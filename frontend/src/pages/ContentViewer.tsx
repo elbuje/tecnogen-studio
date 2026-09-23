@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,7 +14,8 @@ import {
   AlertCircle,
   Share2,
   Trash2,
-  Layers
+  Layers,
+  RotateCw
 } from 'lucide-react';
 
 export const ContentViewer: React.FC = () => {
@@ -40,21 +41,44 @@ export const ContentViewer: React.FC = () => {
   // Deleting state
   const [deleting, setDeleting] = useState(false);
 
-  const fetchContent = async () => {
+  const pollingRef = useRef<any>(null);
+
+  const fetchContent = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get(`/contents/${contentId}`);
       setContent(res.data);
+      return res.data;
     } catch (e) {
       console.error('Error fetching content:', e);
+      return null;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchContent();
+
+    // Auto-polling cada 3 segundos si el contenido se está generando
+    pollingRef.current = setInterval(async () => {
+      const data = await fetchContent(true);
+      if (data && data.status !== 'generating') {
+        clearInterval(pollingRef.current);
+      }
+    }, 3000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, [contentId]);
+
+  // Si el estado cambia a listo, detener polling
+  useEffect(() => {
+    if (content && content.status !== 'generating' && pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+  }, [content?.status]);
 
   const slides = content?.slides || [];
   const currentSlide = slides[currentIndex];
@@ -83,7 +107,7 @@ export const ContentViewer: React.FC = () => {
       });
       await refreshUser();
       setSingleFeedback('');
-      await fetchContent();
+      await fetchContent(false);
       alert(`Lámina #${currentSlide.slide_number} regenerada con éxito con OpenAI (1 crédito consumido).`);
     } catch (err: any) {
       alert(err.response?.data?.detail?.message || err.response?.data?.detail || 'Error al regenerar slide.');
@@ -103,7 +127,17 @@ export const ContentViewer: React.FC = () => {
       await refreshUser();
       setShowRegenerateAllModal(false);
       setGlobalFeedback('');
-      await fetchContent();
+      await fetchContent(false);
+
+      // Reiniciar polling para esperar la regeneración completa
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = setInterval(async () => {
+        const data = await fetchContent(true);
+        if (data && data.status !== 'generating') {
+          clearInterval(pollingRef.current);
+        }
+      }, 3000);
+
       alert(`Regeneración completa iniciada (${content.total_slides} créditos consumidos). Procesando con OpenAI...`);
     } catch (err: any) {
       alert(err.response?.data?.detail?.message || err.response?.data?.detail || 'Error al regenerar todo el carrusel.');
@@ -132,14 +166,14 @@ export const ContentViewer: React.FC = () => {
   const handleApproveAll = async () => {
     try {
       await api.post(`/contents/${contentId}/approve`);
-      await fetchContent();
+      await fetchContent(false);
       alert('¡Carrusel aprobado exitosamente! Ahora podés descargarlo o programarlo en Metricool.');
     } catch (e) {
       alert('Error al aprobar carrusel.');
     }
   };
 
-  if (loading) {
+  if (loading && !content) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-slate-400">
         <RefreshCw className="w-6 h-6 animate-spin text-cyan-400 mr-2" /> Cargando visor interactivo...
@@ -169,20 +203,52 @@ export const ContentViewer: React.FC = () => {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-bold text-white tracking-tight">{content.title}</h1>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-white tracking-tight">{content.title}</h1>
+              {content.status === 'generating' && (
+                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[11px] font-semibold animate-pulse">
+                  <RotateCw className="w-3 h-3 animate-spin" /> Procesando con OpenAI...
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
               <span>{content.total_slides} slides</span>
               <span>•</span>
               <span className="capitalize text-cyan-300">{content.type}</span>
               <span>•</span>
-              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] font-semibold text-slate-300">
-                Estado: {content.status}
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  content.status === 'ready_for_review'
+                    ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                    : content.status === 'approved'
+                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                    : content.status === 'failed'
+                    ? 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                    : 'bg-slate-800 text-slate-300'
+                }`}
+              >
+                {content.status === 'ready_for_review'
+                  ? 'Listo para Revisar'
+                  : content.status === 'approved'
+                  ? 'Aprobado'
+                  : content.status === 'failed'
+                  ? 'Error'
+                  : 'Generando...'}
               </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Botón Refrescar Manual */}
+          <button
+            onClick={() => fetchContent(false)}
+            title="Actualizar estado"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+          >
+            <RotateCw className="w-4 h-4" />
+          </button>
+
           {/* Botón Regenerar Todo */}
           <button
             onClick={() => setShowRegenerateAllModal(true)}
@@ -246,44 +312,48 @@ export const ContentViewer: React.FC = () => {
             )}
 
             {/* Slide Number Overlay */}
-            <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[11px] font-bold text-white border border-white/10">
-              Slide {currentIndex + 1} de {slides.length} (v{currentSlide?.version || 1})
-            </div>
+            {slides.length > 0 && (
+              <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[11px] font-bold text-white border border-white/10">
+                Slide {currentIndex + 1} de {slides.length} (v{currentSlide?.version || 1})
+              </div>
+            )}
           </div>
 
           {/* Navigation Controls */}
-          <div className="flex items-center gap-6">
-            <button
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-              className="p-3 rounded-2xl glass-card hover:bg-slate-800 text-white disabled:opacity-30 transition-all"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+          {slides.length > 0 && (
+            <div className="flex items-center gap-6">
+              <button
+                onClick={handlePrev}
+                disabled={currentIndex === 0}
+                className="p-3 rounded-2xl glass-card hover:bg-slate-800 text-white disabled:opacity-30 transition-all"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
 
-            {/* Dot indicators */}
-            <div className="flex items-center gap-2">
-              {slides.map((s: any, idx: number) => (
-                <button
-                  key={s.id || idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`w-3 h-3 rounded-full transition-all ${
-                    idx === currentIndex
-                      ? 'bg-cyan-400 w-8'
-                      : 'bg-slate-700 hover:bg-slate-600'
-                  }`}
-                />
-              ))}
+              {/* Dot indicators */}
+              <div className="flex items-center gap-2">
+                {slides.map((s: any, idx: number) => (
+                  <button
+                    key={s.id || idx}
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      idx === currentIndex
+                        ? 'bg-cyan-400 w-8'
+                        : 'bg-slate-700 hover:bg-slate-600'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={handleNext}
+                disabled={currentIndex === slides.length - 1}
+                className="p-3 rounded-2xl glass-card hover:bg-slate-800 text-white disabled:opacity-30 transition-all"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
-
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === slides.length - 1}
-              className="p-3 rounded-2xl glass-card hover:bg-slate-800 text-white disabled:opacity-30 transition-all"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Right: Individual Slide Controls & Regeneration */}
