@@ -10,6 +10,8 @@ import { ContentViewer } from './pages/ContentViewer';
 import { BrandKit } from './pages/BrandKit';
 import { AISettings } from './pages/AISettings';
 import { Billing } from './pages/Billing';
+import { Profile } from './pages/Profile';
+import { Integrations } from './pages/Integrations';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -61,6 +63,22 @@ export const App: React.FC = () => {
             element={
               <ProtectedLayout>
                 <BrandKit />
+              </ProtectedLayout>
+            }
+          />
+          <Route
+            path="/app/integrations"
+            element={
+              <ProtectedLayout>
+                <Integrations />
+              </ProtectedLayout>
+            }
+          />
+          <Route
+            path="/app/profile"
+            element={
+              <ProtectedLayout>
+                <Profile />
               </ProtectedLayout>
             }
           />

@@ -1,11 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import os
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, brands, contents, settings as ai_settings, billing
+from app.routers import auth, brands, contents, settings as ai_settings, billing, integrations
 
 # Crear tablas en base de datos si no existen
 Base.metadata.create_all(bind=engine)
@@ -32,6 +31,7 @@ app.include_router(brands.router, prefix=settings.API_V1_STR)
 app.include_router(contents.router, prefix=settings.API_V1_STR)
 app.include_router(ai_settings.router, prefix=settings.API_V1_STR)
 app.include_router(billing.router, prefix=settings.API_V1_STR)
+app.include_router(integrations.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Sparkles, Coins, LogOut, User as UserIcon, Settings as SettingsIcon } from 'lucide-react';
+import { Sparkles, Coins, LogOut, User as UserIcon, Settings as SettingsIcon, Link2 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -31,31 +31,39 @@ export const Navbar: React.FC = () => {
         {user && (
           <>
             {/* Credit Badge */}
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-sm">
+            <Link
+              to="/app/billing"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+            >
               <Coins className="w-4 h-4 text-amber-400 animate-pulse" />
               <span className="font-semibold text-white">{user.credits_balance}</span>
               <span className="text-slate-400 text-xs uppercase tracking-wider font-medium">créditos</span>
-            </div>
+            </Link>
 
             {/* Plan Badge */}
             <div className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-md bg-cyan-950/60 border border-cyan-800/50 text-cyan-300 text-xs font-semibold uppercase tracking-wider">
               Plan {user.plan_tier}
             </div>
 
-            {/* User Dropdown / Info */}
-            <div className="flex items-center gap-3 pl-2 border-l border-slate-800">
-              <div className="text-right hidden md:block">
-                <div className="text-xs font-semibold text-slate-200">{user.full_name || user.email}</div>
-                <div className="text-[10px] text-slate-400">{user.email}</div>
+            {/* Profile Direct Button */}
+            <Link
+              to="/app/profile"
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 transition-colors"
+            >
+              <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-xs font-bold">
+                {user.full_name?.charAt(0) || 'U'}
               </div>
-              <button
-                onClick={handleLogout}
-                title="Cerrar Sesión"
-                className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/60 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+              <span className="text-xs font-semibold text-slate-200 hidden md:inline">Mi Perfil</span>
+            </Link>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              title="Cerrar Sesión"
+              className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800/60 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </>
         )}
       </div>
