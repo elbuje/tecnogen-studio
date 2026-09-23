@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Palette, Sparkles, Sliders, CreditCard, Link2, User } from 'lucide-react';
+import { LayoutDashboard, Layers, Palette, Sparkles, Sliders, CreditCard, Link2, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const Sidebar: React.FC = () => {
@@ -8,6 +8,7 @@ export const Sidebar: React.FC = () => {
 
   const navItems = [
     { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/app/library', label: 'Mi Biblioteca', icon: Layers },
     { to: '/app/brands', label: 'Mis Marcas & Kits', icon: Palette },
     { to: '/app/integrations', label: 'Integraciones & APIs', icon: Link2 },
     { to: '/app/profile', label: 'Mi Perfil', icon: User },

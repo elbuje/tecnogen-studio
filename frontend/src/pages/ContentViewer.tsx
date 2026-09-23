@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -12,20 +12,33 @@ import {
   Calendar,
   Sparkles,
   AlertCircle,
-  Share2
+  Share2,
+  Trash2,
+  Layers
 } from 'lucide-react';
 
 export const ContentViewer: React.FC = () => {
   const { contentId } = useParams<{ contentId: string }>();
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [content, setContent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Feedback & Regenerate modal/state
-  const [feedback, setFeedback] = useState('');
-  const [regenerating, setRegenerating] = useState(false);
+  // Single slide feedback
+  const [singleFeedback, setSingleFeedback] = useState('');
+  const [regeneratingSingle, setRegeneratingSingle] = useState(false);
+
+  // All slides feedback & modal
+  const [showRegenerateAllModal, setShowRegenerateAllModal] = useState(false);
+  const [globalFeedback, setGlobalFeedback] = useState('');
+  const [regeneratingAll, setRegeneratingAll] = useState(false);
+
+  // Metricool modal
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+
+  // Deleting state
+  const [deleting, setDeleting] = useState(false);
 
   const fetchContent = async () => {
     try {
@@ -58,23 +71,61 @@ export const ContentViewer: React.FC = () => {
     }
   };
 
-  const handleRegenerateSlide = async (e: React.FormEvent) => {
+  // 1. Regenerar Solo este Slide (1 crédito)
+  const handleRegenerateSingle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentSlide || !feedback.trim()) return;
+    if (!currentSlide || !singleFeedback.trim()) return;
 
     try {
-      setRegenerating(true);
+      setRegeneratingSingle(true);
       await api.post(`/contents/${contentId}/slides/${currentSlide.slide_number}/regenerate`, {
-        feedback,
+        feedback: singleFeedback,
       });
       await refreshUser();
-      setFeedback('');
+      setSingleFeedback('');
       await fetchContent();
-      alert(`Lámina #${currentSlide.slide_number} regenerada con éxito (1 crédito consumido).`);
+      alert(`Lámina #${currentSlide.slide_number} regenerada con éxito con OpenAI (1 crédito consumido).`);
     } catch (err: any) {
       alert(err.response?.data?.detail?.message || err.response?.data?.detail || 'Error al regenerar slide.');
     } finally {
-      setRegenerating(false);
+      setRegeneratingSingle(false);
+    }
+  };
+
+  // 2. Regenerar Todo el Carrusel (N créditos)
+  const handleRegenerateAll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setRegeneratingAll(true);
+      await api.post(`/contents/${contentId}/regenerate-all`, {
+        global_feedback: globalFeedback || null,
+      });
+      await refreshUser();
+      setShowRegenerateAllModal(false);
+      setGlobalFeedback('');
+      await fetchContent();
+      alert(`Regeneración completa iniciada (${content.total_slides} créditos consumidos). Procesando con OpenAI...`);
+    } catch (err: any) {
+      alert(err.response?.data?.detail?.message || err.response?.data?.detail || 'Error al regenerar todo el carrusel.');
+    } finally {
+      setRegeneratingAll(false);
+    }
+  };
+
+  // 3. Eliminar Carrusel
+  const handleDelete = async () => {
+    if (!confirm(`¿Estás seguro de que querés eliminar el carrusel "${content.title}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      setDeleting(true);
+      await api.delete(`/contents/${contentId}`);
+      await refreshUser();
+      navigate('/app/library');
+    } catch (e) {
+      alert('Error al eliminar carrusel.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -82,7 +133,7 @@ export const ContentViewer: React.FC = () => {
     try {
       await api.post(`/contents/${contentId}/approve`);
       await fetchContent();
-      alert('¡Carrusel aprobado exitosamente! Ahora podés descargarlo o programarlo.');
+      alert('¡Carrusel aprobado exitosamente! Ahora podés descargarlo o programarlo en Metricool.');
     } catch (e) {
       alert('Error al aprobar carrusel.');
     }
@@ -100,7 +151,7 @@ export const ContentViewer: React.FC = () => {
     return (
       <div className="p-8 text-center space-y-4">
         <div className="text-rose-400 font-bold">Contenido no encontrado</div>
-        <Link to="/app" className="text-cyan-400 underline text-sm">Volver al Dashboard</Link>
+        <Link to="/app/library" className="text-cyan-400 underline text-sm">Ir a Mi Biblioteca</Link>
       </div>
     );
   }
@@ -111,8 +162,9 @@ export const ContentViewer: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div className="flex items-center gap-4">
           <Link
-            to="/app"
+            to="/app/library"
             className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+            title="Volver a Mi Biblioteca"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
@@ -130,28 +182,48 @@ export const ContentViewer: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Botón Regenerar Todo */}
+          <button
+            onClick={() => setShowRegenerateAllModal(true)}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-cyan-400" /> Regenerar Todo el Carrusel
+          </button>
+
+          {/* Aprobar */}
           {content.status !== 'approved' && (
             <button
               onClick={handleApproveAll}
               className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/20"
             >
-              <CheckCircle2 className="w-4 h-4" /> Aprobar Carrusel Completo
+              <CheckCircle2 className="w-4 h-4" /> Aprobar Todo
             </button>
           )}
 
+          {/* Programar */}
           <button
             onClick={() => setShowScheduleModal(true)}
             className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-black flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/20"
           >
-            <Calendar className="w-4 h-4" /> Programar en Metricool
+            <Calendar className="w-4 h-4" /> Programar Metricool
+          </button>
+
+          {/* Eliminar Carrusel */}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Eliminar este carrusel por completo"
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Main Studio Viewer Area */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: 1024x1536 Viewport Stage (Proporción 2:3 Vertical) */}
+        {/* Left: 1024x1536 Viewport Stage */}
         <div className="lg:col-span-7 flex flex-col items-center space-y-4">
           <div className="relative w-full max-w-[420px] aspect-[2/3] rounded-3xl overflow-hidden glass-panel border border-slate-700/80 shadow-2xl flex items-center justify-center bg-[#0B1E38]">
             {currentSlide?.image_url ? (
@@ -164,7 +236,11 @@ export const ContentViewer: React.FC = () => {
               <div className="text-center p-6 space-y-3">
                 <Sparkles className="w-8 h-8 text-cyan-400 mx-auto animate-spin" />
                 <div className="text-sm font-semibold text-slate-300">
-                  Generando Slide #{currentIndex + 1}...
+                  {currentSlide?.status === 'failed' ? (
+                    <span className="text-rose-400">Error en OpenAI: {currentSlide?.feedback}</span>
+                  ) : (
+                    `Generando Slide #${currentIndex + 1}...`
+                  )}
                 </div>
               </div>
             )}
@@ -210,7 +286,7 @@ export const ContentViewer: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Slide Controls, Copy & Granular Regeneration */}
+        {/* Right: Individual Slide Controls & Regeneration */}
         <div className="lg:col-span-5 space-y-6">
           {/* Slide Details & Prompt info */}
           <div className="p-6 rounded-3xl glass-card space-y-4">
@@ -223,34 +299,34 @@ export const ContentViewer: React.FC = () => {
               </span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 font-mono leading-relaxed">
+            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 font-mono leading-relaxed max-h-40 overflow-y-auto">
               <span className="text-slate-500 font-sans block text-[10px] uppercase font-bold mb-1">
-                Prompt Utilizado:
+                Prompt Enviado a OpenAI:
               </span>
-              {currentSlide?.prompt_used || 'Generando prompt dinámico...'}
+              {currentSlide?.prompt_used || 'Generando prompt con OpenAI...'}
             </div>
 
             {/* Granular Regeneration Form (1 Credit) */}
-            <form onSubmit={handleRegenerateSlide} className="pt-3 border-t border-slate-800 space-y-3">
+            <form onSubmit={handleRegenerateSingle} className="pt-3 border-t border-slate-800 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" /> Regenerar solo este slide
+                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" /> Regenerar solo esta lámina (#{currentIndex + 1})
                 </span>
                 <span className="text-amber-300 font-bold">1 crédito</span>
               </div>
               <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Ej: Hacer el texto más corto, cambiar el color del título o reemplazar la foto por Dra. Jessica 2..."
+                value={singleFeedback}
+                onChange={(e) => setSingleFeedback(e.target.value)}
+                placeholder="Ej: Cambiar el fondo por más iluminado, o mostrar primer plano de sonrisa..."
                 rows={3}
                 className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs focus:border-cyan-400 focus:outline-none resize-none"
               />
               <button
                 type="submit"
-                disabled={regenerating || !feedback.trim()}
+                disabled={regeneratingSingle || !singleFeedback.trim()}
                 className="w-full py-2.5 rounded-xl font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-40"
               >
-                {regenerating ? 'Regenerando slide...' : 'Enviar Feedback & Regenerar (1 Crédito)'}
+                {regeneratingSingle ? 'Regenerando con OpenAI...' : `Regenerar Lámina #${currentIndex + 1} (1 Crédito)`}
               </button>
             </form>
           </div>
@@ -267,6 +343,77 @@ export const ContentViewer: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal: Regenerar Todo el Carrusel */}
+      {showRegenerateAllModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-3xl glass-panel p-8 space-y-6 border border-slate-700 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                  <RefreshCw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Regenerar Todo el Carrusel</h3>
+                  <p className="text-xs text-slate-400">
+                    Se generarán nuevamente las {content.total_slides} láminas con OpenAI
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRegenerateAllModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRegenerateAll} className="space-y-4">
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 space-y-1">
+                <div className="font-semibold text-white flex items-center justify-between">
+                  <span>Costo de Regeneración:</span>
+                  <span className="text-amber-300 font-bold text-sm">{content.total_slides} créditos</span>
+                </div>
+                <div className="text-slate-400">
+                  Saldo actual: {user?.credits_balance} créditos
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  Directiva Global / Feedback (Opcional)
+                </label>
+                <textarea
+                  value={globalFeedback}
+                  onChange={(e) => setGlobalFeedback(e.target.value)}
+                  placeholder="Ej: Usar tono más minimalista, fotos con luz natural y colores más pasteles en todas las láminas..."
+                  rows={3}
+                  className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs focus:border-cyan-400 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowRegenerateAllModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={regeneratingAll}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25 flex items-center gap-2 disabled:opacity-50"
+                >
+                  {regeneratingAll
+                    ? 'Iniciando...'
+                    : `Confirmar y Regenerar (${content.total_slides} Créditos)`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Metricool Scheduling Modal */}
       {showScheduleModal && (

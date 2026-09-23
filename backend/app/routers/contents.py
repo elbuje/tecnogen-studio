@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import base64
 import logging
+from pydantic import BaseModel
 from app.database import get_db, SessionLocal
 from app.models.user import User
 from app.models.brand import Brand
@@ -18,16 +19,17 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/contents", tags=["Contenidos & Carruseles"])
 
+class RegenerateAllRequest(BaseModel):
+    global_feedback: Optional[str] = None
+
 def build_openai_slide_prompt(
     brand: Brand,
     slide_num: int,
     total_slides: int,
     slide_data: dict,
-    subject_presence: str = "portada-y-cierre"
+    subject_presence: str = "portada-y-cierre",
+    global_feedback: Optional[str] = None
 ) -> str:
-    """
-    Construye el prompt detallado para enviar a la API de OpenAI Image.
-    """
     slide_type = slide_data.get("slide_type", "content")
     title = slide_data.get("title", "")
     body = slide_data.get("body", "")
@@ -39,13 +41,15 @@ def build_openai_slide_prompt(
     else:
         subject_instruction = "Diseño gráfico editorial minimalista, con enfoque en tipografía legible, clínica y elementos gráficos de estética dental moderna."
 
+    feedback_instruction = f"\nDIRECTIVA ESPECIAL DE REGENERACIÓN: {global_feedback}\n" if global_feedback else ""
+
     prompt = f"""
 Diseño editorial premium para red social (Instagram / LinkedIn), formato vertical.
 Marca: {brand.name}.
 Paleta de colores: Fondo sólido o degradado suave en {brand.bg_color or '#0B1E38'}, detalles destacados en color acento {brand.accent_color or '#7DD3FC'}, y elementos primarios en {brand.primary_color or '#16345F'}.
 Estilo: Fotografía clínica de alta gama y diseño publicitario editorial médico.
 Zona superior izquierda (x:40, y:40, ancho 180px): Dejar completamente libre y despejada de texto o rostros para superposición posterior del logo.
-
+{feedback_instruction}
 CONTENIDO DEL SLIDE (Lámina {slide_num} de {total_slides}):
 Tipo de lámina: {slide_type.upper()}
 Título principal: "{title}"
@@ -59,11 +63,7 @@ Texto perfectamente legible en español sin errores tipográficos.
 """
     return prompt.strip()
 
-def process_content_generation(content_id: str, db_factory):
-    """
-    Worker para generación estricta con OpenAI Image API.
-    Si falla, rechaza y reembolsa los créditos inmediatamente.
-    """
+def process_content_generation(content_id: str, db_factory, global_feedback: Optional[str] = None):
     db = db_factory()
     try:
         content = db.query(Content).filter(Content.id == content_id).first()
@@ -73,7 +73,6 @@ def process_content_generation(content_id: str, db_factory):
         content.status = "generating"
         db.commit()
         
-        # 1. Obtener configuración de IA
         ai_setting = db.query(AISetting).filter(AISetting.is_active == True, AISetting.category == "image").first()
         model_name = ai_setting.model_name if ai_setting else "dall-e-3"
         api_key = ai_setting.api_key_override if (ai_setting and ai_setting.api_key_override) else None
@@ -89,7 +88,6 @@ def process_content_generation(content_id: str, db_factory):
 
         brand = content.brand
 
-        # 2. Generar Copy estructurado
         slides_copy = generate_carousel_slides_copy(
             topic=content.title,
             total_slides=content.total_slides,
@@ -99,40 +97,51 @@ def process_content_generation(content_id: str, db_factory):
 
         failed_count = 0
 
-        # 3. Generar cada imagen con OpenAI
         for i, slide_data in enumerate(slides_copy, start=1):
             slide_type = slide_data.get("slide_type", "content")
-            prompt = build_openai_slide_prompt(brand, i, content.total_slides, slide_data)
+            prompt = build_openai_slide_prompt(brand, i, content.total_slides, slide_data, global_feedback=global_feedback)
             
             try:
                 img_bytes = image_service.generate_slide_image(prompt=prompt)
-                
                 b64_str = base64.b64encode(img_bytes).decode('utf-8')
                 data_uri = f"data:image/png;base64,{b64_str}"
                 
-                slide = Slide(
-                    content_id=content.id,
-                    slide_number=i,
-                    slide_type=slide_type,
-                    image_url=data_uri,
-                    prompt_used=prompt,
-                    status="generated",
-                    version=1
-                )
-                db.add(slide)
+                # Check if slide already exists (for re-generation)
+                existing = db.query(Slide).filter(Slide.content_id == content.id, Slide.slide_number == i).first()
+                if existing:
+                    existing.image_url = data_uri
+                    existing.prompt_used = prompt
+                    existing.status = "generated"
+                    existing.version += 1
+                else:
+                    slide = Slide(
+                        content_id=content.id,
+                        slide_number=i,
+                        slide_type=slide_type,
+                        image_url=data_uri,
+                        prompt_used=prompt,
+                        status="generated",
+                        version=1
+                    )
+                    db.add(slide)
                 db.commit()
             except Exception as e:
                 logger.error(f"Fallo en OpenAI al generar slide {i}: {e}")
-                slide = Slide(
-                    content_id=content.id,
-                    slide_number=i,
-                    slide_type=slide_type,
-                    prompt_used=prompt,
-                    feedback=f"Error OpenAI: {str(e)}",
-                    status="failed",
-                    version=1
-                )
-                db.add(slide)
+                existing = db.query(Slide).filter(Slide.content_id == content.id, Slide.slide_number == i).first()
+                if existing:
+                    existing.status = "failed"
+                    existing.feedback = f"Error OpenAI: {str(e)}"
+                else:
+                    slide = Slide(
+                        content_id=content.id,
+                        slide_number=i,
+                        slide_type=slide_type,
+                        prompt_used=prompt,
+                        feedback=f"Error OpenAI: {str(e)}",
+                        status="failed",
+                        version=1
+                    )
+                    db.add(slide)
                 db.commit()
                 failed_count += 1
                 refund_credits_atomic(db, brand.user_id, 1, f"Reembolso por fallo OpenAI en slide {i}", content.id)
@@ -162,7 +171,6 @@ def generate_content(
     if total_slides < 1 or total_slides > 15:
         raise HTTPException(status_code=400, detail="El total de slides debe estar entre 1 y 15")
 
-    # 1. Crear registro de contenido
     content = Content(
         brand_id=brand.id,
         type=payload.type or "carousel",
@@ -179,7 +187,6 @@ def generate_content(
     db.commit()
     db.refresh(content)
 
-    # 2. Descuento atómico de créditos
     remaining = charge_credits_atomic(
         db=db,
         user_id=current_user.id,
@@ -189,7 +196,6 @@ def generate_content(
         reference_id=content.id
     )
 
-    # 3. Lanzar procesamiento en background
     background_tasks.add_task(process_content_generation, content.id, SessionLocal)
 
     return {
@@ -199,6 +205,47 @@ def generate_content(
         "credits_charged": total_slides,
         "credits_remaining": remaining,
         "message": f"Tu carrusel se está generando con {total_slides} láminas mediante OpenAI."
+    }
+
+@router.post("/{content_id}/regenerate-all", response_model=ContentGenerateResponse, status_code=status.HTTP_202_ACCEPTED)
+def regenerate_all_slides(
+    content_id: str,
+    payload: RegenerateAllRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Regenera todas las láminas del carrusel completo consumiendo N créditos.
+    """
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if not content:
+        raise HTTPException(status_code=404, detail="Contenido no encontrado")
+    if content.brand.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
+
+    # Descuento atómico de créditos
+    remaining = charge_credits_atomic(
+        db=db,
+        user_id=current_user.id,
+        amount=content.total_slides,
+        action_type="regenerate_carousel_all",
+        description=f"Regeneración Completa: {content.title} ({content.total_slides} slides)",
+        reference_id=content.id
+    )
+
+    content.status = "generating"
+    db.commit()
+
+    background_tasks.add_task(process_content_generation, content.id, SessionLocal, payload.global_feedback)
+
+    return {
+        "content_id": content.id,
+        "status": "generating",
+        "estimated_time_seconds": content.total_slides * 15,
+        "credits_charged": content.total_slides,
+        "credits_remaining": remaining,
+        "message": f"Regenerando todas las {content.total_slides} láminas del carrusel."
     }
 
 @router.get("", response_model=List[ContentOut])
@@ -223,6 +270,22 @@ def get_content(content_id: str, current_user: User = Depends(get_current_user),
     if content.brand.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
     return content
+
+@router.delete("/{content_id}")
+def delete_content(content_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Elimina un carrusel/contenido por completo.
+    """
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if not content:
+        raise HTTPException(status_code=404, detail="Contenido no encontrado")
+    if content.brand.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
+
+    title = content.title
+    db.delete(content)
+    db.commit()
+    return {"message": f"Carrusel '{title}' eliminado exitosamente.", "deleted_id": content_id}
 
 @router.post("/{content_id}/approve")
 def approve_content(content_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -250,7 +313,6 @@ def regenerate_slide(
     if content.brand.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
 
-    # Descontar 1 crédito atómicamente
     charge_credits_atomic(
         db=db,
         user_id=current_user.id,
@@ -280,22 +342,31 @@ def regenerate_slide(
         b64_str = base64.b64encode(img_bytes).decode('utf-8')
         data_uri = f"data:image/png;base64,{b64_str}"
 
-        new_slide = Slide(
-            content_id=content.id,
-            slide_number=slide_number,
-            slide_type=existing_slide.slide_type if existing_slide else "content",
-            image_url=data_uri,
-            prompt_used=prompt,
-            feedback=payload.feedback,
-            status="generated",
-            version=new_version
-        )
-        db.add(new_slide)
-        db.commit()
-        db.refresh(new_slide)
-        return new_slide
+        if existing_slide:
+            existing_slide.image_url = data_uri
+            existing_slide.prompt_used = prompt
+            existing_slide.feedback = payload.feedback
+            existing_slide.status = "generated"
+            existing_slide.version = new_version
+            db.commit()
+            db.refresh(existing_slide)
+            return existing_slide
+        else:
+            new_slide = Slide(
+                content_id=content.id,
+                slide_number=slide_number,
+                slide_type="content",
+                image_url=data_uri,
+                prompt_used=prompt,
+                feedback=payload.feedback,
+                status="generated",
+                version=new_version
+            )
+            db.add(new_slide)
+            db.commit()
+            db.refresh(new_slide)
+            return new_slide
     except Exception as e:
         logger.error(f"Fallo al regenerar slide con OpenAI: {e}")
-        # Reembolsar crédito
         refund_credits_atomic(db, current_user.id, 1, f"Reembolso por fallo al regenerar slide #{slide_number}", content.id)
         raise HTTPException(status_code=500, detail=f"Fallo al conectar con OpenAI Image API: {str(e)}")

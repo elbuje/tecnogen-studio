@@ -12,6 +12,7 @@ import { AISettings } from './pages/AISettings';
 import { Billing } from './pages/Billing';
 import { Profile } from './pages/Profile';
 import { Integrations } from './pages/Integrations';
+import { Library } from './pages/Library';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -47,6 +48,14 @@ export const App: React.FC = () => {
             element={
               <ProtectedLayout>
                 <Dashboard />
+              </ProtectedLayout>
+            }
+          />
+          <Route
+            path="/app/library"
+            element={
+              <ProtectedLayout>
+                <Library />
               </ProtectedLayout>
             }
           />
