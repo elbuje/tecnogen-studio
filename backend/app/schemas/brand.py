@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 class BrandAssetBase(BaseModel):
-    asset_type: str  # logo_white, logo_color, photo_person, photo_product
+    asset_type: str
     label: Optional[str] = None
     file_url: Optional[str] = None
     gdrive_file_id: Optional[str] = None
@@ -24,8 +24,17 @@ class BrandBase(BaseModel):
     bg_color: Optional[str] = "#0B1E38"
     font_style_title: Optional[str] = "serif-editorial"
     font_style_body: Optional[str] = "sans-modern"
+    layout_preset: Optional[str] = "editorial-top"
     logo_position: Optional[str] = "top-left"
     logo_width_px: Optional[int] = 180
+    
+    # 5 Carpetas Especializadas
+    gdrive_logos_folder_id: Optional[str] = None
+    gdrive_subjects_folder_id: Optional[str] = None
+    gdrive_brand_manual_folder_id: Optional[str] = None
+    gdrive_templates_folder_id: Optional[str] = None
+    gdrive_products_folder_id: Optional[str] = None
+    
     gdrive_input_folder_id: Optional[str] = None
     gdrive_output_folder_id: Optional[str] = None
     sheets_url: Optional[str] = None
@@ -43,8 +52,14 @@ class BrandUpdate(BaseModel):
     bg_color: Optional[str] = None
     font_style_title: Optional[str] = None
     font_style_body: Optional[str] = None
+    layout_preset: Optional[str] = None
     logo_position: Optional[str] = None
     logo_width_px: Optional[int] = None
+    gdrive_logos_folder_id: Optional[str] = None
+    gdrive_subjects_folder_id: Optional[str] = None
+    gdrive_brand_manual_folder_id: Optional[str] = None
+    gdrive_templates_folder_id: Optional[str] = None
+    gdrive_products_folder_id: Optional[str] = None
     gdrive_input_folder_id: Optional[str] = None
     gdrive_output_folder_id: Optional[str] = None
     sheets_url: Optional[str] = None

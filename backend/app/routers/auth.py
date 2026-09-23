@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User, CreditLedger
+from app.models.brand import Brand
 from app.schemas.auth import UserRegister, UserLogin, TokenResponse
+from app.schemas.user import UserProfileUpdate, UserProfileOut
 from app.services.auth_service import verify_password, get_password_hash, create_access_token, create_refresh_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
@@ -34,7 +36,11 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     
-    # Registrar carga inicial en ledger
+    # Crear marca inicial por defecto
+    brand_name = f"{payload.full_name or 'Mi'} Marca"
+    brand = Brand(user_id=user.id, name=brand_name)
+    db.add(brand)
+    
     ledger = CreditLedger(
         user_id=user.id,
         amount=credits,
@@ -87,7 +93,8 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     }
 
 @router.get("/me")
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    brand = db.query(Brand).filter(Brand.user_id == current_user.id).first()
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -95,5 +102,55 @@ def get_me(current_user: User = Depends(get_current_user)):
         "role": current_user.role,
         "plan_tier": current_user.plan_tier,
         "credits_balance": current_user.credits_balance,
-        "plan_renewal_date": current_user.plan_renewal_date
+        "plan_renewal_date": current_user.plan_renewal_date,
+        "brand_name": brand.name if brand else "",
+        "brand_id": brand.id if brand else None
+    }
+
+@router.put("/profile")
+def update_profile(payload: UserProfileUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Permite al usuario editar su nombre completo, nombre de marca, email y contraseña.
+    """
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if payload.full_name is not None:
+        user.full_name = payload.full_name
+
+    if payload.email is not None and payload.email != user.email:
+        existing = db.query(User).filter(User.email == payload.email, User.id != user.id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="El correo ya está en uso por otra cuenta")
+        user.email = payload.email
+
+    if payload.new_password:
+        user.password_hash = get_password_hash(payload.new_password)
+
+    # Actualizar nombre de la marca si se especificó
+    if payload.brand_name:
+        brand = db.query(Brand).filter(Brand.user_id == user.id).first()
+        if brand:
+            brand.name = payload.brand_name
+        else:
+            brand = Brand(user_id=user.id, name=payload.brand_name)
+            db.add(brand)
+
+    db.commit()
+    db.refresh(user)
+
+    brand = db.query(Brand).filter(Brand.user_id == user.id).first()
+
+    return {
+        "message": "Perfil y marca actualizados exitosamente",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "plan_tier": user.plan_tier,
+            "credits_balance": user.credits_balance,
+            "brand_name": brand.name if brand else ""
+        }
     }

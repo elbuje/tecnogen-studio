@@ -21,18 +21,26 @@ class Brand(Base):
     font_style_title = Column(String(50), default="serif-editorial")
     font_style_body = Column(String(50), default="sans-modern")
     
-    # Composición de Marca
+    # Composición de Marca y Layout Preset (1 a 10)
+    layout_preset = Column(String(50), default="editorial-top")
     logo_position = Column(String(30), default="top-left")
     logo_width_px = Column(Integer, default=180)
     
-    # Conexiones
+    # Carpetas Especializadas de Google Drive (Zero-Storage)
+    gdrive_logos_folder_id = Column(Text, nullable=True)
+    gdrive_subjects_folder_id = Column(Text, nullable=True)
+    gdrive_brand_manual_folder_id = Column(Text, nullable=True)
+    gdrive_templates_folder_id = Column(Text, nullable=True)
+    gdrive_products_folder_id = Column(Text, nullable=True)
+    
+    # Retrocompatibilidad
     gdrive_input_folder_id = Column(Text, nullable=True)
     gdrive_output_folder_id = Column(Text, nullable=True)
+    
     sheets_url = Column(Text, nullable=True)
     metricool_user_token = Column(Text, nullable=True)
     metricool_blog_id = Column(String(100), nullable=True)
     
-    # Reglas adicionales
     brand_rules = Column(JSON, default=dict)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -47,7 +55,7 @@ class BrandAsset(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     brand_id = Column(String(36), ForeignKey("brands.id", ondelete="CASCADE"), nullable=False, index=True)
-    asset_type = Column(String(30), nullable=False)  # 'logo_white', 'logo_color', 'logo_black', 'photo_person', 'photo_product'
+    asset_type = Column(String(30), nullable=False)  # 'logo', 'subject', 'manual', 'template', 'product'
     label = Column(String(100), nullable=True)
     file_url = Column(Text, nullable=True)
     gdrive_file_id = Column(Text, nullable=True)

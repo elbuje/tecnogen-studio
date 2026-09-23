@@ -35,6 +35,21 @@ def build_openai_slide_prompt(
     body = slide_data.get("body", "")
     subtitle = slide_data.get("subtitle", "")
     
+    layout_preset = brand.layout_preset or "editorial-top"
+    layout_guidelines = {
+        "editorial-top": "Composición Editorial Hero: Titular superior de gran impacto, sujeto o elemento visual en zona media/baja, logo respetado en esquina superior.",
+        "split-horizontal": "Composición Split Horizontal (50/50): Mitad superior con imagen clínica de alta resolución y mitad inferior con fondo de marca estructurado para el copy.",
+        "split-vertical": "Composición Split Vertical: Columna izquierda con texto ordenado y columna derecha con fotografía del sujeto o producto.",
+        "minimal-dark": "Composición Minimalista Dark: Gran titular central tipográfico, espacios negativos limpios y diseño sobrio de alta gama.",
+        "testimonial-quote": "Composición de Testimonio y Social Proof: Cita destacada entre comillas, badge de satisfacción y fotografía de confianza.",
+        "step-by-step": "Composición Paso a Paso / Checklist: Pasos numerados con badges de acento y tipografía jerárquica clara.",
+        "before-after": "Composición Comparativa (Antes y Después): Dos bloques simétricos diferenciados con etiquetas claras de diagnóstico y resultado.",
+        "stat-hero": "Composición Estadística Hero: Cifra o porcentaje en tamaño XXL central con texto explicativo de respaldo.",
+        "full-bleed": "Composición Full Bleed: Fotografía envolvente a pantalla completa con gradiente inferior oscuro para contraste del texto.",
+        "cta-conversion": "Composición Gran CTA de Cierre: Titular de acción directo, botón visual simulado de reserva/contacto y firma de marca."
+    }
+    layout_rule = layout_guidelines.get(layout_preset, layout_guidelines["editorial-top"])
+
     subject_instruction = ""
     if subject_presence in ["portada-y-cierre", "todas"] and (slide_num == 1 or slide_num == total_slides or subject_presence == "todas"):
         subject_instruction = "Incluir fotografía editorial hiperrealista y profesional de una odontóloga/doctora en uniforme clínico sonriente y transmitiendo confianza."
@@ -44,8 +59,9 @@ def build_openai_slide_prompt(
     feedback_instruction = f"\nDIRECTIVA ESPECIAL DE REGENERACIÓN: {global_feedback}\n" if global_feedback else ""
 
     prompt = f"""
-Diseño editorial premium para red social (Instagram / LinkedIn), formato vertical.
+Diseño editorial premium para red social (Instagram / LinkedIn), formato vertical (1024x1536).
 Marca: {brand.name}.
+Regla de Composición y Layout: {layout_rule}
 Paleta de colores: Fondo sólido o degradado suave en {brand.bg_color or '#0B1E38'}, detalles destacados en color acento {brand.accent_color or '#7DD3FC'}, y elementos primarios en {brand.primary_color or '#16345F'}.
 Estilo: Fotografía clínica de alta gama y diseño publicitario editorial médico.
 Zona superior izquierda (x:40, y:40, ancho 180px): Dejar completamente libre y despejada de texto o rostros para superposición posterior del logo.

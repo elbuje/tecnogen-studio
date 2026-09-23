@@ -13,7 +13,11 @@ router = APIRouter(prefix="/integrations", tags=["Integraciones & APIs"])
 
 class DriveConnectRequest(BaseModel):
     brand_id: str
-    input_folder_id: Optional[str] = None
+    logos_folder_id: Optional[str] = None
+    subjects_folder_id: Optional[str] = None
+    brand_manual_folder_id: Optional[str] = None
+    templates_folder_id: Optional[str] = None
+    products_folder_id: Optional[str] = None
     output_folder_id: Optional[str] = None
 
 class SheetsConnectRequest(BaseModel):
@@ -42,8 +46,12 @@ def get_integrations_status(brand_id: Optional[str] = None, current_user: User =
         "brand_id": brand.id if brand else None,
         "brand_name": brand.name if brand else None,
         "gdrive": {
-            "connected": bool(brand and (brand.gdrive_input_folder_id or brand.gdrive_output_folder_id)),
-            "input_folder_id": brand.gdrive_input_folder_id if brand else None,
+            "connected": bool(brand and (brand.gdrive_logos_folder_id or brand.gdrive_subjects_folder_id or brand.gdrive_input_folder_id or brand.gdrive_output_folder_id)),
+            "logos_folder_id": brand.gdrive_logos_folder_id if brand else None,
+            "subjects_folder_id": brand.gdrive_subjects_folder_id if brand else None,
+            "brand_manual_folder_id": brand.gdrive_brand_manual_folder_id if brand else None,
+            "templates_folder_id": brand.gdrive_templates_folder_id if brand else None,
+            "products_folder_id": brand.gdrive_products_folder_id if brand else None,
             "output_folder_id": brand.gdrive_output_folder_id if brand else None,
             "service_account_email": "drive-bot@tecnogen-studio.iam.gserviceaccount.com"
         },
@@ -67,10 +75,15 @@ def connect_drive(payload: DriveConnectRequest, current_user: User = Depends(get
     if brand.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="No tienes acceso a esta marca")
 
-    brand.gdrive_input_folder_id = payload.input_folder_id
+    brand.gdrive_logos_folder_id = payload.logos_folder_id
+    brand.gdrive_subjects_folder_id = payload.subjects_folder_id
+    brand.gdrive_brand_manual_folder_id = payload.brand_manual_folder_id
+    brand.gdrive_templates_folder_id = payload.templates_folder_id
+    brand.gdrive_products_folder_id = payload.products_folder_id
     brand.gdrive_output_folder_id = payload.output_folder_id
+    
     db.commit()
-    return {"message": "Carpetas de Google Drive vinculadas exitosamente", "status": "connected"}
+    return {"message": "5 Carpetas de Google Drive vinculadas exitosamente", "status": "connected"}
 
 @router.post("/sheets")
 def connect_sheets(payload: SheetsConnectRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -133,7 +146,7 @@ def create_api_key(payload: ApiKeyCreateRequest, current_user: User = Depends(ge
         "id": api_key.id,
         "label": api_key.label,
         "key_prefix": api_key.key_prefix,
-        "api_key": raw_key,  # Solo se muestra en la creación
+        "api_key": raw_key,
         "message": "Copia tu API Key ahora. No se volverá a mostrar completa por seguridad."
     }
 
