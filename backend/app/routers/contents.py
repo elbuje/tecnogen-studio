@@ -271,7 +271,11 @@ def list_contents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Content).join(Brand).filter(Brand.user_id == current_user.id)
+    if current_user.role == "admin":
+        query = db.query(Content)
+    else:
+        query = db.query(Content).join(Brand).filter(Brand.user_id == current_user.id)
+        
     if brand_id:
         query = query.filter(Content.brand_id == brand_id)
     if status:
