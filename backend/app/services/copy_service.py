@@ -114,3 +114,61 @@ Devuelve EXACTAMENTE un JSON array con {total_slides} objetos:
     })
 
     return slides
+
+def generate_post_caption(
+    topic: str,
+    brand_name: str = "JM Odontología Integral",
+    slides: Optional[List[Dict[str, Any]]] = None,
+    openai_client = None,
+    text_model: str = "gpt-4o-mini"
+) -> Dict[str, str]:
+    """
+    Genera el caption completo y hashtags profesionales para Instagram/LinkedIn.
+    """
+    if openai_client:
+        try:
+            prompt = f"""
+Sos un copywriter profesional de alto nivel en salud, medicina y odontología.
+Crea un texto persuasivo y de alto valor para acompañar un post de carrusel/video en Instagram y LinkedIn.
+Tema: "{topic}"
+Clínica/Marca: "{brand_name}"
+
+Estructura requerida:
+1. Gancho inicial intrigante con emoji.
+2. Desarrollo de valor médico/profesional explicando por qué importa el tema (2 párrafos claros).
+3. Resumen de puntos clave o consejos prácticos.
+4. Llamado a la acción (CTA) cálido y profesional invitando a agendar o comentar.
+5. 6 a 10 hashtags relevantes y específicos.
+
+Devuelve EXACTAMENTE un JSON con:
+{{
+  "caption": "Texto completo formateado con saltos de línea y emojis",
+  "hashtags": "#saluddental #odontologia ..."
+}}
+"""
+            response = openai_client.chat.completions.create(
+                model=text_model,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            import json
+            data = json.loads(response.choices[0].message.content)
+            if "caption" in data:
+                return {
+                    "caption": data.get("caption", ""),
+                    "hashtags": data.get("hashtags", "#odontologia #saludbucal #esteticadental")
+                }
+        except Exception as e:
+            logger.error(f"Error generando caption con GPT: {e}")
+
+    # Fallback
+    caption = (
+        f"🦷 {topic.capitalize()}\n\n"
+        f"La salud bucal y la estética de tu sonrisa van de la mano. Un diagnóstico a tiempo y el uso de técnicas modernas "
+        f"marcan la diferencia en la durabilidad y naturalidad de cada tratamiento.\n\n"
+        f"En {brand_name} priorizamos tu bienestar con atención personalizada y tecnología de vanguardia.\n\n"
+        f"💬 ¿Cuándo fue tu último control? Dejanos tu consulta o escribinos por mensaje directo para coordinar tu cita."
+    )
+    hashtags = "#OdontologiaIntegral #SaludBucal #EsteticaDental #SonrisaSaludable #ImplantesDentales #PrevencionDental"
+    return {"caption": caption, "hashtags": hashtags}
+

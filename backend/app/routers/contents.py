@@ -13,7 +13,7 @@ from app.schemas.content import ContentGenerateRequest, ContentOut, ContentGener
 from app.services.auth_service import get_current_user
 from app.services.credit_service import charge_credits_atomic, refund_credits_atomic
 from app.services.ai_image_service import AIImageService
-from app.services.copy_service import generate_carousel_slides_copy
+from app.services.copy_service import generate_carousel_slides_copy, generate_post_caption
 
 logger = logging.getLogger(__name__)
 
@@ -35,48 +35,17 @@ def build_openai_slide_prompt(
     body = slide_data.get("body", "")
     subtitle = slide_data.get("subtitle", "")
     
-    layout_preset = brand.layout_preset or "editorial-top"
-    layout_guidelines = {
-        "editorial-top": "Composición Editorial Hero: Titular superior de gran impacto, sujeto o elemento visual en zona media/baja, logo respetado en esquina superior.",
-        "split-horizontal": "Composición Split Horizontal (50/50): Mitad superior con imagen clínica de alta resolución y mitad inferior con fondo de marca estructurado para el copy.",
-        "split-vertical": "Composición Split Vertical: Columna izquierda con texto ordenado y columna derecha con fotografía del sujeto o producto.",
-        "minimal-dark": "Composición Minimalista Dark: Gran titular central tipográfico, espacios negativos limpios y diseño sobrio de alta gama.",
-        "testimonial-quote": "Composición de Testimonio y Social Proof: Cita destacada entre comillas, badge de satisfacción y fotografía de confianza.",
-        "step-by-step": "Composición Paso a Paso / Checklist: Pasos numerados con badges de acento y tipografía jerárquica clara.",
-        "before-after": "Composición Comparativa (Antes y Después): Dos bloques simétricos diferenciados con etiquetas claras de diagnóstico y resultado.",
-        "stat-hero": "Composición Estadística Hero: Cifra o porcentaje en tamaño XXL central con texto explicativo de respaldo.",
-        "full-bleed": "Composición Full Bleed: Fotografía envolvente a pantalla completa con gradiente inferior oscuro para contraste del texto.",
-        "cta-conversion": "Composición Gran CTA de Cierre: Titular de acción directo, botón visual simulado de reserva/contacto y firma de marca."
-    }
-    layout_rule = layout_guidelines.get(layout_preset, layout_guidelines["editorial-top"])
-
-    subject_instruction = ""
-    if subject_presence in ["portada-y-cierre", "todas"] and (slide_num == 1 or slide_num == total_slides or subject_presence == "todas"):
-        subject_instruction = "Incluir fotografía editorial hiperrealista y profesional de una odontóloga/doctora en uniforme clínico sonriente y transmitiendo confianza."
+    feedback_instruction = f"Note: {global_feedback}. " if global_feedback else ""
+    
+    # Prompt de alta fidelidad fotográfica y médica
+    if slide_type == "cover" or slide_num == 1:
+        scene = f"A stunning photorealistic hero shot for: {title}. Bright, ultra-clean modern dental studio, confident friendly female dentist in modern stylish medical uniform, smiling patient, aesthetic clinical environment, soft natural daylight, shallow depth of field, 8k resolution, award-winning healthcare photography."
+    elif slide_type == "cta" or slide_num == total_slides:
+        scene = f"A welcoming modern dental clinic reception with radiant healthy smiles, patient receiving care consultation, warm ambient light, high-end medical practice atmosphere, clean architectural design, 8k."
     else:
-        subject_instruction = "Diseño gráfico editorial minimalista, con enfoque en tipografía legible, clínica y elementos gráficos de estética dental moderna."
+        scene = f"High-end aesthetic dental photography illustrating {title}. State-of-the-art dental equipment, clean aesthetic composition, close-up details of dental care, pristine clinic setting, soft studio lighting, professional medical magazine editorial."
 
-    feedback_instruction = f"\nDIRECTIVA ESPECIAL DE REGENERACIÓN: {global_feedback}\n" if global_feedback else ""
-
-    prompt = f"""
-Diseño editorial premium para red social (Instagram / LinkedIn), formato vertical (1024x1536).
-Marca: {brand.name}.
-Regla de Composición y Layout: {layout_rule}
-Paleta de colores: Fondo sólido o degradado suave en {brand.bg_color or '#0B1E38'}, detalles destacados en color acento {brand.accent_color or '#7DD3FC'}, y elementos primarios en {brand.primary_color or '#16345F'}.
-Estilo: Fotografía clínica de alta gama y diseño publicitario editorial médico.
-Zona superior izquierda (x:40, y:40, ancho 180px): Dejar completamente libre y despejada de texto o rostros para superposición posterior del logo.
-{feedback_instruction}
-CONTENIDO DEL SLIDE (Lámina {slide_num} de {total_slides}):
-Tipo de lámina: {slide_type.upper()}
-Título principal: "{title}"
-{f'Subtítulo: "{subtitle}"' if subtitle else ''}
-{f'Texto de cuerpo: "{body}"' if body else ''}
-
-{subject_instruction}
-
-Paginador inferior: Línea sutil con {total_slides} puntos donde el #{slide_num} está iluminado en color {brand.accent_color or '#7DD3FC'}.
-Texto perfectamente legible en español sin errores tipográficos.
-"""
+    prompt = f"{scene} {feedback_instruction} Color harmony with subtle brand accents in {brand.accent_color or '#7DD3FC'}. Hyper-realistic, 8k, crisp focus, no distortion."
     return prompt.strip()
 
 def process_content_generation(content_id: str, db_factory, global_feedback: Optional[str] = None):
@@ -90,7 +59,7 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
         db.commit()
         
         ai_setting = db.query(AISetting).filter(AISetting.is_active == True, AISetting.category == "image").first()
-        model_name = ai_setting.model_name if ai_setting else "dall-e-3"
+        model_name = ai_setting.model_name if ai_setting else "gpt-image-2.5-sunburst"
         api_key = ai_setting.api_key_override if (ai_setting and ai_setting.api_key_override) else None
         
         try:
@@ -118,6 +87,19 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             brand_name=brand.name,
             openai_client=image_service.client
         )
+
+        # Generar caption y hashtags con IA
+        try:
+            caption_data = generate_post_caption(
+                topic=content.title,
+                brand_name=brand.name,
+                slides=slides_copy,
+                openai_client=image_service.client
+            )
+            content.caption_copy = caption_data.get("caption", content.caption_copy)
+            content.hashtags = caption_data.get("hashtags", content.hashtags)
+        except Exception as e:
+            logger.warning(f"Error generando caption enriquecido: {e}")
 
         failed_count = 0
 

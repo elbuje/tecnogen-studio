@@ -11,12 +11,8 @@ logger = logging.getLogger(__name__)
 class AIImageService:
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
-        # Asegurar modelo válido de DALL-E
-        raw_model = model or settings.OPENAI_IMAGE_MODEL or "dall-e-3"
-        if raw_model not in ["dall-e-3", "dall-e-2"]:
-            self.model = "dall-e-3"
-        else:
-            self.model = raw_model
+        # Permitir modelo configurado o gpt-image-2.5-sunburst por defecto
+        self.model = model or settings.OPENAI_IMAGE_MODEL or "gpt-image-2.5-sunburst"
 
         self.client = None
         if self.api_key and self.api_key not in ["tu-api-key-de-openai", ""]:
@@ -29,35 +25,44 @@ class AIImageService:
     def generate_slide_image(
         self,
         prompt: str,
-        size: str = "1024x1792",
+        size: str = "1024x1024",
         quality: str = "standard",
         slide_info: Optional[Dict[str, Any]] = None,
         brand_info: Optional[Dict[str, Any]] = None
     ) -> bytes:
         """
-        Genera la imagen con OpenAI DALL-E 3 si hay API Key válida.
+        Genera imagen fotográfica hiperrealista con OpenAI API.
         Si la API Key no está configurada o la API de OpenAI falla/excede cuota,
-        genera una pieza gráfica de alta fidelidad editorial con Pillow,
-        garantizando que la generación NUNCA falle ni deje la pantalla en blanco.
+        aplica render de diseño editorial de contingencia con Pillow.
         """
-        # 1. Intento con OpenAI API si el cliente está disponible
         if self.client:
-            try:
-                image_size = "1024x1792" if self.model == "dall-e-3" else "1024x1024"
-                response = self.client.images.generate(
-                    model=self.model,
-                    prompt=prompt,
-                    size=image_size,
-                    quality=quality,
-                    n=1,
-                    response_format="b64_json"
-                )
-                image_base64 = response.data[0].b64_json
-                return base64.b64decode(image_base64)
-            except Exception as e:
-                logger.warning(f"Llamado a OpenAI DALL-E falló ({e}). Aplicando render de diseño editorial de alta definición.")
+            # Modelos gpt-image soportan 1024x1024 o 1024x1536 / 1024x1792
+            models_to_try = [self.model, "gpt-image-2.5-sunburst", "gpt-image-1.5", "gpt-image-1"]
+            # Deduplicar
+            seen = set()
+            models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
 
-        # 2. Generador Gráfico de Alta Fidelidad (Pillow / Editorial Canvas HD)
+            for m in models_to_try:
+                try:
+                    img_size = "1024x1024"
+                    response = self.client.images.generate(
+                        model=m,
+                        prompt=prompt,
+                        size=img_size,
+                        n=1
+                    )
+                    first_img = response.data[0]
+                    if hasattr(first_img, 'b64_json') and first_img.b64_json:
+                        return base64.b64decode(first_img.b64_json)
+                    elif hasattr(first_img, 'url') and first_img.url:
+                        import requests
+                        r = requests.get(first_img.url, timeout=30)
+                        if r.status_code == 200:
+                            return r.content
+                except Exception as e:
+                    logger.warning(f"Intento con modelo {m} falló ({e}). Probando siguiente...")
+
+        # 2. Generador Gráfico de Contingencia (Pillow / Editorial Canvas HD)
         return self._render_editorial_canvas(prompt=prompt, slide_info=slide_info, brand_info=brand_info)
 
     def _render_editorial_canvas(
