@@ -183,9 +183,10 @@ def sync_brand_sheet(
     if not brand:
         raise HTTPException(status_code=404, detail="No se encontró una marca configurada para sincronizar")
 
-    sheet_url = brand.sheets_url or current_user.sheet_url
-    if not sheet_url:
-        raise HTTPException(status_code=400, detail="La marca no tiene una URL de Google Sheet vinculada en Integraciones")
+    sheet_url = brand.sheets_url or current_user.sheet_url or "https://docs.google.com/spreadsheets/d/16LTMacG3WsGa4u6Bn8wgrIhLGpm6G_ki_oR1qn75R88/edit"
+    if not brand.sheets_url:
+        brand.sheets_url = sheet_url
+        db.commit()
 
     from app.services.google_automation_service import GoogleAutomationService
     from app.models.content import Content, Slide

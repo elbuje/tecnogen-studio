@@ -73,7 +73,7 @@ def seed():
                 avatar_minutes_used=12,
                 credits_balance=220,
                 auto_mode_enabled=True,
-                sheet_url="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit",
+                sheet_url="https://docs.google.com/spreadsheets/d/16LTMacG3WsGa4u6Bn8wgrIhLGpm6G_ki_oR1qn75R88/edit",
                 sheet_auto_mode="copilot"
             )
             db.add(client)
@@ -92,6 +92,7 @@ def seed():
                 font_style_body="sans-modern",
                 logo_position="top-left",
                 logo_width_px=180,
+                sheets_url="https://docs.google.com/spreadsheets/d/16LTMacG3WsGa4u6Bn8wgrIhLGpm6G_ki_oR1qn75R88/edit",
                 brand_rules={
                     "paginador": "abajo-linea-conectada",
                     "flechas_navegacion": True,
@@ -108,6 +109,11 @@ def seed():
             client.monthly_video_limit = 30
             client.auto_mode_enabled = True
             client.sheet_auto_mode = "copilot"
+            client.sheet_url = "https://docs.google.com/spreadsheets/d/16LTMacG3WsGa4u6Bn8wgrIhLGpm6G_ki_oR1qn75R88/edit"
+            
+            brand = db.query(Brand).filter(Brand.user_id == client.id).first()
+            if brand:
+                brand.sheets_url = "https://docs.google.com/spreadsheets/d/16LTMacG3WsGa4u6Bn8wgrIhLGpm6G_ki_oR1qn75R88/edit"
             db.commit()
 
         # 4. Default AI Setting
