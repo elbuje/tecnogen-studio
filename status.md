@@ -28,6 +28,7 @@ TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y 
 | **Brand Kit (10 Layout Cards)** | 🟢 Completado | 10 tarjetas con mini-wireframes interactivos de distribución de texto, logo e imagen (`/app/brands`). |
 | **Google Drive 5 Carpetas** | 🟢 Completado | Carpetas de Logos, Sujetos, Manuales, Plantillas, Productos + tags `[TAG:nombre]` para Excel/Sheets (`/app/integrations`). |
 | **Mi Biblioteca & Visor** | 🟢 Completado | Visor 1024x1536 con polling automático, borrado de carruseles y regeneración slide por slide / todo (`/app/library`, `/app/viewer/:id`). |
+| **Multi-Look & Feel (Themes)** | 🟢 Completado | Selector instantáneo sin recarga de 4 apariencias: TecnoGen Cyber Glow, HeyGen/Canva Studio, Claude Cowork y ChatGPT Canvas. |
 
 ---
 
