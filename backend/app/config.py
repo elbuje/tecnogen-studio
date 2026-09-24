@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     OPENAI_TEXT_MODEL: str = "gpt-4o-mini"
     
     # Google Drive Service Account / OAuth
-    GOOGLE_SERVICE_ACCOUNT_EMAIL: Optional[str] = "drive-bot@tecnogen-studio.iam.gserviceaccount.com"
-    GOOGLE_SERVICE_ACCOUNT_KEY_PATH: Optional[str] = None
+    GOOGLE_SERVICE_ACCOUNT_EMAIL: Optional[str] = "727210347000-compute@developer.gserviceaccount.com"
+    GOOGLE_SERVICE_ACCOUNT_KEY_PATH: Optional[str] = "storage/google-service-account.json"
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     

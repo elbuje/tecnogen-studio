@@ -32,6 +32,8 @@ class MetricoolConnectRequest(BaseModel):
 class ApiKeyCreateRequest(BaseModel):
     label: str
 
+from app.config import settings
+
 @router.get("")
 def get_integrations_status(brand_id: Optional[str] = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     brand = None
@@ -53,7 +55,7 @@ def get_integrations_status(brand_id: Optional[str] = None, current_user: User =
             "templates_folder_id": brand.gdrive_templates_folder_id if brand else None,
             "products_folder_id": brand.gdrive_products_folder_id if brand else None,
             "output_folder_id": brand.gdrive_output_folder_id if brand else None,
-            "service_account_email": "drive-bot@tecnogen-studio.iam.gserviceaccount.com"
+            "service_account_email": settings.GOOGLE_SERVICE_ACCOUNT_EMAIL
         },
         "sheets": {
             "connected": bool(brand and brand.sheets_url),

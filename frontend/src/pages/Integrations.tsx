@@ -52,7 +52,7 @@ export const Integrations: React.FC = () => {
 
   const [activeHelp, setActiveHelp] = useState<string | null>(null);
 
-  const SERVICE_ACCOUNT = "drive-bot@tecnogen-studio.iam.gserviceaccount.com";
+  const SERVICE_ACCOUNT = "727210347000-compute@developer.gserviceaccount.com";
 
   const fetchAll = async () => {
     try {
