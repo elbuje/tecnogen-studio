@@ -371,6 +371,152 @@ def list_agent_configurations(
     return results
 
 
+@router.get("/agents/sheet-jobs")
+def get_sheet_jobs_for_client(
+    client_email: str,
+    current_user: User = Depends(get_current_ops_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Lee las filas del Google Sheet del cliente y devuelve las tareas pendientes y su estado.
+    """
+    client = db.query(User).filter(User.email == client_email).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    brand = db.query(Brand).filter(Brand.user_id == client.id).first()
+    sheet_url = (brand.sheets_url if brand else None) or client.sheet_url
+    if not sheet_url:
+        raise HTTPException(status_code=400, detail="El cliente no tiene un Google Sheet vinculado")
+
+    from app.services.google_automation_service import GoogleAutomationService
+    g_svc = GoogleAutomationService()
+    try:
+        jobs = g_svc.read_sheet_jobs(sheet_url)
+        return {
+            "client_email": client.email,
+            "sheet_url": sheet_url,
+            "total_rows": len(jobs),
+            "pending_count": sum(1 for j in jobs if j.get("is_pending")),
+            "jobs": jobs
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error leyendo Google Sheet: {str(e)}")
+
+
+@router.post("/agents/sync-sheet")
+def sync_sheet_automatically(
+    client_email: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_ops_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Recorre el Google Sheet del cliente, detecta filas con 'Pendiente — enviar a la IA'
+    que no hayan sido procesadas, las pone en 'Procesando' y dispara la generación.
+    """
+    client = db.query(User).filter(User.email == client_email).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    brand = db.query(Brand).filter(Brand.user_id == client.id).first()
+    sheet_url = (brand.sheets_url if brand else None) or client.sheet_url
+    if not sheet_url:
+        raise HTTPException(status_code=400, detail="El cliente no tiene un Google Sheet vinculado")
+
+    from app.services.google_automation_service import GoogleAutomationService
+    g_svc = GoogleAutomationService()
+    jobs = g_svc.read_sheet_jobs(sheet_url)
+
+    pending_jobs = [j for j in jobs if j.get("is_pending")]
+    if not pending_jobs:
+        return {
+            "success": True,
+            "message": "No hay filas con estado 'Pendiente — enviar a la IA' pendientes de procesar.",
+            "processed_count": 0
+        }
+
+    triggered = []
+    mode_to_use = client.sheet_auto_mode or "autonomous"
+
+    for job in pending_jobs:
+        row_ref = str(job["row_number"])
+        topic = job["titulo"] or job["tema"] or f"Contenido Fila {row_ref}"
+        
+        # 1. Parsear el guion del Sheet si existe
+        parsed_slides = g_svc.parse_script_to_slides(job.get("guion", ""))
+        total_slides = len(parsed_slides) if parsed_slides else 6
+
+        # 2. Marcar en el Sheet como "Procesando"
+        g_svc.update_sheet_row_status(
+            sheet_url=sheet_url,
+            row_number=job["row_number"],
+            estado="Procesando"
+        )
+
+        # 3. Crear registro Content
+        new_content = Content(
+            brand_id=brand.id,
+            type="carousel",
+            title=topic,
+            hook_text=parsed_slides[0].get("title", topic) if parsed_slides else topic,
+            caption_copy=job.get("copy_instagram") or f"💡 {topic}\n\nEn {brand.name} priorizamos tu bienestar y sonrisa.",
+            hashtags="#saluddental #odontologia #" + brand.name.replace(" ", ""),
+            status="generating" if mode_to_use == "autonomous" else "ready_for_review",
+            source="google_sheet",
+            sheet_row_ref=row_ref,
+            total_slides=total_slides
+        )
+        db.add(new_content)
+        db.commit()
+        db.refresh(new_content)
+
+        # 4. Crear los Slides en la base de datos
+        if parsed_slides:
+            for s in parsed_slides:
+                slide = Slide(
+                    content_id=new_content.id,
+                    slide_number=s["slide_number"],
+                    slide_type=s["slide_type"],
+                    prompt_used=s["title"],
+                    status="pending"
+                )
+                db.add(slide)
+        else:
+            slides_copy = generate_carousel_slides_copy(topic=topic, total_slides=total_slides, brand_name=brand.name)
+            for idx, s in enumerate(slides_copy, start=1):
+                slide = Slide(
+                    content_id=new_content.id,
+                    slide_number=idx,
+                    slide_type=s.get("slide_type", "content"),
+                    prompt_used=s.get("title", ""),
+                    status="pending"
+                )
+                db.add(slide)
+        db.commit()
+
+        # 5. Lanzar renderizado
+        if mode_to_use == "autonomous":
+            background_tasks.add_task(process_content_generation, new_content.id, SessionLocal)
+
+        triggered.append({
+            "row": job["row_number"],
+            "title": topic,
+            "content_id": new_content.id,
+            "slides_count": total_slides
+        })
+
+    client.sheet_last_sync_at = datetime.utcnow()
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Se disparó la creación para {len(triggered)} carruseles desde el Sheet.",
+        "processed_count": len(triggered),
+        "items": triggered
+    }
+
+
 @router.post("/agents/trigger-job", response_model=AgentTriggerJobResponse)
 def trigger_agent_job_from_sheet(
     payload: AgentTriggerJobPayload,
@@ -402,6 +548,21 @@ def trigger_agent_job_from_sheet(
     if mode_to_use == "auto":
         mode_to_use = client.sheet_auto_mode or "copilot"
 
+    # Marcar en el Sheet si se especificó fila y existe URL
+    sheet_url = (brand.sheets_url if brand else None) or client.sheet_url
+    from app.services.google_automation_service import GoogleAutomationService
+    g_svc = GoogleAutomationService()
+
+    if sheet_url and payload.sheet_row_ref and payload.sheet_row_ref.isdigit():
+        try:
+            g_svc.update_sheet_row_status(
+                sheet_url=sheet_url,
+                row_number=int(payload.sheet_row_ref),
+                estado="Procesando"
+            )
+        except Exception as e:
+            logger.warning(f"No se pudo actualizar estado en Sheet a Procesando: {e}")
+
     # 1. Generar copy con Copy Service
     total_slides = 6
     slides_copy = generate_carousel_slides_copy(
@@ -416,8 +577,8 @@ def trigger_agent_job_from_sheet(
         type=payload.format or "carousel",
         title=payload.topic,
         hook_text=slides_copy[0].get("title", payload.topic) if slides_copy else payload.topic,
-        caption_copy=f"Nuevo contenido generado sobre {payload.topic} para {brand.name}.\n\n#Salud #Estetica #{brand.name.replace(' ', '')}",
-        hashtags=f"#{brand.name.replace(' ', '')} #Tendencias #TecnoGen",
+        caption_copy=f"💡 {payload.topic}\n\nEn {brand.name} priorizamos tu bienestar con tecnología y calidez.\n\n#SaludBucal #EsteticaDental #{brand.name.replace(' ', '')}",
+        hashtags=f"#{brand.name.replace(' ', '')} #SaludDental #TecnoGen",
         status="generating" if mode_to_use == "autonomous" else "ready_for_review",
         source="google_sheet",
         sheet_row_ref=payload.sheet_row_ref,
@@ -458,6 +619,7 @@ def trigger_agent_job_from_sheet(
         details=f"Generación disparada desde Sheet (Fila {payload.sheet_row_ref}). Modo: {mode_to_use}. Contenido: {new_content.id}"
     )
     db.add(log)
+    db.commit()
     db.commit()
 
     return {

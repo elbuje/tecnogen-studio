@@ -38,6 +38,20 @@ export const OpsAgents: React.FC = () => {
   const [testMode, setTestMode] = useState('copilot'); // 'autonomous' or 'copilot'
   const [triggering, setTriggering] = useState(false);
   const [triggerResult, setTriggerResult] = useState<any>(null);
+  const [syncingEmail, setSyncingEmail] = useState<string | null>(null);
+
+  const handleSyncSheet = async (email: string) => {
+    try {
+      setSyncingEmail(email);
+      const res = await api.post(`/ops/agents/sync-sheet?client_email=${encodeURIComponent(email)}`);
+      alert(res.data.message || 'Sincronización completada.');
+      fetchAgents();
+    } catch (e: any) {
+      alert('Error sincronizando sheet: ' + (e.response?.data?.detail || e.message));
+    } finally {
+      setSyncingEmail(null);
+    }
+  };
 
   const fetchAgents = async () => {
     try {
@@ -174,16 +188,24 @@ export const OpsAgents: React.FC = () => {
                   <span>Última sincronización:</span>
                   <span className="text-purple-300 font-mono">{agent.sheet_last_sync_at ? new Date(agent.sheet_last_sync_at).toLocaleString() : 'Pendiente primer disparo'}</span>
                 </div>
-                <div className="truncate pt-1 border-t border-slate-900">
+                <div className="truncate pt-1 border-t border-slate-900 flex items-center justify-between">
                   <a
                     href={agent.sheet_url}
                     target="_blank"
                     rel="noreferrer"
                     className="text-cyan-400 hover:underline flex items-center gap-1 text-[11px]"
                   >
-                    <span>Abrir Planilla de Novedades del Cliente</span>
+                    <span>Abrir Planilla</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
+                  <button
+                    onClick={() => handleSyncSheet(agent.client_email)}
+                    disabled={syncingEmail === agent.client_email}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] flex items-center gap-1 transition-all shadow-md shadow-indigo-600/20"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${syncingEmail === agent.client_email ? 'animate-spin' : ''}`} />
+                    <span>{syncingEmail === agent.client_email ? 'Sincronizando...' : 'Sincronizar Sheet'}</span>
+                  </button>
                 </div>
               </div>
             </div>

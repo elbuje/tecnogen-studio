@@ -81,25 +81,40 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             "font_style_body": brand.font_style_body
         }
 
-        slides_copy = generate_carousel_slides_copy(
-            topic=content.title,
-            total_slides=content.total_slides,
-            brand_name=brand.name,
-            openai_client=image_service.client
-        )
-
-        # Generar caption y hashtags con IA
-        try:
-            caption_data = generate_post_caption(
+        # Verificar si ya existen láminas pre-cargadas (ej. originadas del GUION del Sheet)
+        existing_slides = db.query(Slide).filter(Slide.content_id == content.id).order_by(Slide.slide_number).all()
+        
+        if existing_slides and len(existing_slides) > 0:
+            slides_copy = []
+            for es in existing_slides:
+                slides_copy.append({
+                    "slide_number": es.slide_number,
+                    "slide_type": es.slide_type,
+                    "badge": f"PASO {es.slide_number}" if es.slide_type == "content" else es.slide_type.upper(),
+                    "title": es.prompt_used or content.title,
+                    "body": es.prompt_used or content.title
+                })
+        else:
+            slides_copy = generate_carousel_slides_copy(
                 topic=content.title,
+                total_slides=content.total_slides,
                 brand_name=brand.name,
-                slides=slides_copy,
                 openai_client=image_service.client
             )
-            content.caption_copy = caption_data.get("caption", content.caption_copy)
-            content.hashtags = caption_data.get("hashtags", content.hashtags)
-        except Exception as e:
-            logger.warning(f"Error generando caption enriquecido: {e}")
+
+        # Generar caption y hashtags con IA si no vienen provistos
+        if not content.caption_copy or "💡" in content.caption_copy or "Nuevo contenido generado" in content.caption_copy:
+            try:
+                caption_data = generate_post_caption(
+                    topic=content.title,
+                    brand_name=brand.name,
+                    slides=slides_copy,
+                    openai_client=image_service.client
+                )
+                content.caption_copy = caption_data.get("caption", content.caption_copy)
+                content.hashtags = caption_data.get("hashtags", content.hashtags)
+            except Exception as e:
+                logger.warning(f"Error generando caption enriquecido: {e}")
 
         failed_count = 0
 
@@ -157,12 +172,30 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
                 failed_count += 1
                 refund_credits_atomic(db, brand.user_id, 1, f"Reembolso por fallo en slide {i}", content.id)
 
-
         if failed_count == content.total_slides:
             content.status = "failed"
         else:
             content.status = "ready_for_review"
         db.commit()
+
+        # Si provino de un Google Sheet, actualizar el Sheet con el nuevo estado y link de preview
+        if content.source == "google_sheet" and content.sheet_row_ref and brand.sheets_url:
+            try:
+                from app.services.google_automation_service import GoogleAutomationService
+                g_svc = GoogleAutomationService()
+                row_idx = int(content.sheet_row_ref)
+                preview_link = f"https://studio.tecnogen.ar/app/viewer/{content.id}"
+                final_sheet_status = "Listo para Revisión" if content.status == "ready_for_review" else "Error"
+                g_svc.update_sheet_row_status(
+                    sheet_url=brand.sheets_url,
+                    row_number=row_idx,
+                    estado=final_sheet_status,
+                    content_id=content.id,
+                    preview_url=preview_link
+                )
+            except Exception as e_sheet:
+                logger.error(f"Error actualizando estado en Google Sheet: {e_sheet}")
+
     finally:
         db.close()
 
