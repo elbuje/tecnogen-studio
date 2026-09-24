@@ -15,7 +15,9 @@ import {
   Palette,
   Video,
   FileImage,
-  Play
+  Play,
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -91,6 +93,25 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const [syncingSheet, setSyncingSheet] = useState(false);
+  const handleSyncSheet = async () => {
+    const brandId = selectedBrandId || (brands.length > 0 ? brands[0].id : null);
+    if (!brandId) {
+      alert('No hay una marca configurada para sincronizar.');
+      return;
+    }
+    try {
+      setSyncingSheet(true);
+      const res = await api.post('/ops/agents/sync-sheet', { brand_id: brandId });
+      alert(res.data.detail || `¡Sincronización exitosa! Pendientes encontrados: ${res.data.pending_count || 0}`);
+      await fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Error al sincronizar Google Sheet. Verificá que la URL esté configurada en Integraciones.');
+    } finally {
+      setSyncingSheet(false);
+    }
+  };
+
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       {/* Welcome Banner & Quick Action */}
@@ -109,6 +130,14 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 relative z-10">
+          <button
+            onClick={handleSyncSheet}
+            disabled={syncingSheet}
+            className="px-5 py-3 rounded-2xl font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 shadow-xl shadow-emerald-500/10 transition-all flex items-center gap-2 text-sm disabled:opacity-40"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncingSheet ? 'animate-spin' : ''}`} />
+            {syncingSheet ? 'Sincronizando...' : 'Sincronizar Google Sheet'}
+          </button>
           <button
             onClick={() => handleOpenModalWithFormat('video_reel')}
             className="px-5 py-3 rounded-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-xl shadow-purple-600/25 transition-all flex items-center gap-2 text-sm"

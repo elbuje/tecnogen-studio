@@ -369,11 +369,28 @@ export const ContentViewer: React.FC = () => {
               </span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 font-mono leading-relaxed max-h-40 overflow-y-auto">
-              <span className="text-slate-500 font-sans block text-[10px] uppercase font-bold mb-1">
-                Prompt Enviado a OpenAI:
-              </span>
-              {currentSlide?.prompt_used || 'Generando prompt con OpenAI...'}
+            {/* Prompt exacto enviado a la IA */}
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-indigo-500/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-indigo-400 font-bold text-xs flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" /> Prompt Enviado a la IA para este Slide
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentSlide?.prompt_used) {
+                      navigator.clipboard.writeText(currentSlide.prompt_used);
+                      alert('¡Prompt copiado al portapapeles!');
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-semibold border border-indigo-500/30 transition-all flex items-center gap-1"
+                >
+                  <Share2 className="w-3 h-3" /> Copiar Prompt
+                </button>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto selection:bg-indigo-500 selection:text-white">
+                {currentSlide?.prompt_used || 'Generando prompt con OpenAI...'}
+              </div>
             </div>
 
             {/* Granular Regeneration Form (1 Credit) */}

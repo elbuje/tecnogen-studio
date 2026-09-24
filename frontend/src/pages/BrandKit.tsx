@@ -371,63 +371,7 @@ export const BrandKit: React.FC = () => {
             </Link>
           </div>
 
-          {/* 10 Tarjetas de Distribución Visual y Composición */}
-          <div className="p-8 rounded-3xl glass-card space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Layout className="w-5 h-5 text-cyan-400" /> Distribución y Composición Gráfica (10 Estilos)
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Seleccioná la estructura de diseño predeterminada que guiará la distribución de textos, imágenes y logos en tus diapositivas.
-                </p>
-              </div>
-              <div className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 self-start sm:self-auto">
-                Seleccionado: <span className="text-cyan-400 font-bold">{LAYOUT_PRESETS.find(p => p.id === (selectedBrand.layout_preset || 'editorial-top'))?.name}</span>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {LAYOUT_PRESETS.map((preset) => {
-                const isSelected = (selectedBrand.layout_preset || 'editorial-top') === preset.id;
-                return (
-                  <div
-                    key={preset.id}
-                    onClick={() => setSelectedBrand({ ...selectedBrand, layout_preset: preset.id })}
-                    className={`cursor-pointer rounded-2xl p-3 border transition-all duration-200 flex flex-col justify-between group relative overflow-hidden ${
-                      isSelected
-                        ? 'bg-slate-900 border-cyan-400 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400'
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
-                    }`}
-                  >
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center shadow-md">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                    )}
-
-                    <div className="mb-2">
-                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        {preset.category}
-                      </div>
-                      <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
-                        {preset.name}
-                      </div>
-                    </div>
-
-                    {/* Mini Wireframe Preview */}
-                    <div className="my-2 shadow-inner rounded-xl overflow-hidden border border-slate-800">
-                      {renderLayoutMiniWireframe(preset.id, isSelected)}
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 leading-tight mt-1 line-clamp-2">
-                      {preset.description}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
 
           {/* Paleta de Colores y Tipografías */}
           <div className="p-8 rounded-3xl glass-card space-y-6">

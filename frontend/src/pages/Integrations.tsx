@@ -17,7 +17,8 @@ import {
   Users,
   BookOpen,
   LayoutTemplate,
-  ShoppingBag
+  ShoppingBag,
+  RefreshCw
 } from 'lucide-react';
 
 export const Integrations: React.FC = () => {
@@ -140,6 +141,23 @@ export const Integrations: React.FC = () => {
       alert('Error al guardar Google Sheet.');
     } finally {
       setSavingSheets(false);
+    }
+  };
+
+  const [syncingSheet, setSyncingSheet] = useState(false);
+  const handleSyncSheet = async () => {
+    if (!selectedBrandId) {
+      alert('Seleccioná una marca primero.');
+      return;
+    }
+    try {
+      setSyncingSheet(true);
+      const res = await api.post('/ops/agents/sync-sheet', { brand_id: selectedBrandId });
+      alert(res.data.detail || `¡Sincronización exitosa! Pendientes encontrados: ${res.data.pending_count || 0}`);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Error al sincronizar Google Sheet.');
+    } finally {
+      setSyncingSheet(false);
     }
   };
 
@@ -464,7 +482,16 @@ export const Integrations: React.FC = () => {
             />
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleSyncSheet}
+              disabled={syncingSheet || !sheetsUrl}
+              className="px-6 py-2.5 rounded-xl font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs transition-all flex items-center gap-2 disabled:opacity-40"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncingSheet ? 'animate-spin' : ''}`} />
+              {syncingSheet ? 'Leyendo Sheet...' : 'Sincronizar Sheet Ahora'}
+            </button>
             <button
               type="submit"
               disabled={savingSheets}
