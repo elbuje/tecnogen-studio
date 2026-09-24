@@ -2,8 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { Navbar } from './components/layout/Navbar';
-import { Sidebar } from './components/layout/Sidebar';
+import { AppLayout } from './components/layout/AppLayout';
 import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -26,15 +25,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     return <Navigate to="/login" replace />;
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-app)] transition-colors duration-300">
-      <Navbar />
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-[var(--bg-app)]/40 p-1 md:p-2">{children}</main>
-      </div>
-    </div>
-  );
+  return <AppLayout>{children}</AppLayout>;
 };
 
 export const App: React.FC = () => {
