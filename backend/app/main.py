@@ -4,7 +4,7 @@ import os
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, brands, contents, settings as ai_settings, billing, integrations
+from app.routers import auth, brands, contents, settings as ai_settings, billing, integrations, ops
 
 # Crear tablas en base de datos si no existen
 Base.metadata.create_all(bind=engine)
@@ -32,6 +32,8 @@ app.include_router(contents.router, prefix=settings.API_V1_STR)
 app.include_router(ai_settings.router, prefix=settings.API_V1_STR)
 app.include_router(billing.router, prefix=settings.API_V1_STR)
 app.include_router(integrations.router, prefix=settings.API_V1_STR)
+app.include_router(ops.router, prefix=settings.API_V1_STR)
+
 
 @app.post("/api/v1/diagnostic")
 async def receive_diagnostic(request: bytes = None):

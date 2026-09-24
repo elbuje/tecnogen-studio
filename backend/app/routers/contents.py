@@ -103,6 +103,14 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             return
 
         brand = content.brand
+        brand_info = {
+            "name": brand.name,
+            "primary_color": brand.primary_color,
+            "accent_color": brand.accent_color,
+            "bg_color": brand.bg_color,
+            "font_style_title": brand.font_style_title,
+            "font_style_body": brand.font_style_body
+        }
 
         slides_copy = generate_carousel_slides_copy(
             topic=content.title,
@@ -114,11 +122,16 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
         failed_count = 0
 
         for i, slide_data in enumerate(slides_copy, start=1):
+            slide_data["total_slides"] = content.total_slides
             slide_type = slide_data.get("slide_type", "content")
             prompt = build_openai_slide_prompt(brand, i, content.total_slides, slide_data, global_feedback=global_feedback)
             
             try:
-                img_bytes = image_service.generate_slide_image(prompt=prompt)
+                img_bytes = image_service.generate_slide_image(
+                    prompt=prompt,
+                    slide_info=slide_data,
+                    brand_info=brand_info
+                )
                 b64_str = base64.b64encode(img_bytes).decode('utf-8')
                 data_uri = f"data:image/png;base64,{b64_str}"
                 
@@ -142,25 +155,26 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
                     db.add(slide)
                 db.commit()
             except Exception as e:
-                logger.error(f"Fallo en OpenAI al generar slide {i}: {e}")
+                logger.error(f"Fallo al generar slide {i}: {e}")
                 existing = db.query(Slide).filter(Slide.content_id == content.id, Slide.slide_number == i).first()
                 if existing:
                     existing.status = "failed"
-                    existing.feedback = f"Error OpenAI: {str(e)}"
+                    existing.feedback = f"Error: {str(e)}"
                 else:
                     slide = Slide(
                         content_id=content.id,
                         slide_number=i,
                         slide_type=slide_type,
                         prompt_used=prompt,
-                        feedback=f"Error OpenAI: {str(e)}",
+                        feedback=f"Error: {str(e)}",
                         status="failed",
                         version=1
                     )
                     db.add(slide)
                 db.commit()
                 failed_count += 1
-                refund_credits_atomic(db, brand.user_id, 1, f"Reembolso por fallo OpenAI en slide {i}", content.id)
+                refund_credits_atomic(db, brand.user_id, 1, f"Reembolso por fallo en slide {i}", content.id)
+
 
         if failed_count == content.total_slides:
             content.status = "failed"
@@ -180,7 +194,7 @@ def generate_content(
     brand = db.query(Brand).filter(Brand.id == payload.brand_id).first()
     if not brand:
         raise HTTPException(status_code=404, detail="Marca no encontrada")
-    if brand.user_id != current_user.id and current_user.role != "admin":
+    if brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a esta marca")
 
     total_slides = payload.total_slides or 6
@@ -208,7 +222,7 @@ def generate_content(
         user_id=current_user.id,
         amount=total_slides,
         action_type="generate_carousel",
-        description=f"Generación Carrusel: {payload.title} ({total_slides} slides)",
+        description=f"Generación {payload.type or 'Carrusel'}: {payload.title} ({total_slides} slides)",
         reference_id=content.id
     )
 
@@ -220,7 +234,7 @@ def generate_content(
         "estimated_time_seconds": total_slides * 15,
         "credits_charged": total_slides,
         "credits_remaining": remaining,
-        "message": f"Tu carrusel se está generando con {total_slides} láminas mediante OpenAI."
+        "message": f"Tu {payload.type or 'carrusel'} se está generando con {total_slides} láminas."
     }
 
 @router.post("/{content_id}/regenerate-all", response_model=ContentGenerateResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -231,13 +245,10 @@ def regenerate_all_slides(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Regenera todas las láminas del carrusel completo consumiendo N créditos.
-    """
     content = db.query(Content).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(status_code=404, detail="Contenido no encontrado")
-    if content.brand.user_id != current_user.id and current_user.role != "admin":
+    if content.brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
 
     # Descuento atómico de créditos
@@ -261,7 +272,7 @@ def regenerate_all_slides(
         "estimated_time_seconds": content.total_slides * 15,
         "credits_charged": content.total_slides,
         "credits_remaining": remaining,
-        "message": f"Regenerando todas las {content.total_slides} láminas del carrusel."
+        "message": f"Regenerando todas las {content.total_slides} láminas."
     }
 
 @router.get("", response_model=List[ContentOut])
@@ -271,7 +282,7 @@ def list_contents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if current_user.role == "admin":
+    if current_user.role in ["admin", "superadmin", "support"]:
         query = db.query(Content)
     else:
         query = db.query(Content).join(Brand).filter(Brand.user_id == current_user.id)
@@ -287,37 +298,34 @@ def get_content(content_id: str, current_user: User = Depends(get_current_user),
     content = db.query(Content).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(status_code=404, detail="Contenido no encontrado")
-    if content.brand.user_id != current_user.id and current_user.role != "admin":
+    if content.brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
     return content
 
 @router.delete("/{content_id}")
 def delete_content(content_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """
-    Elimina un carrusel/contenido por completo.
-    """
     content = db.query(Content).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(status_code=404, detail="Contenido no encontrado")
-    if content.brand.user_id != current_user.id and current_user.role != "admin":
+    if content.brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
 
     title = content.title
     db.delete(content)
     db.commit()
-    return {"message": f"Carrusel '{title}' eliminado exitosamente.", "deleted_id": content_id}
+    return {"message": f"Contenido '{title}' eliminado exitosamente.", "deleted_id": content_id}
 
 @router.post("/{content_id}/approve")
 def approve_content(content_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     content = db.query(Content).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(status_code=404, detail="Contenido no encontrado")
-    if content.brand.user_id != current_user.id and current_user.role != "admin":
+    if content.brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
 
     content.status = "approved"
     db.commit()
-    return {"message": "Carrusel aprobado con éxito", "content_id": content.id, "status": content.status}
+    return {"message": "Contenido aprobado con éxito", "content_id": content.id, "status": content.status}
 
 @router.post("/{content_id}/slides/{slide_number}/regenerate", response_model=SlideOut)
 def regenerate_slide(
@@ -330,8 +338,9 @@ def regenerate_slide(
     content = db.query(Content).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(status_code=404, detail="Contenido no encontrado")
-    if content.brand.user_id != current_user.id and current_user.role != "admin":
+    if content.brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
+
 
     charge_credits_atomic(
         db=db,

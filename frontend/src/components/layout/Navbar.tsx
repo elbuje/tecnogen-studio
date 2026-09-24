@@ -43,8 +43,19 @@ export const Navbar: React.FC = () => {
 
             {/* Plan Badge */}
             <div className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-md bg-cyan-950/60 border border-cyan-800/50 text-cyan-300 text-xs font-semibold uppercase tracking-wider">
-              Plan {user.plan_tier}
+              {user.role === 'superadmin' ? 'SuperAdmin' : user.role === 'support' ? 'Soporte HQ' : `Plan ${user.plan_tier}`}
             </div>
+
+            {/* Ops HQ Switch for SuperAdmin & Support */}
+            {(user.role === 'superadmin' || user.role === 'admin' || user.role === 'support') && (
+              <Link
+                to="/ops"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/40 hover:to-indigo-600/40 border border-purple-500/40 text-purple-200 text-xs font-bold transition-all shadow-sm"
+              >
+                <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+                <span>Panel Ops / HQ</span>
+              </Link>
+            )}
 
             {/* Theme / Look & Feel Switcher */}
             <ThemeSwitcher />
@@ -72,5 +83,6 @@ export const Navbar: React.FC = () => {
         )}
       </div>
     </header>
+
   );
 };

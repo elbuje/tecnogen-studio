@@ -54,3 +54,22 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+def get_current_ops_user(current_user: User = Depends(get_current_user)) -> User:
+    """Valida que el usuario sea SuperAdmin, Admin o Soporte."""
+    if current_user.role not in ["admin", "superadmin", "support"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido: Se requieren permisos de Operaciones o Soporte."
+        )
+    return current_user
+
+def get_current_superadmin(current_user: User = Depends(get_current_user)) -> User:
+    """Valida que el usuario sea SuperAdmin o Admin."""
+    if current_user.role not in ["admin", "superadmin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido: Se requieren permisos de Administrador Maestro."
+        )
+    return current_user
+

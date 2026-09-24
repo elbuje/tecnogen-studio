@@ -15,9 +15,23 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(100), nullable=True)
-    role = Column(String(20), nullable=False, default="client")  # 'admin', 'client', 'agency'
-    plan_tier = Column(String(20), nullable=False, default="starter")  # 'starter', 'growth', 'agency'
-    credits_balance = Column(Integer, nullable=False, default=75)
+    role = Column(String(20), nullable=False, default="client")  # 'superadmin', 'admin', 'support', 'client'
+    plan_tier = Column(String(20), nullable=False, default="growth")  # 'starter', 'growth', 'enterprise', 'custom'
+    commercial_status = Column(String(30), nullable=False, default="active")  # 'active', 'trial', 'suspended_payment', 'suspended_manual', 'cancelled'
+    plan_name = Column(String(50), nullable=True, default="Plan Growth Pro")
+    plan_price_monthly = Column(Integer, nullable=True, default=150)
+    monthly_video_limit = Column(Integer, nullable=False, default=30)
+    videos_generated_this_month = Column(Integer, nullable=False, default=0)
+    avatar_minutes_quota = Column(Integer, nullable=False, default=60)
+    avatar_minutes_used = Column(Integer, nullable=False, default=0)
+    
+    # Automatización y Agentes
+    auto_mode_enabled = Column(Boolean, default=False, nullable=False)
+    sheet_url = Column(Text, nullable=True)
+    sheet_auto_mode = Column(String(30), default="copilot", nullable=False)  # 'autonomous', 'copilot', 'disabled'
+    sheet_last_sync_at = Column(DateTime, nullable=True)
+    notes = Column(Text, nullable=True)
+    credits_balance = Column(Integer, nullable=False, default=220)
     
     google_oauth_token = Column(Text, nullable=True)
     google_refresh_token = Column(Text, nullable=True)
@@ -60,3 +74,17 @@ class ApiKey(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="api_keys")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), nullable=False, index=True)
+    user_email = Column(String(255), nullable=True)
+    target_user_id = Column(String(36), nullable=True, index=True)
+    target_email = Column(String(255), nullable=True)
+    action = Column(String(100), nullable=False, index=True)  # 'impersonate_login', 'suspend_client', 'activate_client', 'update_quota', etc.
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+

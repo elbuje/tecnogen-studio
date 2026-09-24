@@ -17,7 +17,7 @@ PLAN_MAX_BRANDS = {
 
 @router.get("", response_model=List[BrandOut])
 def list_brands(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role == "admin":
+    if current_user.role in ["admin", "superadmin", "support"]:
         return db.query(Brand).all()
     return db.query(Brand).filter(Brand.user_id == current_user.id).all()
 
@@ -26,7 +26,7 @@ def create_brand(payload: BrandCreate, current_user: User = Depends(get_current_
     # Validar cuota de marcas según plan
     max_brands = PLAN_MAX_BRANDS.get(current_user.plan_tier, 1)
     current_count = db.query(Brand).filter(Brand.user_id == current_user.id).count()
-    if current_count >= max_brands:
+    if current_count >= max_brands and current_user.role not in ["admin", "superadmin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Tu plan {current_user.plan_tier.capitalize()} permite hasta {max_brands} marca(s). Actualizá tu plan para agregar más."
@@ -59,7 +59,7 @@ def get_brand(brand_id: str, current_user: User = Depends(get_current_user), db:
     brand = db.query(Brand).filter(Brand.id == brand_id).first()
     if not brand:
         raise HTTPException(status_code=404, detail="Marca no encontrada")
-    if brand.user_id != current_user.id and current_user.role != "admin":
+    if brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a esta marca")
     return brand
 
@@ -68,7 +68,7 @@ def update_brand(brand_id: str, payload: BrandUpdate, current_user: User = Depen
     brand = db.query(Brand).filter(Brand.id == brand_id).first()
     if not brand:
         raise HTTPException(status_code=404, detail="Marca no encontrada")
-    if brand.user_id != current_user.id and current_user.role != "admin":
+    if brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a esta marca")
     
     update_data = payload.model_dump(exclude_unset=True)
@@ -84,8 +84,9 @@ def add_brand_asset(brand_id: str, payload: BrandAssetBase, current_user: User =
     brand = db.query(Brand).filter(Brand.id == brand_id).first()
     if not brand:
         raise HTTPException(status_code=404, detail="Marca no encontrada")
-    if brand.user_id != current_user.id and current_user.role != "admin":
+    if brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
         raise HTTPException(status_code=403, detail="No tienes acceso a esta marca")
+
 
     asset = BrandAsset(
         brand_id=brand.id,
