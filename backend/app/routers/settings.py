@@ -14,14 +14,30 @@ def get_ai_settings(current_user: User = Depends(get_current_user), db: Session 
     return db.query(AISetting).all()
 
 @router.post("", response_model=AISettingOut, status_code=status.HTTP_201_CREATED)
-def create_or_update_ai_setting(payload: AISettingCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Solo administradores pueden cambiar la configuración de IA del sistema")
-    
+def create_or_update_ai_setting(
+    payload: AISettingCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     # Desactivar otros del mismo category si este es activo
     if payload.is_active:
         db.query(AISetting).filter(AISetting.category == payload.category).update({"is_active": False})
     
+    # Buscar si ya existe una configuración para este category y provider
+    existing = db.query(AISetting).filter(
+        AISetting.category == payload.category,
+        AISetting.provider == payload.provider
+    ).first()
+
+    if existing:
+        existing.model_name = payload.model_name
+        existing.api_key_override = payload.api_key_override
+        existing.is_active = payload.is_active
+        existing.parameters = payload.parameters or {}
+        db.commit()
+        db.refresh(existing)
+        return existing
+
     setting = AISetting(
         provider=payload.provider,
         category=payload.category,

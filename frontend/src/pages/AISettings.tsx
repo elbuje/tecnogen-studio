@@ -94,8 +94,8 @@ export const AISettings: React.FC = () => {
       setSuccessMsg('¡Configuración de IA guardada en tu perfil con éxito!');
       setTimeout(() => setSuccessMsg(null), 4000);
       await fetchSettings();
-    } catch (e) {
-      alert('Error al guardar la configuración de IA.');
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Error al guardar la configuración de IA.');
     } finally {
       setSaving(false);
     }
