@@ -62,16 +62,23 @@ class GoogleAutomationService:
         return url_or_id.split('?')[0].strip()
 
     @staticmethod
-    def parse_script_to_slides(script_text: str) -> List[Dict[str, Any]]:
+    def parse_script_to_slides(script_text: str, total_slides: int = 4, topic: str = "") -> List[Dict[str, Any]]:
         """
         Parsea el guion de texto proveniente de la columna 'GUION'
-        en láminas estructuradas respetando número, tipo y texto.
+        en láminas estructuradas respetando número, tipo, headline y body_text.
         """
         if not script_text:
-            return []
+            # Fallback a láminas por defecto con el topic
+            return [
+                {"slide_number": 1, "order_index": 1, "slide_type": "cover", "headline": topic or "Portada", "body_text": topic},
+                {"slide_number": 2, "order_index": 2, "slide_type": "content", "headline": "Información Clave", "body_text": topic},
+                {"slide_number": 3, "order_index": 3, "slide_type": "content", "headline": "Consejo Profesional", "body_text": topic},
+                {"slide_number": 4, "order_index": 4, "slide_type": "cta", "headline": "Agendá tu Consulta", "body_text": "Dejanos tu comentario o escribinos por DM."}
+            ]
+
         lines = [l.strip() for l in script_text.split('\n') if l.strip()]
         slides = []
-        for line in lines:
+        for idx, line in enumerate(lines, start=1):
             m = re.match(r'^(\d+)[\.\)]\s*(?:(Portada|Cierre|Paso\s*\d+|Consejo\s*\d+|Mito\s*\d+):?\s*)?(.*)$', line, re.IGNORECASE)
             if m:
                 num = int(m.group(1))
@@ -80,11 +87,27 @@ class GoogleAutomationService:
                 slide_type = 'cover' if (num == 1 or tag.lower() == 'portada') else ('cta' if tag.lower() == 'cierre' else 'content')
                 slides.append({
                     "slide_number": num,
+                    "order_index": num,
                     "slide_type": slide_type,
                     "badge": tag.upper() if tag else f"PASO {num}",
+                    "headline": content[:80] if content else (topic if num == 1 else f"Lámina #{num}"),
                     "title": content,
+                    "body_text": content,
                     "body": content
                 })
+            else:
+                slide_type = 'cover' if idx == 1 else ('cta' if idx == len(lines) else 'content')
+                slides.append({
+                    "slide_number": idx,
+                    "order_index": idx,
+                    "slide_type": slide_type,
+                    "badge": f"PASO {idx}",
+                    "headline": line[:80],
+                    "title": line,
+                    "body_text": line,
+                    "body": line
+                })
+
         return slides
 
     def read_sheet_jobs(self, sheet_url: str, tab_name: str = "Carruseles") -> List[Dict[str, Any]]:

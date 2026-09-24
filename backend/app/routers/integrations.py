@@ -1,13 +1,17 @@
-import hashlib
-import secrets
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models.user import User, ApiKey
 from app.models.brand import Brand
+from app.models.content import Content, Slide
 from app.services.auth_service import get_current_user
+import logging
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/integrations", tags=["Integraciones & APIs"])
 
 router = APIRouter(prefix="/integrations", tags=["Integraciones & APIs"])
 
@@ -161,12 +165,16 @@ def revoke_api_key(key_id: str, current_user: User = Depends(get_current_user), 
     db.commit()
     return {"message": "API Key revocada exitosamente"}
 
+import logging
+logger = logging.getLogger(__name__)
+
 class SyncSheetRequest(BaseModel):
     brand_id: Optional[str] = None
 
 @router.post("/sync-sheet")
 def sync_brand_sheet(
     payload: SyncSheetRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -226,19 +234,16 @@ def sync_brand_sheet(
         topic = job.get("topic") or f"Contenido Sheet Fila {row_idx}"
         script_raw = job.get("script") or ""
         total_slides = job.get("total_slides") or 4
-        notes = job.get("notes") or ""
-        subject = job.get("subject") or ""
 
         try:
-            # 1. Crear registro de Contenido
+            # 1. Crear registro de Contenido con campos exactos del modelo
             content = Content(
                 brand_id=brand.id,
-                user_id=current_user.id,
                 title=topic,
                 type="carousel",
                 status="generating",
+                source="google_sheet",
                 total_slides=total_slides,
-                aspect_ratio="4:5",
                 sheet_row_ref=f"row_{row_idx}"
             )
             db.add(content)
@@ -250,27 +255,24 @@ def sync_brand_sheet(
             for s in slides_data:
                 slide_obj = Slide(
                     content_id=content.id,
-                    order_index=s["order_index"],
-                    slide_type=s["slide_type"],
-                    headline=s["headline"],
-                    body_text=s["body_text"],
-                    layout_style="editorial_clean",
-                    prompt_used=f"Generando prompt con OpenAI para: {s['headline']}...",
+                    slide_number=s.get("order_index") or 1,
+                    slide_type=s.get("slide_type") or "content",
+                    prompt_used=f"Generando prompt con OpenAI para: {s.get('headline', topic)}...",
                     status="pending"
                 )
                 db.add(slide_obj)
             db.commit()
 
-            # 3. Disparar generación
-            process_content_generation(content.id, brand.id)
+            # 3. Disparar generación asíncrona en segundo plano
+            background_tasks.add_task(process_content_generation, content.id, SessionLocal)
             triggered.append({"row_index": row_idx, "content_id": content.id, "title": topic})
         except Exception as e:
-            logger.exception(f"Error procesando fila {row_idx}")
+            logger.exception(f"Error procesando fila {row_idx}: {e}")
             triggered.append({"row_index": row_idx, "error": str(e)})
 
     return {
         "success": True,
-        "detail": f"¡Sincronización exitosa! Se enviaron a generar {len(triggered)} contenidos desde tu Sheet.",
+        "detail": f"¡Sincronización exitosa! Se pusieron en marcha {len(triggered)} contenidos con IA desde tu Sheet.",
         "pending_count": len(triggered),
         "items": triggered
     }
