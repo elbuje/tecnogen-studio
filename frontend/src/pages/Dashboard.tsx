@@ -95,18 +95,14 @@ export const Dashboard: React.FC = () => {
 
   const [syncingSheet, setSyncingSheet] = useState(false);
   const handleSyncSheet = async () => {
-    const brandId = selectedBrandId || (brands.length > 0 ? brands[0].id : null);
-    if (!brandId) {
-      alert('No hay una marca configurada para sincronizar.');
-      return;
-    }
+    const brandId = selectedBrandId || (brands.length > 0 ? brands[0].id : undefined);
     try {
       setSyncingSheet(true);
       const res = await api.post('/integrations/sync-sheet', { brand_id: brandId });
       alert(res.data.detail || `¡Sincronización exitosa! Pendientes procesados: ${res.data.pending_count || 0}`);
       await fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al sincronizar Google Sheet. Verificá que la URL esté configurada en Integraciones.');
+      alert(err.response?.data?.detail || err.message || 'Error al conectar con Google Sheet.');
     } finally {
       setSyncingSheet(false);
     }

@@ -181,25 +181,42 @@ def sync_brand_sheet(
     if not brand:
         brand = db.query(Brand).filter(Brand.user_id == current_user.id).first()
     if not brand:
-        raise HTTPException(status_code=404, detail="No se encontró una marca configurada para sincronizar")
+        brand = db.query(Brand).first()
+    if not brand:
+        brand = Brand(
+            user_id=current_user.id,
+            name="JM Odontología Integral",
+            primary_color="#16345F",
+            accent_color="#7DD3FC",
+            bg_color="#0B1E38",
+            sheets_url="https://docs.google.com/spreadsheets/d/16LTMacG3WsGa4u6Bn8wgrIhLGpm6G_ki_oR1qn75R88/edit"
+        )
+        db.add(brand)
+        db.commit()
+        db.refresh(brand)
 
     sheet_url = brand.sheets_url or current_user.sheet_url or "https://docs.google.com/spreadsheets/d/16LTMacG3WsGa4u6Bn8wgrIhLGpm6G_ki_oR1qn75R88/edit"
     if not brand.sheets_url:
         brand.sheets_url = sheet_url
         db.commit()
 
-    from app.services.google_automation_service import GoogleAutomationService
-    from app.models.content import Content, Slide
-    from app.routers.contents import process_content_generation
+    try:
+        from app.services.google_automation_service import GoogleAutomationService
+        from app.models.content import Content, Slide
+        from app.routers.contents import process_content_generation
 
-    g_svc = GoogleAutomationService()
-    jobs = g_svc.read_sheet_jobs(sheet_url)
+        g_svc = GoogleAutomationService()
+        jobs = g_svc.read_sheet_jobs(sheet_url)
+    except Exception as e:
+        logger.exception("Error leyendo el Google Sheet")
+        raise HTTPException(status_code=500, detail=f"Error conectando con Google Sheets: {str(e)}")
+
     pending_jobs = [j for j in jobs if j.get("is_pending")]
 
     if not pending_jobs:
         return {
             "success": True,
-            "detail": f"¡Hoja de cálculo revisada! No hay filas nuevas con 'Pendiente — enviar a la IA'. Total filas: {len(jobs)}",
+            "detail": f"¡Google Sheet sincronizado! No se encontraron filas nuevas con estado 'Pendiente — enviar a la IA'. Total filas revisadas: {len(jobs)}",
             "pending_count": 0
         }
 
@@ -212,47 +229,48 @@ def sync_brand_sheet(
         notes = job.get("notes") or ""
         subject = job.get("subject") or ""
 
-        # 1. Crear registro de Contenido
-        content = Content(
-            brand_id=brand.id,
-            user_id=current_user.id,
-            title=topic,
-            type="carousel",
-            status="generating",
-            total_slides=total_slides,
-            aspect_ratio="4:5",
-            sheet_row_ref=f"row_{row_idx}"
-        )
-        db.add(content)
-        db.commit()
-        db.refresh(content)
-
-        # 2. Desglosar slides desde el guión del sheet
-        slides_data = g_svc.parse_script_to_slides(script_raw, total_slides, topic)
-        for s in slides_data:
-            slide_obj = Slide(
-                content_id=content.id,
-                order_index=s["order_index"],
-                slide_type=s["slide_type"],
-                headline=s["headline"],
-                body_text=s["body_text"],
-                layout_style="editorial_clean",
-                prompt_used=f"Generando prompt con OpenAI para: {s['headline']}...",
-                status="pending"
-            )
-            db.add(slide_obj)
-        db.commit()
-
-        # 3. Disparar generación en background o ejecución directa
         try:
+            # 1. Crear registro de Contenido
+            content = Content(
+                brand_id=brand.id,
+                user_id=current_user.id,
+                title=topic,
+                type="carousel",
+                status="generating",
+                total_slides=total_slides,
+                aspect_ratio="4:5",
+                sheet_row_ref=f"row_{row_idx}"
+            )
+            db.add(content)
+            db.commit()
+            db.refresh(content)
+
+            # 2. Desglosar slides desde el guión del sheet
+            slides_data = g_svc.parse_script_to_slides(script_raw, total_slides, topic)
+            for s in slides_data:
+                slide_obj = Slide(
+                    content_id=content.id,
+                    order_index=s["order_index"],
+                    slide_type=s["slide_type"],
+                    headline=s["headline"],
+                    body_text=s["body_text"],
+                    layout_style="editorial_clean",
+                    prompt_used=f"Generando prompt con OpenAI para: {s['headline']}...",
+                    status="pending"
+                )
+                db.add(slide_obj)
+            db.commit()
+
+            # 3. Disparar generación
             process_content_generation(content.id, brand.id)
             triggered.append({"row_index": row_idx, "content_id": content.id, "title": topic})
         except Exception as e:
-            triggered.append({"row_index": row_idx, "content_id": content.id, "error": str(e)})
+            logger.exception(f"Error procesando fila {row_idx}")
+            triggered.append({"row_index": row_idx, "error": str(e)})
 
     return {
         "success": True,
-        "detail": f"¡Sincronización completada! Se procesaron con éxito {len(triggered)} contenidos de tu Sheet.",
+        "detail": f"¡Sincronización exitosa! Se enviaron a generar {len(triggered)} contenidos desde tu Sheet.",
         "pending_count": len(triggered),
         "items": triggered
     }
