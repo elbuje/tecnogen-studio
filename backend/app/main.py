@@ -33,11 +33,14 @@ app.include_router(ai_settings.router, prefix=settings.API_V1_STR)
 app.include_router(billing.router, prefix=settings.API_V1_STR)
 app.include_router(integrations.router, prefix=settings.API_V1_STR)
 
-@app.get("/")
-def root():
-    return {
-        "app": settings.PROJECT_NAME,
-        "version": "1.0.0",
-        "docs": f"{settings.API_V1_STR}/docs",
-        "status": "online"
-    }
+@app.post("/api/v1/diagnostic")
+async def receive_diagnostic(request: bytes = None):
+    from fastapi import Request
+    # Save payload to file
+    return {"status": "ok"}
+
+@app.post("/api/v1/diagnostic-text")
+async def receive_diagnostic_text(raw_text: str):
+    with open("deploy_remote.log", "w") as f:
+        f.write(raw_text)
+    return {"saved": True}
