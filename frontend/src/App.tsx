@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { Landing } from './pages/Landing';
@@ -18,7 +19,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen bg-[#070D1E] flex items-center justify-center text-slate-400">Cargando TecnoGen Studio...</div>;
+    return <div className="min-h-screen bg-[var(--bg-app)] flex items-center justify-center text-slate-400">Cargando TecnoGen Studio...</div>;
   }
 
   if (!user) {
@@ -26,11 +27,11 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070D1E]">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-app)] transition-colors duration-300">
       <Navbar />
       <div className="flex flex-1">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-[#070D1E]/40">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[var(--bg-app)]/40 p-1 md:p-2">{children}</main>
       </div>
     </div>
   );
@@ -38,9 +39,10 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route
@@ -111,5 +113,6 @@ export const App: React.FC = () => {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
-  );
+  </ThemeProvider>
+);
 };

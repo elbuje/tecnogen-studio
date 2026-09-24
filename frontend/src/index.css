@@ -2,27 +2,84 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Default: TecnoGen Cyber Glow */
+  --bg-app: #070D1E;
+  --bg-sidebar: #0B132B;
+  --bg-panel: rgba(18, 28, 54, 0.7);
+  --bg-card: rgba(26, 38, 70, 0.5);
+  --accent-primary: #38BDF8;
+  --accent-secondary: #2563EB;
+  --accent-glow: rgba(56, 189, 248, 0.2);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(255, 255, 255, 0.06);
+}
+
+/* 🎨 Theme 2: HeyGen & Canva Creative Studio */
+html.theme-heygen {
+  --bg-app: #0F0F13;
+  --bg-sidebar: #15151C;
+  --bg-panel: rgba(26, 26, 36, 0.75);
+  --bg-card: rgba(34, 34, 48, 0.6);
+  --accent-primary: #8B5CF6;
+  --accent-secondary: #EC4899;
+  --accent-glow: rgba(139, 92, 246, 0.25);
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --border-card: rgba(255, 255, 255, 0.07);
+}
+
+/* 🎨 Theme 3: Claude Cowork (Anthropic Warm Minimal) */
+html.theme-claude {
+  --bg-app: #161512;
+  --bg-sidebar: #1C1A16;
+  --bg-panel: rgba(32, 29, 24, 0.8);
+  --bg-card: rgba(42, 38, 31, 0.6);
+  --accent-primary: #D97706;
+  --accent-secondary: #EA580C;
+  --accent-glow: rgba(217, 119, 6, 0.2);
+  --border-subtle: rgba(217, 119, 6, 0.12);
+  --border-card: rgba(255, 255, 255, 0.05);
+}
+
+/* 🎨 Theme 4: ChatGPT Canvas (OpenAI Clean Minimalist) */
+html.theme-chatgpt {
+  --bg-app: #0D0D0D;
+  --bg-sidebar: #141414;
+  --bg-panel: rgba(26, 26, 26, 0.85);
+  --bg-card: rgba(36, 36, 36, 0.6);
+  --accent-primary: #10A37F;
+  --accent-secondary: #059669;
+  --accent-glow: rgba(16, 163, 127, 0.2);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(255, 255, 255, 0.06);
+}
+
 @layer base {
   body {
-    @apply bg-[#070D1E] text-slate-100 min-h-screen;
+    background-color: var(--bg-app);
+    color: #F1F5F9;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
 .glass-panel {
-  background: rgba(18, 28, 54, 0.7);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.3s ease;
 }
 
 .glass-card {
-  background: rgba(26, 38, 70, 0.5);
+  background: var(--bg-card);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-card);
+  transition: all 0.3s ease;
 }
 
-.glow-cyan {
-  box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);
+.glow-accent {
+  box-shadow: 0 0 30px var(--accent-glow);
 }
 
 /* Custom Scrollbar */
@@ -31,7 +88,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #070D1E;
+  background: var(--bg-app);
 }
 ::-webkit-scrollbar-thumb {
   background: #1E293B;

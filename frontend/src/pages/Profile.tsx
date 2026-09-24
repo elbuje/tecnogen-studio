@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, AVAILABLE_THEMES } from '../contexts/ThemeContext';
 import api from '../api/client';
 import { User, Shield, Coins, Sparkles, Key, Check, Mail, Lock, Building, Save } from 'lucide-react';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [brandName, setBrandName] = useState('');
@@ -191,6 +193,64 @@ export const Profile: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Look & Feel Selection Section */}
+      <div className="p-8 rounded-3xl glass-card space-y-6">
+        <div>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-cyan-400" /> Look & Feel / Entorno Visual de Trabajo
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Personalizá la interfaz según la herramienta con la que te sientas más familiarizado. El cambio es instantáneo.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {AVAILABLE_THEMES.map((th) => {
+            const isSelected = theme === th.id;
+            return (
+              <div
+                key={th.id}
+                onClick={() => setTheme(th.id)}
+                className={`cursor-pointer rounded-2xl p-4 border transition-all duration-200 flex items-start gap-4 ${
+                  isSelected
+                    ? 'bg-slate-800/90 border-cyan-400 ring-1 ring-cyan-400 shadow-lg shadow-cyan-500/10'
+                    : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                }`}
+              >
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-700/80 shadow-md"
+                  style={{ backgroundColor: th.bgPreview }}
+                >
+                  <div
+                    className="w-5 h-5 rounded-full shadow-sm"
+                    style={{ backgroundColor: th.accentColor }}
+                  />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                      {th.name}
+                    </span>
+                    {isSelected && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                        Activo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1 leading-snug">
+                    {th.tagline}
+                  </p>
+                  <div className="mt-2 text-[10px] font-mono text-slate-500 uppercase">
+                    Estilo: {th.badge}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

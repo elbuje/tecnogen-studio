@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Sparkles, Coins, LogOut, User as UserIcon, Settings as SettingsIcon, Link2 } from 'lucide-react';
+import { ThemeSwitcher } from '../common/ThemeSwitcher';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -44,6 +45,9 @@ export const Navbar: React.FC = () => {
             <div className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-md bg-cyan-950/60 border border-cyan-800/50 text-cyan-300 text-xs font-semibold uppercase tracking-wider">
               Plan {user.plan_tier}
             </div>
+
+            {/* Theme / Look & Feel Switcher */}
+            <ThemeSwitcher />
 
             {/* Profile Direct Button */}
             <Link
