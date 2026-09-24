@@ -160,3 +160,99 @@ def revoke_api_key(key_id: str, current_user: User = Depends(get_current_user), 
     db.delete(key)
     db.commit()
     return {"message": "API Key revocada exitosamente"}
+
+class SyncSheetRequest(BaseModel):
+    brand_id: Optional[str] = None
+
+@router.post("/sync-sheet")
+def sync_brand_sheet(
+    payload: SyncSheetRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Sincroniza el Google Sheet de la marca del usuario:
+    Lee las filas con estado 'Pendiente — enviar a la IA',
+    crea los contenidos en el sistema, dispara la generación por IA y actualiza la fila en el Sheet.
+    """
+    brand = None
+    if payload.brand_id:
+        brand = db.query(Brand).filter(Brand.id == payload.brand_id).first()
+    if not brand:
+        brand = db.query(Brand).filter(Brand.user_id == current_user.id).first()
+    if not brand:
+        raise HTTPException(status_code=404, detail="No se encontró una marca configurada para sincronizar")
+
+    sheet_url = brand.sheets_url or current_user.sheet_url
+    if not sheet_url:
+        raise HTTPException(status_code=400, detail="La marca no tiene una URL de Google Sheet vinculada en Integraciones")
+
+    from app.services.google_automation_service import GoogleAutomationService
+    from app.models.content import Content, Slide
+    from app.routers.contents import process_content_generation
+
+    g_svc = GoogleAutomationService()
+    jobs = g_svc.read_sheet_jobs(sheet_url)
+    pending_jobs = [j for j in jobs if j.get("is_pending")]
+
+    if not pending_jobs:
+        return {
+            "success": True,
+            "detail": f"¡Hoja de cálculo revisada! No hay filas nuevas con 'Pendiente — enviar a la IA'. Total filas: {len(jobs)}",
+            "pending_count": 0
+        }
+
+    triggered = []
+    for job in pending_jobs:
+        row_idx = job["row_index"]
+        topic = job.get("topic") or f"Contenido Sheet Fila {row_idx}"
+        script_raw = job.get("script") or ""
+        total_slides = job.get("total_slides") or 4
+        notes = job.get("notes") or ""
+        subject = job.get("subject") or ""
+
+        # 1. Crear registro de Contenido
+        content = Content(
+            brand_id=brand.id,
+            user_id=current_user.id,
+            title=topic,
+            type="carousel",
+            status="generating",
+            total_slides=total_slides,
+            aspect_ratio="4:5",
+            sheet_row_ref=f"row_{row_idx}"
+        )
+        db.add(content)
+        db.commit()
+        db.refresh(content)
+
+        # 2. Desglosar slides desde el guión del sheet
+        slides_data = g_svc.parse_script_to_slides(script_raw, total_slides, topic)
+        for s in slides_data:
+            slide_obj = Slide(
+                content_id=content.id,
+                order_index=s["order_index"],
+                slide_type=s["slide_type"],
+                headline=s["headline"],
+                body_text=s["body_text"],
+                layout_style="editorial_clean",
+                prompt_used=f"Generando prompt con OpenAI para: {s['headline']}...",
+                status="pending"
+            )
+            db.add(slide_obj)
+        db.commit()
+
+        # 3. Disparar generación en background o ejecución directa
+        try:
+            process_content_generation(content.id, brand.id)
+            triggered.append({"row_index": row_idx, "content_id": content.id, "title": topic})
+        except Exception as e:
+            triggered.append({"row_index": row_idx, "content_id": content.id, "error": str(e)})
+
+    return {
+        "success": True,
+        "detail": f"¡Sincronización completada! Se procesaron con éxito {len(triggered)} contenidos de tu Sheet.",
+        "pending_count": len(triggered),
+        "items": triggered
+    }
+

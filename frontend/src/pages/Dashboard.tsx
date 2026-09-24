@@ -102,8 +102,8 @@ export const Dashboard: React.FC = () => {
     }
     try {
       setSyncingSheet(true);
-      const res = await api.post('/ops/agents/sync-sheet', { brand_id: brandId });
-      alert(res.data.detail || `¡Sincronización exitosa! Pendientes encontrados: ${res.data.pending_count || 0}`);
+      const res = await api.post('/integrations/sync-sheet', { brand_id: brandId });
+      alert(res.data.detail || `¡Sincronización exitosa! Pendientes procesados: ${res.data.pending_count || 0}`);
       await fetchData();
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Error al sincronizar Google Sheet. Verificá que la URL esté configurada en Integraciones.');
