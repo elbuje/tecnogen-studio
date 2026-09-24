@@ -11,13 +11,30 @@ logger = logging.getLogger(__name__)
 
 class GoogleAutomationService:
     def __init__(self, key_path: Optional[str] = None):
-        self.key_path = key_path or settings.GOOGLE_SERVICE_ACCOUNT_KEY_PATH or "storage/google-service-account.json"
+        candidate_paths = [
+            key_path,
+            getattr(settings, "GOOGLE_SERVICE_ACCOUNT_KEY_PATH", None),
+            "storage/google-service-account.json",
+            "backend/storage/google-service-account.json",
+            os.path.join(os.path.dirname(__file__), "../../../storage/google-service-account.json"),
+            os.path.join(os.path.dirname(__file__), "../../storage/google-service-account.json"),
+            os.path.join(os.path.dirname(__file__), "../storage/google-service-account.json"),
+            "/home/ploi/studio.tecnogen.ar/backend/storage/google-service-account.json",
+            "/home/ploi/studio.tecnogen.ar/storage/google-service-account.json"
+        ]
+        
+        self.key_path = None
+        for p in candidate_paths:
+            if p and os.path.exists(p):
+                self.key_path = p
+                break
+
         self.creds = None
         self.drive_service = None
         self.sheets_service = None
         self.is_ready = False
 
-        if os.path.exists(self.key_path):
+        if self.key_path:
             try:
                 scopes = [
                     "https://www.googleapis.com/auth/drive.readonly",
@@ -29,6 +46,8 @@ class GoogleAutomationService:
                 self.is_ready = True
             except Exception as e:
                 logger.error(f"Error inicializando GoogleAutomationService: {e}")
+        else:
+            logger.error("No se encontró el archivo google-service-account.json en ninguna de las rutas esperadas.")
 
     @staticmethod
     def extract_id(url_or_id: Optional[str]) -> Optional[str]:
@@ -118,15 +137,21 @@ class GoogleAutomationService:
 
             jobs.append({
                 "row_number": row_num,
+                "row_index": row_num,
                 "nro": val(idx_num),
                 "tema": val(idx_tema),
+                "topic": val(idx_tema) or val(idx_titulo),
                 "titulo": val(idx_titulo),
+                "title": val(idx_titulo) or val(idx_tema),
                 "guion": val(idx_guion),
+                "script": val(idx_guion),
                 "subtitulos": val(idx_subtitulos),
                 "copy_instagram": val(idx_instagram),
                 "doctora_ref": val(idx_fotos),
+                "subject": val(idx_fotos),
                 "estado": estado,
                 "nota": val(idx_nota),
+                "notes": val(idx_nota),
                 "content_id": content_id,
                 "link_preview": val(idx_link_preview),
                 "fecha_procesado": val(idx_fecha),
