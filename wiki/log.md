@@ -5,6 +5,11 @@ Historial cronológico de cambios, decisiones técnicas e hitos del proyecto.
 ---
 
 ## 2026-09-24
+* `FEAT`: Implementación de **4 Arquitecturas Estructurales de Distribución de Pantalla y UI (Multi-Layout)**:
+  1. **TecnoGen Clásico:** Barra de navegación superior fija + Menú lateral completo (260px) + Canvas central estándar.
+  2. **HeyGen & Canva Creative Studio:** Riel de iconos compacto izquierdo (72px) con tooltips dinámicos + Barra de herramientas de estudio superior con acciones rápidas (`+ Generar Contenido`) + Canvas enmarcado para diseño audiovisual.
+  3. **Claude Cowork (Anthropic):** Espacio de trabajo editorial minimalista con panel lateral colapsable de proyectos, árbol de navegación por secciones, migas de pan editoriales y lienzo amplio tipo documento.
+  4. **ChatGPT Canvas (OpenAI):** Barra lateral colapsable oscura con botón "+ Nuevo Carrusel", selector central de modelo / motor IA (`TecnoGen Studio 4.0`) y canvas de enfoque total.
 * `DEPLOY`: Despliegue exitoso en producción en Ploi `errante` (`72.61.34.92`) para el dominio **`https://studio.tecnogen.ar`**.
 * `REPO`: Creación y sincronización del repositorio oficial en GitHub: **`https://github.com/elbuje/tecnogen-studio`** (Ramas `main` y `dev`).
 * `SSL`: Emisión de certificado SSL con Let's Encrypt y redirección HTTPS 301.
