@@ -20,15 +20,16 @@ TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y 
 |:---|:---|:---|
 | **Sitio en Producción** | 🟢 100% Online | **`https://studio.tecnogen.ar`** con SSL Let's Encrypt y HTTP/2 activo. |
 | **Repositorio Oficial** | 🟢 Sincronizado | `https://github.com/elbuje/tecnogen-studio` (Ramas `main` y `dev`). |
-| **Backend en Producción** | 🟢 Activo (:8028) | FastAPI + SQLite persistente en `/storage/tecnogen_prod.db` gestionado por PM2. |
+| **Backend en Producción** | 🟢 Activo (:8028) | FastAPI + SQLite persistente gestionado como Daemon supervisado en Ploi (`id: 226698`). |
 | **Frontend en Producción** | 🟢 Compilado | SPA React 18 + Vite + Tailwind CSS servido directamente por Nginx en `/public`. |
 | **API Proxy Reverso** | 🟢 Conectado | Peticiones `/api/*` derivadas al puerto `8028` con autenticación JWT y CORS. |
-| **Mi Perfil Editable** | 🟢 Completado | Edición de Nombre, Email, Nombre de Marca y Contraseña (`/app/profile`). |
-| **Modelos & IA Dinámica** | 🟢 Completado | Flujo Empresa -> Key -> Modelos dinámicos. Uso estricto de API Key de usuario (`/app/ai-settings`). |
-| **Brand Kit (10 Layout Cards)** | 🟢 Completado | 10 tarjetas con mini-wireframes interactivos de distribución de texto, logo e imagen (`/app/brands`). |
-| **Google Drive 5 Carpetas** | 🟢 Completado | Carpetas de Logos, Sujetos, Manuales, Plantillas, Productos + tags `[TAG:nombre]` para Excel/Sheets (`/app/integrations`). |
-| **Mi Biblioteca & Visor** | 🟢 Completado | Visor 1024x1536 con polling automático, borrado de carruseles y regeneración slide por slide / todo (`/app/library`, `/app/viewer/:id`). |
-| **Multi-Look & Feel (Themes)** | 🟢 Completado | Selector instantáneo sin recarga de 4 apariencias: TecnoGen Cyber Glow, HeyGen/Canva Studio, Claude Cowork y ChatGPT Canvas. |
+| **Sincronización Sheets** | 🟢 Operativo | Botón de 1 clic en Dashboard e Integraciones con lectura de filas, guiones y estados. |
+| **Generación Asíncrona IA** | 🟢 Activa | Desacople con `BackgroundTasks` en el servidor (autonomía total sin depender de la PC del cliente). |
+| **Auditoría de Prompts** | 🟢 Completado | Visor de contenidos muestra el prompt exacto enviado a la IA para cada slide con botón de copiado. |
+| **Brand Kit 100% Automatizado** | 🟢 Completado | Eliminadas las tarjetas de layout manual. Todo el diseño y contenido se rige por el Excel y Manual de Marca. |
+| **Google Drive 5 Carpetas** | 🟢 Completado | Carpetas de Logos, Sujetos, Manuales, Plantillas, Productos (`/app/integrations`). |
+| **Mi Biblioteca & Visor** | 🟢 Completado | Visor con polling automático, regeneración granular slide por slide y exportación (`/app/viewer/:id`). |
+| **Multi-Look & Feel (Themes)** | 🟢 Completado | Selector instantáneo de 4 apariencias (Cyber Glow, HeyGen/Canva Studio, Claude Cowork, ChatGPT Canvas). |
 
 ---
 
