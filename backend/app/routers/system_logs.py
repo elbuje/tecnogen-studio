@@ -86,11 +86,19 @@ def get_system_logs(
     # Ordenar por timestamp descendente
     deduped.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
+    # Determinar motor de base de datos activo
+    from app.database import engine
+    from app.config import settings
+    if "sqlite" in settings.DATABASE_URL.lower():
+        db_type = "ONLINE (SQLite)"
+    else:
+        db_type = f"ONLINE (MySQL: {engine.url.database or 'tecnogen_studio'})"
+
     return {
         "total": len(deduped[:limit]),
         "logs": deduped[:limit],
         "server_time": datetime.now().isoformat(),
-        "database_status": "ONLINE (SQLite)"
+        "database_status": db_type
     }
 
 @router.delete("/logs")
