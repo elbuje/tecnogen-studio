@@ -33,11 +33,7 @@ class AIImageService:
         Genera imagen fotográfica hiperrealista con OpenAI DALL-E-3 API.
         """
         if self.client:
-            # Mapear modelos de interfaz a modelos válidos de OpenAI Images API
-            resolved_primary = self.model
-            if resolved_primary not in ["dall-e-3", "dall-e-2"]:
-                resolved_primary = "dall-e-3"
-
+            resolved_primary = self.model or "dall-e-3"
             models_to_try = [resolved_primary, "dall-e-3", "dall-e-2"]
             # Deduplicar preservando orden
             seen = set()

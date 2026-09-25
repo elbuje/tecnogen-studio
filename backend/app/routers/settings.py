@@ -63,7 +63,7 @@ def fetch_provider_models(
             for m in data:
                 m_id = m.get("id", "")
                 m_type = "other"
-                if "dall-e" in m_id:
+                if "dall-e" in m_id or "image" in m_id or "sunburst" in m_id:
                     m_type = "image"
                 elif "gpt-4" in m_id or "gpt-3.5" in m_id or "o1" in m_id or "o3" in m_id or "chatgpt" in m_id:
                     m_type = "chat"
@@ -77,6 +77,8 @@ def fetch_provider_models(
                     name_label = "DALL-E 3 (Generación de Imágenes HD)"
                 elif m_id == "dall-e-2":
                     name_label = "DALL-E 2 (Generación de Imágenes Estándar)"
+                elif "gpt-image-2.5-sunburst" in m_id:
+                    name_label = "GPT Image 2.5 Sunburst (Renderizado HD y Tipografía)"
                 elif m_id == "gpt-4o":
                     name_label = "GPT-4o (Omni Multimodal)"
                 elif m_id == "gpt-4o-mini":
@@ -92,17 +94,19 @@ def fetch_provider_models(
 
             # Priorizar modelos de imagen al principio, seguidos por GPT-4o
             def sort_key(item: AIModelItem):
-                if item.id == "dall-e-3":
+                if "gpt-image-2.5-sunburst" in item.id:
                     return 0
-                if item.id == "dall-e-2":
+                if item.id == "dall-e-3":
                     return 1
-                if item.type == "image":
+                if item.id == "dall-e-2":
                     return 2
-                if item.id.startswith("gpt-4o"):
+                if item.type == "image":
                     return 3
-                if item.type == "chat":
+                if item.id.startswith("gpt-4o"):
                     return 4
-                return 5
+                if item.type == "chat":
+                    return 5
+                return 6
 
             items.sort(key=lambda x: (sort_key(x), x.id))
 
