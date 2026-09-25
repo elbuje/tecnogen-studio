@@ -87,9 +87,15 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
         }
 
         # Descargar Logo oficial y Fotos de Personajes desde Google Drive
-        g_svc = GoogleAutomationService()
-        logo_bytes = g_svc.get_brand_logo_bytes(brand) if g_svc.is_ready else None
-        subject_bytes = g_svc.get_brand_subject_bytes(brand, "Jessica") if g_svc.is_ready else None
+        try:
+            g_svc = GoogleAutomationService()
+            logo_bytes = g_svc.get_brand_logo_bytes(brand) if g_svc.is_ready else None
+            subject_bytes = g_svc.get_brand_subject_bytes(brand, "Jessica") if g_svc.is_ready else None
+        except Exception as e_drive:
+            logger.warning(f"Aviso al obtener activos de Drive: {e_drive}")
+            g_svc = None
+            logo_bytes = None
+            subject_bytes = None
 
         # Verificar si ya existen láminas pre-cargadas (ej. originadas del GUION del Sheet)
         existing_slides = db.query(Slide).filter(Slide.content_id == content.id).order_by(Slide.slide_number).all()
@@ -207,10 +213,8 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
         db.commit()
 
         # Si provino de un Google Sheet, actualizar el Sheet con el nuevo estado y link de preview
-        if content.source == "google_sheet" and content.sheet_row_ref and brand.sheets_url:
+        if content.source == "google_sheet" and content.sheet_row_ref and brand.sheets_url and g_svc and g_svc.is_ready:
             try:
-                from app.services.google_automation_service import GoogleAutomationService
-                g_svc = GoogleAutomationService()
                 digits = re.sub(r'\D', '', str(content.sheet_row_ref))
                 row_idx = int(digits) if digits else 0
                 if row_idx > 0:
@@ -226,6 +230,17 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             except Exception as e_sheet:
                 logger.error(f"Error actualizando estado en Google Sheet: {e_sheet}")
 
+    except Exception as e_global:
+        logger.error(f"Error crítico en process_content_generation: {e_global}", exc_info=True)
+        try:
+            content = db.query(Content).filter(Content.id == content_id).first()
+            if content:
+                content.status = "failed"
+                db.commit()
+                if content.brand and content.brand.user_id:
+                    refund_credits_atomic(db, content.brand.user_id, content.total_slides, f"Fallo en generación: {str(e_global)}", content.id)
+        except Exception as e_cleanup:
+            logger.error(f"Error en rollback de fallos: {e_cleanup}")
     finally:
         db.close()
 

@@ -17,7 +17,8 @@ import {
   FileImage,
   Play,
   FileSpreadsheet,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -257,9 +258,12 @@ export const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </span>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                    <span>
+                      {new Date(item.created_at).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' })} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs
+                    </span>
+                  </div>
                   <Link
                     to={`/app/viewer/${item.id}`}
                     className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-slate-200 border border-slate-700/60 transition-colors flex items-center gap-1.5"

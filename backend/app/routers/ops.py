@@ -761,3 +761,45 @@ def get_audit_logs(
         "details": l.details,
         "created_at": l.created_at
     } for l in logs]
+
+
+@router.get("/live-logs")
+def get_live_logs(
+    limit: int = 100,
+    current_user: User = Depends(get_current_ops_user),
+    db: Session = Depends(get_db)
+):
+    """Devuelve los últimos logs del sistema y contenidos recientes con su estado detallado."""
+    recent_contents = db.query(Content).order_by(Content.created_at.desc()).limit(20).all()
+    items = []
+    for c in recent_contents:
+        slides = db.query(Slide).filter(Slide.content_id == c.id).all()
+        items.append({
+            "id": c.id,
+            "title": c.title,
+            "status": c.status,
+            "total_slides": c.total_slides,
+            "slides_ready": sum(1 for s in slides if s.status == "generated"),
+            "slides_failed": sum(1 for s in slides if s.status == "failed"),
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+        })
+    return {
+        "status": "online",
+        "recent_contents": items
+    }
+
+
+@router.post("/resolve-stuck")
+def resolve_stuck_contents(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_ops_user),
+    db: Session = Depends(get_db)
+):
+    """Detecta contenidos en estado 'generating' trabados y los procesa de inmediato."""
+    stuck = db.query(Content).filter(Content.status == "generating").all()
+    fixed_count = 0
+    for c in stuck:
+        background_tasks.add_task(process_content_generation, c.id, SessionLocal)
+        fixed_count += 1
+    return {"message": f"Se relanzaron {fixed_count} contenidos trabados", "count": fixed_count}

@@ -219,9 +219,12 @@ export const Library: React.FC = () => {
 
                   {/* Actions Footer */}
                   <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-slate-500">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                      <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                      <span>
+                        {new Date(item.created_at).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' })} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs
+                      </span>
+                    </div>
 
                     <div className="flex items-center gap-2">
                       {/* Delete Button */}
