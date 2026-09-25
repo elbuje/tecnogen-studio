@@ -4,15 +4,153 @@ from typing import List
 from app.database import get_db
 from app.models.user import User
 from app.models.setting import AISetting
-from app.schemas.setting import AISettingCreate, AISettingOut, AITestModelRequest, AITestModelResponse
+from app.schemas.setting import (
+    AISettingCreate,
+    AISettingOut,
+    AITestModelRequest,
+    AITestModelResponse,
+    AIFetchModelsRequest,
+    AIFetchModelsResponse,
+    AIModelItem
+)
 from app.services.auth_service import get_current_user
 import os
+import requests
 
 router = APIRouter(prefix="/settings/ai", tags=["Configuración de IA"])
 
 @router.get("", response_model=List[AISettingOut])
 def get_ai_settings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(AISetting).all()
+
+@router.post("/fetch-models", response_model=AIFetchModelsResponse)
+def fetch_provider_models(
+    payload: AIFetchModelsRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Consulta directamente la API oficial del proveedor (ej: OpenAI Platform /v1/models)
+    con la API Key provista por el usuario para devolver la lista real de modelos disponibles.
+    """
+    from app.config import settings
+
+    api_key = payload.api_key
+    if not api_key:
+        setting = db.query(AISetting).filter(AISetting.provider == payload.provider, AISetting.category == "image").first()
+        if setting and setting.api_key_override:
+            api_key = setting.api_key_override
+        else:
+            api_key = settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+
+    if payload.provider == "openai":
+        if not api_key or api_key in ["tu-api-key-de-openai", ""]:
+            raise HTTPException(status_code=400, detail="Por favor ingresá tu API Key de OpenAI para consultar los modelos disponibles en tu cuenta.")
+
+        try:
+            resp = requests.get(
+                "https://api.openai.com/v1/models",
+                headers={"Authorization": f"Bearer {api_key.strip()}"},
+                timeout=15
+            )
+            if resp.status_code != 200:
+                err_data = resp.json().get("error", {})
+                err_msg = err_data.get("message", f"Error {resp.status_code} al consultar OpenAI")
+                raise HTTPException(status_code=resp.status_code, detail=f"OpenAI API Error: {err_msg}")
+
+            data = resp.json().get("data", [])
+            items = []
+            for m in data:
+                m_id = m.get("id", "")
+                m_type = "other"
+                if "dall-e" in m_id:
+                    m_type = "image"
+                elif "gpt-4" in m_id or "gpt-3.5" in m_id or "o1" in m_id or "o3" in m_id or "chatgpt" in m_id:
+                    m_type = "chat"
+                elif "tts" in m_id or "whisper" in m_id or "audio" in m_id:
+                    m_type = "audio"
+                elif "embedding" in m_id:
+                    m_type = "embedding"
+
+                name_label = m_id
+                if m_id == "dall-e-3":
+                    name_label = "DALL-E 3 (Generación de Imágenes HD)"
+                elif m_id == "dall-e-2":
+                    name_label = "DALL-E 2 (Generación de Imágenes Estándar)"
+                elif m_id == "gpt-4o":
+                    name_label = "GPT-4o (Omni Multimodal)"
+                elif m_id == "gpt-4o-mini":
+                    name_label = "GPT-4o Mini (Rápido y Económico)"
+
+                items.append(AIModelItem(
+                    id=m_id,
+                    name=name_label,
+                    type=m_type,
+                    description=f"Propietario: {m.get('owned_by', 'system')}",
+                    owned_by=m.get("owned_by")
+                ))
+
+            # Priorizar modelos de imagen al principio, seguidos por GPT-4o
+            def sort_key(item: AIModelItem):
+                if item.id == "dall-e-3":
+                    return 0
+                if item.id == "dall-e-2":
+                    return 1
+                if item.type == "image":
+                    return 2
+                if item.id.startswith("gpt-4o"):
+                    return 3
+                if item.type == "chat":
+                    return 4
+                return 5
+
+            items.sort(key=lambda x: (sort_key(x), x.id))
+
+            return AIFetchModelsResponse(
+                provider=payload.provider,
+                models=items,
+                count=len(items),
+                source="live_api"
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al conectar con OpenAI API: {str(e)}")
+
+    elif payload.provider == "flux":
+        catalog = [
+            AIModelItem(id="flux-1.1-pro", name="FLUX 1.1 Pro", type="image", description="Black Forest Labs - Máxima fidelidad fotográfica"),
+            AIModelItem(id="flux-dev", name="FLUX.1 Dev", type="image", description="Black Forest Labs - Open weights profesional"),
+            AIModelItem(id="flux-schnell", name="FLUX.1 Schnell", type="image", description="Black Forest Labs - Ultra alta velocidad"),
+        ]
+        return AIFetchModelsResponse(provider=payload.provider, models=catalog, count=len(catalog), source="catalog")
+
+    elif payload.provider == "stability":
+        catalog = [
+            AIModelItem(id="sd3-large", name="Stable Diffusion 3 Large", type="image", description="Stability AI - Manejo tipográfico y espacial"),
+            AIModelItem(id="stable-diffusion-xl-1024-v1-0", name="SDXL 1.0", type="image", description="Stability AI - Clásico 1024x1024"),
+        ]
+        return AIFetchModelsResponse(provider=payload.provider, models=catalog, count=len(catalog), source="catalog")
+
+    elif payload.provider == "google":
+        catalog = [
+            AIModelItem(id="imagen-3.0-generate-001", name="Imagen 3 (Vertex AI)", type="image", description="Google Cloud - Generación fotorrealista"),
+            AIModelItem(id="imagen-3.0-fast-generate-001", name="Imagen 3 Fast", type="image", description="Google Cloud - Generación optimizada"),
+            AIModelItem(id="gemini-1.5-pro", name="Gemini 1.5 Pro", type="chat", description="Google DeepMind - Multimodal 2M tokens"),
+            AIModelItem(id="gemini-1.5-flash", name="Gemini 1.5 Flash", type="chat", description="Google DeepMind - Rápido y multimodal"),
+        ]
+        return AIFetchModelsResponse(provider=payload.provider, models=catalog, count=len(catalog), source="catalog")
+
+    elif payload.provider == "anthropic":
+        catalog = [
+            AIModelItem(id="claude-3-5-sonnet-20241022", name="Claude 3.5 Sonnet", type="chat", description="Anthropic - Especialista en copywriting y razonamiento"),
+            AIModelItem(id="claude-3-5-haiku-20241022", name="Claude 3.5 Haiku", type="chat", description="Anthropic - Rápido y eficiente"),
+        ]
+        return AIFetchModelsResponse(provider=payload.provider, models=catalog, count=len(catalog), source="catalog")
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Proveedor no reconocido: {payload.provider}")
+
 
 @router.post("/test", response_model=AITestModelResponse)
 def test_ai_model(

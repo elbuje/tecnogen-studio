@@ -1,43 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/client';
-import { Sliders, Sparkles, Check, Key, ShieldCheck, AlertCircle, Cpu, FlaskConical, RefreshCw, XCircle, CheckCircle2 } from 'lucide-react';
+import {
+  Sparkles,
+  Check,
+  Key,
+  ShieldCheck,
+  AlertCircle,
+  Cpu,
+  FlaskConical,
+  RefreshCw,
+  XCircle,
+  CheckCircle2,
+  ChevronDown,
+  Layers,
+  Image as ImageIcon,
+  MessageSquare,
+  Search
+} from 'lucide-react';
 
-const PROVIDER_MODELS: Record<string, { label: string; models: { id: string; name: string; desc: string }[] }> = {
+interface AIModel {
+  id: string;
+  name: string;
+  type: 'image' | 'chat' | 'audio' | 'embedding' | 'other';
+  description?: string;
+  owned_by?: string;
+}
+
+const PROVIDERS: Record<string, { label: string; defaultModel: string; placeholder: string }> = {
   openai: {
-    label: 'OpenAI',
-    models: [
-      { id: 'dall-e-3', name: 'DALL-E 3 (Recomendado)', desc: 'Generación fotorrealista de máxima calidad y comprensión de prompts complejos.' },
-      { id: 'gpt-image-2.5-sunburst', name: 'GPT Image 2.5 Sunburst', desc: 'Renderizado de alta resolución con tipografía embebida.' },
-      { id: 'dall-e-2', name: 'DALL-E 2', desc: 'Generación rápida estándar.' },
-    ],
+    label: 'OpenAI (Platform)',
+    defaultModel: 'dall-e-3',
+    placeholder: 'sk-proj-... o tu clave de API de OpenAI',
   },
   flux: {
     label: 'Black Forest Labs (FLUX)',
-    models: [
-      { id: 'flux-1.1-pro', name: 'FLUX 1.1 Pro', desc: 'Máxima fidelidad fotográfica y estética visual de vanguardia.' },
-      { id: 'flux-dev', name: 'FLUX.1 Dev', desc: 'Modelo open-weights de calidad profesional.' },
-      { id: 'flux-schnell', name: 'FLUX.1 Schnell', desc: 'Generación de ultra alta velocidad.' },
-    ],
+    defaultModel: 'flux-1.1-pro',
+    placeholder: 'bfl_... clave de API de Black Forest Labs',
   },
   stability: {
     label: 'Stability AI',
-    models: [
-      { id: 'sd3-large', name: 'Stable Diffusion 3 Large', desc: 'Excelente manejo tipográfico y composición espacial.' },
-      { id: 'stable-diffusion-xl-1024-v1-0', name: 'SDXL 1.0', desc: 'Clásico probado de alta resolución 1024x1024.' },
-    ],
+    defaultModel: 'sd3-large',
+    placeholder: 'sk-... clave de API de Stability AI',
   },
   google: {
-    label: 'Google Cloud (Vertex AI / Imagen)',
-    models: [
-      { id: 'imagen-3.0-generate-001', name: 'Imagen 3 (Vertex)', desc: 'Modelo generativo insignia de Google Cloud.' },
-      { id: 'imagen-3.0-fast-generate-001', name: 'Imagen 3 Fast', desc: 'Optimizado para baja latencia.' },
-    ],
+    label: 'Google Cloud (Vertex AI / Gemini)',
+    defaultModel: 'imagen-3.0-generate-001',
+    placeholder: 'API Key de Google AI Studio / Vertex',
   },
   anthropic: {
     label: 'Anthropic',
-    models: [
-      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', desc: 'Especialista en estructuración de copy y guiones.' },
-    ],
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    placeholder: 'sk-ant-... clave de Anthropic',
   },
 };
 
@@ -45,6 +58,13 @@ export const AISettings: React.FC = () => {
   const [provider, setProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
   const [modelName, setModelName] = useState('dall-e-3');
+  const [modelsList, setModelsList] = useState<AIModel[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [modelsSource, setModelsSource] = useState<'live_api' | 'catalog' | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [searchFilter, setSearchFilter] = useState('');
+  const [isCustomModel, setIsCustomModel] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -66,9 +86,49 @@ export const AISettings: React.FC = () => {
         setProvider(active.provider);
         setModelName(active.model_name);
         setApiKey(active.api_key_override || '');
+        // Cargar modelos con la clave guardada
+        if (active.api_key_override) {
+          fetchModelsForProvider(active.provider, active.api_key_override);
+        } else {
+          fetchModelsForProvider(active.provider, '');
+        }
+      } else {
+        fetchModelsForProvider('openai', '');
       }
     } catch (e) {
       console.error('Error fetching AI settings:', e);
+      fetchModelsForProvider('openai', '');
+    }
+  };
+
+  const fetchModelsForProvider = async (targetProvider: string, targetKey: string) => {
+    try {
+      setLoadingModels(true);
+      const res = await api.post('/settings/ai/fetch-models', {
+        provider: targetProvider,
+        api_key: targetKey.trim() || undefined,
+      });
+
+      if (res.data?.models) {
+        setModelsList(res.data.models);
+        setModelsSource(res.data.source);
+        
+        // Si el modelo actual no está en la lista y no es custom, seleccionar el primero de tipo imagen o el primero de la lista
+        const exists = res.data.models.some((m: AIModel) => m.id === modelName);
+        if (!exists && !isCustomModel) {
+          const firstImage = res.data.models.find((m: AIModel) => m.type === 'image');
+          if (firstImage) {
+            setModelName(firstImage.id);
+          } else if (res.data.models.length > 0) {
+            setModelName(res.data.models[0].id);
+          }
+        }
+      }
+    } catch (e: any) {
+      console.warn('No se pudieron consultar modelos en vivo:', e);
+      setModelsSource('catalog');
+    } finally {
+      setLoadingModels(false);
     }
   };
 
@@ -79,10 +139,14 @@ export const AISettings: React.FC = () => {
   const handleProviderChange = (newProvider: string) => {
     setProvider(newProvider);
     setTestResult(null);
-    const available = PROVIDER_MODELS[newProvider]?.models;
-    if (available && available.length > 0) {
-      setModelName(available[0].id);
-    }
+    setIsCustomModel(false);
+    const def = PROVIDERS[newProvider]?.defaultModel || '';
+    setModelName(def);
+    fetchModelsForProvider(newProvider, apiKey);
+  };
+
+  const handleSyncModels = () => {
+    fetchModelsForProvider(provider, apiKey);
   };
 
   const handleTestModel = async () => {
@@ -147,7 +211,16 @@ export const AISettings: React.FC = () => {
     }
   };
 
-  const currentModels = PROVIDER_MODELS[provider]?.models || [];
+  // Filtrar modelos
+  const filteredModels = modelsList.filter((m) => {
+    const matchesType = filterType === 'all' || m.type === filterType;
+    const matchesSearch =
+      m.id.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      m.name.toLowerCase().includes(searchFilter.toLowerCase());
+    return matchesType && matchesSearch;
+  });
+
+  const selectedModelObj = modelsList.find((m) => m.id === modelName);
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8">
@@ -156,7 +229,7 @@ export const AISettings: React.FC = () => {
           <Cpu className="w-6 h-6 text-cyan-400" /> Configuración de Motores de IA & Modelos
         </h1>
         <p className="text-sm text-slate-400">
-          Configurá la empresa proveedora, tu clave privada de API y seleccioná el modelo activo de la lista.
+          Ingresá tu API Key para sincronizar el combo de modelos directamente desde la plataforma del proveedor.
         </p>
       </div>
 
@@ -174,7 +247,7 @@ export const AISettings: React.FC = () => {
             1. Seleccionar Empresa / Proveedor de IA
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {Object.entries(PROVIDER_MODELS).map(([key, data]) => (
+            {Object.entries(PROVIDERS).map(([key, data]) => (
               <button
                 key={key}
                 type="button"
@@ -187,18 +260,30 @@ export const AISettings: React.FC = () => {
               >
                 <div className="text-sm font-bold">{data.label}</div>
                 <div className="text-[10px] text-slate-500 mt-1">
-                  {data.models.length} modelos disponibles
+                  {key === 'openai' ? 'API Oficial + Platform' : 'Generación IA'}
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Paso 2: API Key Obligatoria */}
+        {/* Paso 2: API Key */}
         <div className="space-y-3 pt-4 border-t border-slate-800">
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            2. Ingresar tu API Key de {PROVIDER_MODELS[provider]?.label} (Obligatoria)
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              2. Ingresar tu API Key de {PROVIDERS[provider]?.label}
+            </label>
+            <button
+              type="button"
+              onClick={handleSyncModels}
+              disabled={loadingModels || !apiKey.trim()}
+              className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 font-medium disabled:opacity-40"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingModels ? 'animate-spin' : ''}`} />
+              <span>Sincronizar Modelos desde API</span>
+            </button>
+          </div>
+
           <div className="relative">
             <Key className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
@@ -209,53 +294,149 @@ export const AISettings: React.FC = () => {
                 setApiKey(e.target.value);
                 setTestResult(null);
               }}
-              placeholder={`Ingresá tu API Key de ${PROVIDER_MODELS[provider]?.label}...`}
+              onBlur={() => {
+                if (apiKey.trim()) {
+                  fetchModelsForProvider(provider, apiKey);
+                }
+              }}
+              placeholder={PROVIDERS[provider]?.placeholder || 'Ingresá tu API Key...'}
               className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none"
             />
           </div>
           <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Se guardará de forma segura en tu perfil y será la única clave utilizada para todas tus generaciones.
+            Tu clave se almacena cifrada en tu cuenta y se utiliza para invocar los endpoints oficiales.
           </div>
         </div>
 
-        {/* Paso 3: Selector de Modelo según la lista dinámica */}
-        <div className="space-y-3 pt-4 border-t border-slate-800">
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            3. Seleccionar Modelo de {PROVIDER_MODELS[provider]?.label}
-          </label>
-          <div className="space-y-2.5">
-            {currentModels.map((m) => (
-              <label
-                key={m.id}
-                onClick={() => {
-                  setModelName(m.id);
-                  setTestResult(null);
-                }}
-                className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${
-                  modelName === m.id
-                    ? 'bg-cyan-500/10 border-cyan-400 text-white shadow-md'
-                    : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
+        {/* Paso 3: Combo / Selector de Modelos */}
+        <div className="space-y-4 pt-4 border-t border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              3. Selector de Modelo ({modelsList.length} detectados {modelsSource === 'live_api' ? '⚡ en vivo desde tu cuenta' : '📦 catálogo'})
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCustomModel(!isCustomModel)}
+                className="text-xs text-slate-400 hover:text-cyan-400 transition-colors"
               >
-                <input
-                  type="radio"
-                  name="ai_model"
-                  value={m.id}
-                  checked={modelName === m.id}
-                  onChange={() => {
-                    setModelName(m.id);
+                {isCustomModel ? '← Volver al selector combo' : '✏️ Ingresar ID manual'}
+              </button>
+            </div>
+          </div>
+
+          {!isCustomModel ? (
+            <div className="space-y-3">
+              {/* Filtros rápidos */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Filtrar por nombre o ID (ej: dall-e, gpt-4o)..."
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-cyan-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setFilterType('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                      filterType === 'all' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Todos ({modelsList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterType('image')}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                      filterType === 'image' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                    Imágenes ({modelsList.filter((m) => m.type === 'image').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterType('chat')}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                      filterType === 'chat' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    Chat/Vision ({modelsList.filter((m) => m.type === 'chat').length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Combo Dropdown Select */}
+              <div className="relative">
+                <select
+                  value={modelName}
+                  onChange={(e) => {
+                    setModelName(e.target.value);
                     setTestResult(null);
                   }}
-                  className="mt-1 text-cyan-400"
-                />
-                <div className="space-y-0.5">
-                  <div className="text-sm font-bold text-slate-100">{m.name} <code className="text-[11px] text-cyan-400 font-mono ml-2">({m.id})</code></div>
-                  <div className="text-xs text-slate-400">{m.desc}</div>
+                  className="w-full appearance-none pl-4 pr-10 py-3.5 rounded-2xl bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none cursor-pointer"
+                >
+                  {filteredModels.map((m) => (
+                    <option key={m.id} value={m.id} className="bg-slate-900 text-white py-2">
+                      {m.type === 'image' ? '🖼️ [IMAGEN] ' : m.type === 'chat' ? '💬 [CHAT] ' : '⚙️ '}
+                      {m.id} — {m.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              {/* Tarjeta Informativa del Modelo Seleccionado */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">
+                      {selectedModelObj?.name || modelName}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${
+                      selectedModelObj?.type === 'image'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    }`}>
+                      {selectedModelObj?.type?.toUpperCase() || 'ACTIVO'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    ID Técnico: <code className="text-cyan-400 font-mono">{modelName}</code>
+                  </div>
+                  {selectedModelObj?.description && (
+                    <div className="text-[11px] text-slate-500">
+                      {selectedModelObj.description}
+                    </div>
+                  )}
                 </div>
-              </label>
-            ))}
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={modelName}
+                onChange={(e) => {
+                  setModelName(e.target.value);
+                  setTestResult(null);
+                }}
+                placeholder="Ingresá el ID exacto del modelo (ej: dall-e-3, ft:dall-e-3:...)"
+                className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-cyan-500/50 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none"
+              />
+              <p className="text-xs text-slate-400">
+                Podés escribir cualquier nombre o ID de modelo personalizado de tu plataforma.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Test Result Card */}
@@ -298,18 +479,18 @@ export const AISettings: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-300 max-w-xl">
+                  <p className="text-xs text-slate-300 max-w-xl break-words">
                     {testResult.message}
                   </p>
                 </div>
               </div>
 
-              {/* Imagen de prueba generada (Persona Sonriente) */}
+              {/* Imagen de prueba generada */}
               {testResult.image_url && (
                 <div className="relative group self-center md:self-auto">
                   <img
                     src={testResult.image_url}
-                    alt="Prueba de Modelo - Persona Sonriente"
+                    alt="Prueba de Modelo"
                     className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-cover border-2 border-emerald-400/50 shadow-lg shadow-emerald-500/20"
                   />
                   <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full bg-black/80 text-[10px] text-emerald-300 font-bold border border-emerald-500/40">
@@ -332,12 +513,12 @@ export const AISettings: React.FC = () => {
             {testing ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
-                <span>Generando imagen de prueba...</span>
+                <span>Generando imagen de prueba con {modelName}...</span>
               </>
             ) : (
               <>
                 <FlaskConical className="w-4 h-4 text-cyan-400" />
-                <span>Probar Modelo Seleccionado</span>
+                <span>Probar Modelo Seleccionado ({modelName})</span>
               </>
             )}
           </button>

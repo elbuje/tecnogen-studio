@@ -34,3 +34,21 @@ class AITestModelResponse(BaseModel):
     image_url: Optional[str] = None
     message: str
     duration_seconds: Optional[float] = None
+
+class AIFetchModelsRequest(BaseModel):
+    provider: str = "openai"
+    api_key: Optional[str] = None
+
+class AIModelItem(BaseModel):
+    id: str
+    name: str
+    type: str = "image"  # image, chat, vision, other
+    description: Optional[str] = None
+    owned_by: Optional[str] = None
+
+class AIFetchModelsResponse(BaseModel):
+    provider: str
+    models: list[AIModelItem]
+    count: int
+    source: str  # live_api, catalog
+
