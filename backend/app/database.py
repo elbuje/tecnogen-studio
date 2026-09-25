@@ -50,6 +50,19 @@ def run_auto_migrations():
             content_cols = [row[1] for row in res_c.fetchall()]
             if content_cols and "sheet_row_ref" not in content_cols:
                 conn.execute(text("ALTER TABLE contents ADD COLUMN sheet_row_ref VARCHAR(50)"))
+
+            # Slides table
+            res_s = conn.execute(text("PRAGMA table_info(slides)"))
+            slide_cols = [row[1] for row in res_s.fetchall()]
+            slide_needed = {
+                "headline": "TEXT",
+                "body_text": "TEXT",
+                "badge": "TEXT",
+                "gdrive_file_id": "TEXT"
+            }
+            for col, col_type in slide_needed.items():
+                if slide_cols and col not in slide_cols:
+                    conn.execute(text(f"ALTER TABLE slides ADD COLUMN {col} {col_type}"))
                 
             conn.commit()
     except Exception as e:

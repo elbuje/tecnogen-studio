@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Layers, Palette, Sparkles, Sliders, CreditCard, Link2, User } from 'lucide-react';
+import { LayoutDashboard, Layers, Palette, Sparkles, Sliders, CreditCard, Link2, User, Terminal } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const Sidebar: React.FC = () => {
@@ -11,9 +11,10 @@ export const Sidebar: React.FC = () => {
     { to: '/app/library', label: 'Mi Biblioteca', icon: Layers },
     { to: '/app/brands', label: 'Mis Marcas & Kits', icon: Palette },
     { to: '/app/integrations', label: 'Integraciones & APIs', icon: Link2 },
+    { to: '/app/ai-settings', label: 'Modelos & IA', icon: Sliders },
+    { to: '/app/logs', label: 'Logs & Debugger', icon: Terminal },
     { to: '/app/profile', label: 'Mi Perfil', icon: User },
     { to: '/app/billing', label: 'Créditos & Facturación', icon: CreditCard },
-    { to: '/app/ai-settings', label: 'Modelos & IA', icon: Sliders },
   ];
 
   return (

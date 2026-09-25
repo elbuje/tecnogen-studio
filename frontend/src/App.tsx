@@ -16,6 +16,7 @@ import { Billing } from './pages/Billing';
 import { Profile } from './pages/Profile';
 import { Integrations } from './pages/Integrations';
 import { Library } from './pages/Library';
+import { SystemLogs } from './pages/SystemLogs';
 
 // Ops / SuperAdmin Pages
 import { OpsOverview } from './pages/ops/OpsOverview';
@@ -130,6 +131,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedLayout>
                   <Billing />
+                </ProtectedLayout>
+              }
+            />
+            <Route
+              path="/app/logs"
+              element={
+                <ProtectedLayout>
+                  <SystemLogs />
                 </ProtectedLayout>
               }
             />
