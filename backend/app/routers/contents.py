@@ -97,28 +97,13 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             logo_bytes = None
             subject_bytes = None
 
-        # Verificar si ya existen láminas pre-cargadas (ej. originadas del GUION del Sheet)
-        existing_slides = db.query(Slide).filter(Slide.content_id == content.id).order_by(Slide.slide_number).all()
-        
-        if existing_slides and len(existing_slides) > 0:
-            slides_copy = []
-            for es in existing_slides:
-                slides_copy.append({
-                    "slide_number": es.slide_number,
-                    "slide_type": es.slide_type,
-                    "badge": f"PASO {es.slide_number}" if es.slide_type == "content" else es.slide_type.upper(),
-                    "headline": es.prompt_used or content.title,
-                    "title": es.prompt_used or content.title,
-                    "body_text": es.prompt_used or content.title,
-                    "body": es.prompt_used or content.title
-                })
-        else:
-            slides_copy = generate_carousel_slides_copy(
-                topic=content.title,
-                total_slides=content.total_slides,
-                brand_name=brand.name,
-                openai_client=image_service.client
-            )
+        # Generar o resolver el copy estructurado en español
+        slides_copy = generate_carousel_slides_copy(
+            topic=content.title,
+            total_slides=content.total_slides,
+            brand_name=brand.name,
+            openai_client=image_service.client
+        )
 
         # Generar caption y hashtags con IA si no vienen provistos
         if not content.caption_copy or "💡" in content.caption_copy or "Nuevo contenido generado" in content.caption_copy:
@@ -134,11 +119,34 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             except Exception as e:
                 logger.warning(f"Error generando caption enriquecido: {e}")
 
+        # Subcarpeta de Google Drive para este carrusel
+        carousel_drive_folder_id = None
+        if brand.gdrive_output_folder_id and g_svc and g_svc.is_ready:
+            try:
+                date_str = datetime.now().strftime("%Y-%m-%d")
+                clean_title = re.sub(r'[^a-zA-Z0-9_\- ]', '', content.title)[:35]
+                folder_name = f"[Carrusel] {clean_title} - {date_str}"
+                carousel_drive_folder_id = g_svc.create_drive_folder(brand.gdrive_output_folder_id, folder_name)
+            except Exception as e_f:
+                logger.warning(f"No se pudo crear carpeta en Drive: {e_f}")
+                carousel_drive_folder_id = brand.gdrive_output_folder_id
+
         failed_count = 0
 
         for i, slide_data in enumerate(slides_copy, start=1):
             slide_data["total_slides"] = content.total_slides
             slide_type = slide_data.get("slide_type", "content")
+            
+            headline = (slide_data.get("headline") or slide_data.get("title") or content.title).strip()
+            body_text = (slide_data.get("body_text") or slide_data.get("body") or "").strip()
+            badge = (slide_data.get("badge") or (f"PASO {i}" if i > 1 else "CASO CLÍNICO")).upper()
+
+            slide_data["headline"] = headline
+            slide_data["title"] = headline
+            slide_data["body_text"] = body_text
+            slide_data["body"] = body_text
+            slide_data["badge"] = badge
+
             prompt = build_openai_slide_prompt(brand, i, content.total_slides, slide_data, global_feedback=global_feedback)
             
             try:
@@ -165,12 +173,27 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
 
                 b64_str = base64.b64encode(final_png_bytes).decode('utf-8')
                 data_uri = f"data:image/png;base64,{b64_str}"
+
+                # 4. Subir imagen a Google Drive
+                drive_link = None
+                if carousel_drive_folder_id and g_svc and g_svc.is_ready:
+                    try:
+                        file_name = f"Slide_{i}_de_{content.total_slides}.png"
+                        upload_res = g_svc.upload_file_bytes(carousel_drive_folder_id, file_name, final_png_bytes)
+                        if upload_res:
+                            drive_link = upload_res.get("url")
+                    except Exception as e_up:
+                        logger.warning(f"Error subiendo slide {i} a Drive: {e_up}")
                 
                 # Check if slide already exists (for re-generation)
                 existing = db.query(Slide).filter(Slide.content_id == content.id, Slide.slide_number == i).first()
                 if existing:
                     existing.image_url = data_uri
+                    existing.headline = headline
+                    existing.body_text = body_text
+                    existing.badge = badge
                     existing.prompt_used = prompt
+                    existing.gdrive_file_id = drive_link
                     existing.status = "generated"
                     existing.version += 1
                 else:
@@ -179,7 +202,11 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
                         slide_number=i,
                         slide_type=slide_type,
                         image_url=data_uri,
+                        headline=headline,
+                        body_text=body_text,
+                        badge=badge,
                         prompt_used=prompt,
+                        gdrive_file_id=drive_link,
                         status="generated",
                         version=1
                     )

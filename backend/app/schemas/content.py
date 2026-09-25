@@ -7,6 +7,9 @@ class SlideBase(BaseModel):
     slide_type: Optional[str] = "content"
     image_url: Optional[str] = None
     gdrive_file_id: Optional[str] = None
+    headline: Optional[str] = None
+    body_text: Optional[str] = None
+    badge: Optional[str] = None
     prompt_used: Optional[str] = None
     feedback: Optional[str] = None
     status: Optional[str] = "pending"

@@ -508,21 +508,39 @@ export const ContentViewer: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (currentSlide?.prompt_used) {
-                      navigator.clipboard.writeText(currentSlide.prompt_used);
-                      setCopiedText(true);
-                      setTimeout(() => setCopiedText(false), 2000);
-                    }
+                    const copyText = `${currentSlide?.headline || ''}\n\n${currentSlide?.body_text || ''}`.trim() || content?.title;
+                    navigator.clipboard.writeText(copyText);
+                    setCopiedText(true);
+                    setTimeout(() => setCopiedText(false), 2000);
                   }}
                   className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 cursor-pointer"
                 >
-                  {copiedText ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  {copiedText ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-cyan-400" />}
                   {copiedText ? 'Copiado' : 'Copiar Texto'}
                 </button>
               </div>
-              <p className="text-xs text-slate-200 leading-relaxed font-sans">
-                {currentSlide?.prompt_used || 'Generando contenido...'}
-              </p>
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-cyan-300">
+                  {currentSlide?.headline || content?.title}
+                </h4>
+                {currentSlide?.body_text && (
+                  <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                    {currentSlide.body_text}
+                  </p>
+                )}
+                {currentSlide?.gdrive_file_id && (
+                  <div className="pt-1.5">
+                    <a
+                      href={currentSlide.gdrive_file_id}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold"
+                    >
+                      <ExternalLink className="w-3 h-3" /> Ver archivo original en Google Drive
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Auditoría de Prompt IA con Pre-Prompt */}

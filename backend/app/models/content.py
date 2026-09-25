@@ -45,6 +45,10 @@ class Slide(Base):
     image_url = Column(Text, nullable=True)
     gdrive_file_id = Column(Text, nullable=True)
     
+    headline = Column(Text, nullable=True)
+    body_text = Column(Text, nullable=True)
+    badge = Column(String(50), nullable=True)
+    
     prompt_used = Column(Text, nullable=True)
     feedback = Column(Text, nullable=True)
     status = Column(String(20), default="pending", nullable=False)  # 'pending', 'generating', 'generated', 'approved', 'rejected', 'failed'

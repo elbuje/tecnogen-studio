@@ -37,7 +37,7 @@ class GoogleAutomationService:
         if self.key_path:
             try:
                 scopes = [
-                    "https://www.googleapis.com/auth/drive.readonly",
+                    "https://www.googleapis.com/auth/drive",
                     "https://www.googleapis.com/auth/spreadsheets"
                 ]
                 self.creds = service_account.Credentials.from_service_account_file(self.key_path, scopes=scopes)
@@ -311,4 +311,87 @@ class GoogleAutomationService:
             return self.download_file_bytes(selected_file.get("id"))
         except Exception as e:
             logger.error(f"Error obteniendo foto de sujeto de Drive: {e}")
+            return None
+
+    def create_drive_folder(self, parent_folder_id: str, folder_name: str) -> Optional[str]:
+        """Crea una subcarpeta en Google Drive y devuelve su ID."""
+        if not self.is_ready or not parent_folder_id:
+            return None
+        clean_parent_id = self.extract_id(parent_folder_id)
+        if not clean_parent_id:
+            return None
+        try:
+            # Verificar si ya existe para no duplicar
+            q = f"'{clean_parent_id}' in parents and name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+            res = self.drive_service.files().list(q=q, fields="files(id, name)").execute()
+            existing = res.get("files", [])
+            if existing:
+                return existing[0].get("id")
+
+            meta = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [clean_parent_id]
+            }
+            folder = self.drive_service.files().create(body=meta, fields='id').execute()
+            logger.info(f"Carpeta creada en Drive: '{folder_name}' (id={folder.get('id')})")
+            return folder.get('id')
+        except Exception as e:
+            logger.error(f"Error creando carpeta '{folder_name}' en Drive: {e}")
+            return None
+
+    def upload_file_bytes(
+        self,
+        parent_folder_id: str,
+        file_name: str,
+        file_bytes: bytes,
+        mime_type: str = "image/png"
+    ) -> Optional[Dict[str, str]]:
+        """Sube un archivo a Google Drive y devuelve su ID y enlace."""
+        if not self.is_ready or not parent_folder_id or not file_bytes:
+            return None
+        clean_parent_id = self.extract_id(parent_folder_id)
+        if not clean_parent_id:
+            return None
+        try:
+            import io
+            from googleapiclient.http import MediaIoBaseUpload
+
+            # Verificar si ya existe un archivo con ese nombre para actualizarlo o crear nuevo
+            q = f"'{clean_parent_id}' in parents and name = '{file_name}' and trashed = false"
+            res = self.drive_service.files().list(q=q, fields="files(id, name)").execute()
+            existing = res.get("files", [])
+
+            media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, resumable=True)
+
+            if existing:
+                file_id = existing[0].get("id")
+                updated = self.drive_service.files().update(
+                    fileId=file_id,
+                    media_body=media,
+                    fields='id, webViewLink, webContentLink'
+                ).execute()
+                logger.info(f"Archivo actualizado en Drive: {file_name} (id={file_id})")
+                return {
+                    "id": file_id,
+                    "url": updated.get("webViewLink") or f"https://drive.google.com/file/d/{file_id}/view"
+                }
+            else:
+                meta = {
+                    'name': file_name,
+                    'parents': [clean_parent_id]
+                }
+                created = self.drive_service.files().create(
+                    body=meta,
+                    media_body=media,
+                    fields='id, webViewLink, webContentLink'
+                ).execute()
+                file_id = created.get("id")
+                logger.info(f"Archivo subido a Drive: {file_name} (id={file_id})")
+                return {
+                    "id": file_id,
+                    "url": created.get("webViewLink") or f"https://drive.google.com/file/d/{file_id}/view"
+                }
+        except Exception as e:
+            logger.error(f"Error subiendo archivo {file_name} a Drive: {e}")
             return None
