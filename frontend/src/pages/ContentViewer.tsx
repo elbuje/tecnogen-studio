@@ -390,18 +390,28 @@ export const ContentViewer: React.FC = () => {
                 alt={`Slide ${currentSlide.slide_number}`}
                 className="w-full h-full object-contain select-none"
               />
+            ) : currentSlide?.status === 'failed' ? (
+              <div className="text-center p-8 space-y-4">
+                <div className="p-4 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 w-16 h-16 mx-auto flex items-center justify-center shadow-lg shadow-rose-500/10">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+                <div className="space-y-1 max-w-sm mx-auto">
+                  <div className="text-sm font-bold text-rose-400">
+                    Fallo en la generación del modelo
+                  </div>
+                  <p className="text-xs text-slate-300 font-mono break-words">
+                    {currentSlide?.feedback || 'Error al conectar con la API de OpenAI o cuota excedida.'}
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="text-center p-8 space-y-4">
                 <Sparkles className="w-10 h-10 text-cyan-400 mx-auto animate-spin" />
                 <div className="text-sm font-bold text-slate-200">
-                  {currentSlide?.status === 'failed' ? (
-                    <span className="text-rose-400">Error: {currentSlide?.feedback}</span>
-                  ) : (
-                    `Renderizando Lámina #${currentIndex + 1} de ${slides.length}...`
-                  )}
+                  {`Renderizando Lámina #${currentIndex + 1} de ${slides.length}...`}
                 </div>
                 <p className="text-xs text-slate-400 max-w-xs">
-                  Componiendo fondo limpio, foto del sujeto, logo oficial y tipografía en español...
+                  Generando imagen real con el modelo de IA seleccionado...
                 </p>
               </div>
             )}
