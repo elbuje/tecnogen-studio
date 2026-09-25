@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import base64
 import logging
+import re
 from pydantic import BaseModel
 from app.database import get_db, SessionLocal
 from app.models.user import User
@@ -183,16 +184,18 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             try:
                 from app.services.google_automation_service import GoogleAutomationService
                 g_svc = GoogleAutomationService()
-                row_idx = int(content.sheet_row_ref)
-                preview_link = f"https://studio.tecnogen.ar/app/viewer/{content.id}"
-                final_sheet_status = "Listo para Revisión" if content.status == "ready_for_review" else "Error"
-                g_svc.update_sheet_row_status(
-                    sheet_url=brand.sheets_url,
-                    row_number=row_idx,
-                    estado=final_sheet_status,
-                    content_id=content.id,
-                    preview_url=preview_link
-                )
+                digits = re.sub(r'\D', '', str(content.sheet_row_ref))
+                row_idx = int(digits) if digits else 0
+                if row_idx > 0:
+                    preview_link = f"https://studio.tecnogen.ar/app/viewer/{content.id}"
+                    final_sheet_status = "Listo para Revisión" if content.status == "ready_for_review" else "Error"
+                    g_svc.update_sheet_row_status(
+                        sheet_url=brand.sheets_url,
+                        row_number=row_idx,
+                        estado=final_sheet_status,
+                        content_id=content.id,
+                        preview_url=preview_link
+                    )
             except Exception as e_sheet:
                 logger.error(f"Error actualizando estado en Google Sheet: {e_sheet}")
 
