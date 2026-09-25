@@ -23,6 +23,7 @@ TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y 
 | **Backend en Producción** | 🟢 Activo (:8028) | FastAPI + SQLite persistente gestionado como Daemon supervisado en Ploi (`id: 226698`). |
 | **Frontend en Producción** | 🟢 Compilado | SPA React 18 + Vite + Tailwind CSS servido directamente por Nginx en `/public`. |
 | **Pipeline IA & Modelos BD** | 🟢 Operativo | Resolución dinámica desde `ai_settings` en BD con soporte nativo para `gpt-image-2.5-sunburst` y API Key del usuario. |
+| **Probador de Modelo en Vivo** | 🟢 Operativo | Botón `Probar Modelo Seleccionado` en `/app/settings/ai` con test de persona sonriente y diagnóstico de errores en tiempo real. |
 | **Manual de Marca JM** | 🟢 Integrado | Paleta oficial (`#16345F`, `#7DD3FC`, `#1D1D1B`), logo oficial y fotos iPhone `.HIF` de Dra. Jessica (`pillow-heif`). |
 | **Compositor HD (1080x1350)** | 🟢 Operativo | Numeración de láminas (`1/8`, etc.), badges en español, encuadre de profesional y botón de deslizamiento. |
 | **Visor Rediseñado** | 🟢 Completado | Canvas centralizado 1080x1350, filmstrip inferior numerado, inspector con guion editable y descarga masiva de PNGs. |
