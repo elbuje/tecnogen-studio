@@ -4,6 +4,15 @@ Historial cronológico de cambios, decisiones técnicas e hitos del proyecto.
 
 ---
 
+## 2026-09-25
+* `FEAT`: **Identidad de Marca Oficial JM Odontología Integral**: extracción de colores corporativos (`#16345F`, `#7DD3FC`, `#1D1D1B`), tipografías y logo transparente desde el Manual de Marca en Google Drive (`Manual de identidad JM.pdf`).
+* `FEAT`: **Soporte Nativo de Fotos iPhone (`pillow-heif`)**: integración y decodificación directa de imágenes `.HIF` / `.HEIC` de las carpetas de personajes (`Jessica.HIF`).
+* `FEAT`: **Carga Dinámica de Modelos de IA desde Base de Datos**: conexión directa entre `/app/ai-settings`, tabla `ai_settings` y el pipeline de generación (`contents.py`), respetando el modelo activo (`gpt-image-2.5-sunburst`, `dall-e-3`, etc.) y la API Key del usuario sin dependencia de `.env` estático.
+* `FEAT`: **Compositor Determinista HD (1080x1350)**: inserción estricta de numeración de láminas (`1/8`, `2/8`, ..., `8/8`), logo oficial, badges temáticos en español y botón de deslizamiento `Deslizá para leer »`.
+* `FEAT`: **Botones Interactivos de Enlaces en Integraciones**: agregado de botones "Abrir Carpeta" y "Abrir Hoja" con enlaces externos directos en `Integrations.tsx`.
+* `FEAT`: **Rediseño Completo del Visor (`ContentViewer.tsx`)**: vista centralizada 1080x1350 tipo Figma/Canva, tira inferior de diapositivas numeradas, navegación por teclado (`←`/`→`), inspector lateral con guion editable, copia de prompts de IA en 1 clic y descarga de PNGs en lote.
+* `DEPLOY`: Despliegue y verificación en producción en Ploi `errante` (`studio.tecnogen.ar`).
+
 ## 2026-09-24
 * `FEAT`: Implementación de **4 Arquitecturas Estructurales de Distribución de Pantalla y UI (Multi-Layout)**:
   1. **TecnoGen Clásico:** Barra de navegación superior fija + Menú lateral completo (260px) + Canvas central estándar.

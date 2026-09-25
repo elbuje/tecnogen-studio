@@ -17,7 +17,7 @@ class AIImageService:
         if self.api_key and self.api_key not in ["tu-api-key-de-openai", ""]:
             try:
                 from openai import OpenAI
-                self.client = OpenAI(api_key=self.api_key)
+                self.client = OpenAI(api_key=self.api_key, timeout=45.0)
             except Exception as e:
                 logger.warning(f"No se pudo instanciar cliente OpenAI: {e}")
 
@@ -33,8 +33,13 @@ class AIImageService:
         Genera imagen fotográfica hiperrealista con OpenAI DALL-E-3 API.
         """
         if self.client:
-            models_to_try = [self.model, "dall-e-3", "dall-e-2"]
-            # Deduplicar
+            # Mapear modelos de interfaz a modelos válidos de OpenAI Images API
+            resolved_primary = self.model
+            if resolved_primary not in ["dall-e-3", "dall-e-2"]:
+                resolved_primary = "dall-e-3"
+
+            models_to_try = [resolved_primary, "dall-e-3", "dall-e-2"]
+            # Deduplicar preservando orden
             seen = set()
             models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
 
@@ -52,7 +57,7 @@ class AIImageService:
                         return base64.b64decode(first_img.b64_json)
                     elif hasattr(first_img, 'url') and first_img.url:
                         import requests
-                        r = requests.get(first_img.url, timeout=30)
+                        r = requests.get(first_img.url, timeout=25)
                         if r.status_code == 200:
                             return r.content
                 except Exception as e:

@@ -224,12 +224,31 @@ class GoogleAutomationService:
             ).execute()
 
     def download_file_bytes(self, file_id: str) -> Optional[bytes]:
-        """Descarga el contenido binario de un archivo en Google Drive."""
+        """Descarga el contenido binario de un archivo en Google Drive con caché local en disco."""
         if not self.is_ready or not file_id:
             return None
+            
+        cache_dir = os.path.join(os.path.dirname(__file__), "../../storage/cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_file = os.path.join(cache_dir, f"drive_{file_id}.bin")
+        
+        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 0:
+            try:
+                with open(cache_file, "rb") as f:
+                    return f.read()
+            except Exception as e:
+                logger.warning(f"Error leyendo caché de {file_id}: {e}")
+
         try:
             req = self.drive_service.files().get_media(fileId=file_id)
-            return req.execute()
+            content_bytes = req.execute()
+            if content_bytes:
+                try:
+                    with open(cache_file, "wb") as f:
+                        f.write(content_bytes)
+                except Exception as e_w:
+                    logger.warning(f"No se pudo escribir caché para {file_id}: {e_w}")
+            return content_bytes
         except Exception as e:
             logger.error(f"Error descargando archivo {file_id} de Drive: {e}")
             return None

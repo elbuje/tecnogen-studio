@@ -342,6 +342,42 @@ export const ContentViewer: React.FC = () => {
         </div>
       </div>
 
+      {/* Generation Progress Alert Banner */}
+      {content.status === 'generating' && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900/80 to-blue-950/60 border border-cyan-500/30 shadow-xl space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-400">
+                <Sparkles className="w-5 h-5 animate-spin" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  Generación en Curso con IA
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-semibold">
+                    {slides.length} de {content.total_slides} láminas listas
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Componiendo fondos fotográficos con IA, fotos de Drive, logo oficial y tipografía en español. Las láminas aparecen aquí en tiempo real a medida que se completan.
+                </p>
+              </div>
+            </div>
+            <div className="text-right hidden sm:block">
+              <span className="text-lg font-black text-cyan-400">
+                {Math.round((slides.length / Math.max(1, content.total_slides)) * 100)}%
+              </span>
+            </div>
+          </div>
+          {/* Progress Bar */}
+          <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden border border-slate-700/50">
+            <div
+              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500"
+              style={{ width: `${Math.max(8, Math.round((slides.length / Math.max(1, content.total_slides)) * 100))}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Main Studio Viewport & Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Big Stage + Filmstrip Strip */}

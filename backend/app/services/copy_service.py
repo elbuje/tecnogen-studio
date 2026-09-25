@@ -22,34 +22,36 @@ Sos un copywriter experto en redes sociales para marcas profesionales y clínica
 Crea el contenido para un carrusel de Instagram/LinkedIn de {total_slides} slides sobre el tema: "{topic}".
 Marca: {brand_name}.
 
-Devuelve EXACTAMENTE un JSON array con {total_slides} objetos:
-[
-  {{
-    "slide_number": 1,
-    "slide_type": "cover",
-    "badge": "TEMA CLAVE",
-    "title": "Título gancho en mayúsculas/minúsculas potente",
-    "subtitle": "Subtítulo intrigante que invite a deslizar",
-    "body": ""
-  }},
-  {{
-    "slide_number": 2,
-    "slide_type": "content",
-    "badge": "01. CONCEPTO",
-    "title": "Subtítulo principal del slide",
-    "subtitle": "",
-    "body": "Texto explicativo claro, conciso y profesional de 2 a 3 líneas."
-  }},
-  ...
-  {{
-    "slide_number": {total_slides},
-    "slide_type": "cta",
-    "badge": "CONCLUSIÓN & ACCIÓN",
-    "title": "Llamado a la acción claro",
-    "subtitle": "{brand_name}",
-    "body": "Guardá este carrusel o agendá tu consulta hoy mismo."
-  }}
-]
+Devuelve EXACTAMENTE un objeto JSON con una clave "slides" conteniendo una lista de {total_slides} objetos:
+{{
+  "slides": [
+    {{
+      "slide_number": 1,
+      "slide_type": "cover",
+      "badge": "TEMA CLAVE",
+      "title": "Título gancho potente",
+      "subtitle": "Subtítulo intrigante",
+      "body": "Deslizá para saber más 👉"
+    }},
+    {{
+      "slide_number": 2,
+      "slide_type": "content",
+      "badge": "01. CONCEPTO",
+      "title": "Subtítulo principal del slide",
+      "subtitle": "",
+      "body": "Texto explicativo claro y profesional de 2 a 3 líneas."
+    }},
+    ...
+    {{
+      "slide_number": {total_slides},
+      "slide_type": "cta",
+      "badge": "CONCLUSIÓN & ACCIÓN",
+      "title": "Llamado a la acción claro",
+      "subtitle": "{brand_name}",
+      "body": "Guardá este carrusel o agendá tu consulta hoy mismo."
+    }}
+  ]
+}}
 """
             response = openai_client.chat.completions.create(
                 model=text_model,
@@ -58,10 +60,16 @@ Devuelve EXACTAMENTE un JSON array con {total_slides} objetos:
             )
             import json
             data = json.loads(response.choices[0].message.content)
-            if isinstance(data, list):
+            if isinstance(data, list) and len(data) > 0:
                 return data
-            elif "slides" in data:
-                return data["slides"]
+            elif isinstance(data, dict):
+                for k in ["slides", "carousel", "carrusel", "data", "items"]:
+                    if k in data and isinstance(data[k], list) and len(data[k]) > 0:
+                        return data[k]
+                # If dict has numeric keys or values list
+                for v in data.values():
+                    if isinstance(v, list) and len(v) > 0:
+                        return v
         except Exception as e:
             logger.error(f"Error generando copy con GPT: {e}")
 
