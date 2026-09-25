@@ -23,8 +23,8 @@ router = APIRouter(prefix="/contents", tags=["Contenidos & Carruseles"])
 class RegenerateAllRequest(BaseModel):
     global_feedback: Optional[str] = None
 
-from app.services.composer_service import render_slide_composite
 from app.services.google_automation_service import GoogleAutomationService
+from datetime import datetime
 
 def build_openai_slide_prompt(
     brand: Brand,
@@ -35,22 +35,25 @@ def build_openai_slide_prompt(
     global_feedback: Optional[str] = None
 ) -> str:
     slide_type = slide_data.get("slide_type", "content")
-    title = slide_data.get("title", "")
+    headline = (slide_data.get("headline") or slide_data.get("title") or "").strip()
+    body_text = (slide_data.get("body_text") or slide_data.get("body") or "").strip()
+    brand_name = brand.name or "JM Odontología Integral"
     
     feedback_instruction = f"Directive: {global_feedback}. " if global_feedback else ""
     
-    # Directiva estricta de pre-prompt: Fondo fotográfico de alta gama 100% libre de texto
-    preprompt = "Cinematic luxury dental clinic and aesthetic dentistry editorial photography. Bright clean medical studio, soft natural daylight, shallow depth of field, 8k resolution."
-    negative_rules = "STRICTLY NO TEXT, NO LETTERS, NO TYPOGRAPHY, NO WORDS, NO CHARTS, NO GRAPHICS, NO SIGNS, NO WATERMARK. Pure visual photographic background plate only."
-    
     if slide_type == "cover" or slide_num == 1:
-        scene = f"Hero shot of modern aesthetic dental practice interior for: {title}."
+        scene = f"Cover slide for social media carousel. Topic: '{headline}'. Professional, trustworthy and elegant presentation for {brand_name}."
     elif slide_type == "cta" or slide_num == total_slides:
-        scene = "Warm elegant clinic reception and welcoming consultation atmosphere."
+        scene = f"Final conclusion and call to action slide for social media carousel. Topic: '{headline}'. Welcoming and encouraging consultation with {brand_name}."
     else:
-        scene = f"High-end aesthetic dental care details, state-of-the-art dental equipment, clean pristine clinic setting for: {title}."
+        scene = f"Slide {slide_num} of {total_slides} for social media carousel. Concept: '{headline}'. Key message: '{body_text}'. Professional and clear clinical/educational focus for {brand_name}."
 
-    prompt = f"{preprompt} {scene} {feedback_instruction} Color harmony with subtle brand accents in {brand.accent_color or '#7DD3FC'}. {negative_rules}"
+    prompt = (
+        f"High-end editorial social media visual slide (1080x1350 portrait format) for {brand_name}. "
+        f"{scene} {feedback_instruction}"
+        f"Color palette harmony featuring primary brand tones {brand.primary_color or '#16345F'} and luminous accents in {brand.accent_color or '#7DD3FC'}. "
+        f"Atmosphere: ultra-clean, modern clinic, soft natural studio lighting, 8k resolution, premium aesthetic."
+    )
     return prompt.strip()
 
 def process_content_generation(content_id: str, db_factory, global_feedback: Optional[str] = None):
@@ -150,36 +153,22 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             prompt = build_openai_slide_prompt(brand, i, content.total_slides, slide_data, global_feedback=global_feedback)
             
             try:
-                # 1. Generar placa de fondo limpia con IA (Strict NO-TEXT)
-                bg_bytes = image_service.generate_slide_image(
+                # 1. Generar imagen directamente con el modelo de IA seleccionado
+                img_bytes = image_service.generate_slide_image(
                     prompt=prompt,
                     slide_info=slide_data,
                     brand_info=brand_info
                 )
-                
-                # 2. Asignar foto de sujeto real (Jessica) en Portada y láminas estratégicas
-                curr_subject_bytes = subject_bytes if (i == 1 or i == 3 or i == 7) else None
-                
-                # 3. Composición determinista con Pillow (Numeración 1/8, Logo oficial, Textos en español)
-                final_png_bytes = render_slide_composite(
-                    slide_num=i,
-                    total_slides=content.total_slides,
-                    slide_data=slide_data,
-                    brand_info=brand_info,
-                    background_bytes=bg_bytes,
-                    logo_bytes=logo_bytes,
-                    subject_bytes=curr_subject_bytes
-                )
 
-                b64_str = base64.b64encode(final_png_bytes).decode('utf-8')
+                b64_str = base64.b64encode(img_bytes).decode('utf-8')
                 data_uri = f"data:image/png;base64,{b64_str}"
 
-                # 4. Subir imagen a Google Drive
+                # 2. Subir imagen a Google Drive
                 drive_link = None
                 if carousel_drive_folder_id and g_svc and g_svc.is_ready:
                     try:
                         file_name = f"Slide_{i}_de_{content.total_slides}.png"
-                        upload_res = g_svc.upload_file_bytes(carousel_drive_folder_id, file_name, final_png_bytes)
+                        upload_res = g_svc.upload_file_bytes(carousel_drive_folder_id, file_name, img_bytes)
                         if upload_res:
                             drive_link = upload_res.get("url")
                     except Exception as e_up:
@@ -473,26 +462,10 @@ def regenerate_slide(
         
         prompt = build_openai_slide_prompt(brand, slide_number, content.total_slides, slide_data, global_feedback=payload.feedback)
         
-        # 1. Generar placa limpia de fondo con el modelo seleccionado por el usuario en BD
-        bg_bytes = image_service.generate_slide_image(prompt=prompt, slide_info=slide_data, brand_info=brand_info)
+        # 1. Generar imagen directamente con el modelo seleccionado por el usuario en BD
+        img_bytes = image_service.generate_slide_image(prompt=prompt, slide_info=slide_data, brand_info=brand_info)
         
-        # 2. Descargar activos de Drive
-        g_svc = GoogleAutomationService()
-        logo_bytes = g_svc.get_brand_logo_bytes(brand) if g_svc.is_ready else None
-        subject_bytes = g_svc.get_brand_subject_bytes(brand, "Jessica") if (g_svc.is_ready and (slide_number == 1 or slide_number == 3 or slide_number == 7)) else None
-        
-        # 3. Composición determinista HD
-        final_png_bytes = render_slide_composite(
-            slide_num=slide_number,
-            total_slides=content.total_slides,
-            slide_data=slide_data,
-            brand_info=brand_info,
-            background_bytes=bg_bytes,
-            logo_bytes=logo_bytes,
-            subject_bytes=subject_bytes
-        )
-        
-        b64_str = base64.b64encode(final_png_bytes).decode('utf-8')
+        b64_str = base64.b64encode(img_bytes).decode('utf-8')
         data_uri = f"data:image/png;base64,{b64_str}"
 
         if existing_slide:

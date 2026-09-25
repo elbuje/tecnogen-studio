@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class AIImageService:
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
-        self.model = model or getattr(settings, "OPENAI_IMAGE_MODEL", "gpt-image-2.5-sunburst-2026-09-08") or "dall-e-3"
+        self.model = model or getattr(settings, "OPENAI_IMAGE_MODEL", "gpt-image-2.5-sunburst") or "gpt-image-2.5-sunburst"
         self.client = None
 
         if not self.api_key or self.api_key in ["tu-api-key-de-openai", ""]:
