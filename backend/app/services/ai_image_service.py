@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 class AIImageService:
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
-        # Permitir modelo configurado o gpt-image-2.5-sunburst por defecto
-        self.model = model or settings.OPENAI_IMAGE_MODEL or "gpt-image-2.5-sunburst"
+        self.model = model or getattr(settings, "OPENAI_IMAGE_MODEL", "dall-e-3") or "dall-e-3"
 
         self.client = None
         if self.api_key and self.api_key not in ["tu-api-key-de-openai", ""]:
@@ -31,13 +30,10 @@ class AIImageService:
         brand_info: Optional[Dict[str, Any]] = None
     ) -> bytes:
         """
-        Genera imagen fotográfica hiperrealista con OpenAI API.
-        Si la API Key no está configurada o la API de OpenAI falla/excede cuota,
-        aplica render de diseño editorial de contingencia con Pillow.
+        Genera imagen fotográfica hiperrealista con OpenAI DALL-E-3 API.
         """
         if self.client:
-            # Modelos gpt-image soportan 1024x1024 o 1024x1536 / 1024x1792
-            models_to_try = [self.model, "gpt-image-2.5-sunburst", "gpt-image-1.5", "gpt-image-1"]
+            models_to_try = [self.model, "dall-e-3", "dall-e-2"]
             # Deduplicar
             seen = set()
             models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
