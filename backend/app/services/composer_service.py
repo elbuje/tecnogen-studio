@@ -264,7 +264,7 @@ def render_slide_composite(
         swipe_y = height - 120
         draw_rounded_rect(draw, [swipe_x, swipe_y, swipe_x + swipe_box_w, swipe_y + swipe_box_h], radius=28, fill=(*accent_rgb, 255))
         swipe_font = get_font(22, bold=True)
-        draw.text((swipe_x + 28, swipe_y + 14), "Deslizá para leer  ➔", font=swipe_font, fill=(15, 23, 42, 255))
+        draw.text((swipe_x + 28, swipe_y + 14), "Deslizá para leer »", font=swipe_font, fill=(15, 23, 42, 255))
 
     elif slide_type == "cta" or slide_num == total_slides:
         # Lámina de Cierre & Llamado a la Acción
