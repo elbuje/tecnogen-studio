@@ -5,19 +5,18 @@ import {
   Check,
   Key,
   ShieldCheck,
-  AlertCircle,
   Cpu,
   FlaskConical,
   RefreshCw,
   XCircle,
   CheckCircle2,
   ChevronDown,
-  Layers,
   Image as ImageIcon,
   MessageSquare,
   Search,
   Star,
-  Zap
+  Zap,
+  Layers
 } from 'lucide-react';
 
 interface AIModel {
@@ -31,7 +30,7 @@ interface AIModel {
 const PROVIDERS: Record<string, { label: string; defaultModel: string; placeholder: string }> = {
   openai: {
     label: 'OpenAI (Platform)',
-    defaultModel: 'dall-e-3',
+    defaultModel: 'gpt-image-2.5-sunburst-2026-09-08',
     placeholder: 'sk-proj-... o tu clave de API de OpenAI',
   },
   flux: {
@@ -58,16 +57,15 @@ const PROVIDERS: Record<string, { label: string; defaultModel: string; placehold
 
 const RECOMMENDED_IMAGE_MODELS: Record<
   string,
-  { id: string; name: string; tag: string; desc: string; resolution: string; isHighlight?: boolean }[]
+  { id: string; name: string; tag: string; desc: string; resolution: string }[]
 > = {
   openai: [
     {
       id: 'gpt-image-2.5-sunburst-2026-09-08',
       name: 'GPT Image 2.5 Sunburst',
       tag: '⭐ Recomendado 2026',
-      desc: 'Renderizado fotográfico de máxima nitidez, tipografía integrada y precisión anatómica.',
+      desc: 'Renderizado de máxima nitidez, tipografía integrada y precisión anatómica.',
       resolution: '1024x1792 / 1024x1024',
-      isHighlight: true,
     },
     {
       id: 'dall-e-3',
@@ -75,15 +73,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: 'Alta Calidad HD',
       desc: 'Generación hiperrealista con comprensión estética de iluminación médica y dental.',
       resolution: '1024x1792 / 1024x1024',
-      isHighlight: true,
-    },
-    {
-      id: 'dall-e-2',
-      name: 'DALL-E 2',
-      tag: 'Rápido',
-      desc: 'Generación estándar y menor latencia para bocetos visuales.',
-      resolution: '512x512 / 1024x1024',
-      isHighlight: false,
     },
   ],
   flux: [
@@ -93,7 +82,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: '⭐ Recomendado',
       desc: 'Máxima fidelidad fotográfica y texturas hiperrealistas de vanguardia.',
       resolution: '1024x1024',
-      isHighlight: true,
     },
     {
       id: 'flux-dev',
@@ -101,15 +89,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: 'Profesional',
       desc: 'Modelo open-weights de calidad profesional.',
       resolution: '1024x1024',
-      isHighlight: false,
-    },
-    {
-      id: 'flux-schnell',
-      name: 'FLUX.1 Schnell',
-      tag: 'Ultra Rápido',
-      desc: 'Velocidad en tiempo real para generación iterativa.',
-      resolution: '1024x1024',
-      isHighlight: false,
     },
   ],
   stability: [
@@ -119,7 +98,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: '⭐ Recomendado',
       desc: 'Excelente manejo de sombras, iluminación de estudio y composición espacial.',
       resolution: '1024x1024',
-      isHighlight: true,
     },
     {
       id: 'stable-diffusion-xl-1024-v1-0',
@@ -127,7 +105,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: 'Estándar',
       desc: 'Clásico probado de alta resolución.',
       resolution: '1024x1024',
-      isHighlight: false,
     },
   ],
   google: [
@@ -137,7 +114,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: '⭐ Recomendado',
       desc: 'Modelo generativo insignia de Google Cloud con estética fotorrealista.',
       resolution: '1024x1024',
-      isHighlight: true,
     },
     {
       id: 'imagen-3.0-fast-generate-001',
@@ -145,7 +121,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: 'Baja Latencia',
       desc: 'Optimizado para rapidez y consistencia cromática.',
       resolution: '1024x1024',
-      isHighlight: false,
     },
   ],
   anthropic: [
@@ -155,7 +130,6 @@ const RECOMMENDED_IMAGE_MODELS: Record<
       tag: 'Copy & Guiones',
       desc: 'Modelo líder para redacción de copys persuasivos y estructuración de diapositivas.',
       resolution: 'Texto / JSON',
-      isHighlight: true,
     },
   ],
 };
@@ -163,13 +137,12 @@ const RECOMMENDED_IMAGE_MODELS: Record<
 export const AISettings: React.FC = () => {
   const [provider, setProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
-  const [modelName, setModelName] = useState('dall-e-3');
+  const [modelName, setModelName] = useState('gpt-image-2.5-sunburst-2026-09-08');
   const [modelsList, setModelsList] = useState<AIModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelsSource, setModelsSource] = useState<'live_api' | 'catalog' | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [searchFilter, setSearchFilter] = useState('');
-  const [showAllDropdown, setShowAllDropdown] = useState(false);
   const [isCustomModel, setIsCustomModel] = useState(false);
 
   const [saving, setSaving] = useState(false);
@@ -325,7 +298,7 @@ export const AISettings: React.FC = () => {
           <Cpu className="w-6 h-6 text-cyan-400" /> Configuración de Motores de IA & Modelos
         </h1>
         <p className="text-sm text-slate-400">
-          Elegí los modelos recomendados para generación de imágenes o sincronizá la lista completa desde tu cuenta.
+          Sincronizá todos los modelos disponibles en tu cuenta y seleccioná el modelo activo de imagen o cualquier modelo de la plataforma.
         </p>
       </div>
 
@@ -412,7 +385,7 @@ export const AISettings: React.FC = () => {
               <Sparkles className="w-4 h-4 text-amber-400" />
               3. Modelos de Imagen Recomendados ({PROVIDERS[provider]?.label})
             </label>
-            <span className="text-[11px] text-slate-400">Clic para seleccionar</span>
+            <span className="text-[11px] text-slate-400">Clic para seleccionar rápido</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -460,126 +433,111 @@ export const AISettings: React.FC = () => {
                   </div>
 
                   <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
-                    <span className="text-cyan-400">{m.id}</span>
+                    <span className="text-cyan-400 font-bold">{m.id}</span>
                     <span className="text-slate-500">{m.resolution}</span>
                   </div>
                 </div>
               );
             })}
           </div>
+        </div>
 
-          {/* Toggle para Explorar Todos los Modelos de la Cuenta */}
-          <div className="pt-2">
+        {/* Paso 4: Selector Completo de Todos los Modelos de la Plataforma */}
+        <div className="space-y-4 pt-4 border-t border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-cyan-400" />
+              4. Todos los Modelos de tu Plataforma ({modelsList.length} modelos detectados)
+            </label>
             <button
               type="button"
-              onClick={() => setShowAllDropdown(!showAllDropdown)}
-              className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 font-medium transition-colors"
+              onClick={() => setIsCustomModel(!isCustomModel)}
+              className="text-xs text-slate-400 hover:text-cyan-400 transition-colors"
             >
-              <ChevronDown className={`w-4 h-4 transition-transform ${showAllDropdown ? 'rotate-180' : ''}`} />
-              <span>
-                {showAllDropdown
-                  ? 'Ocultar explorador de todos los modelos'
-                  : `🔍 Ver selector completo con todos los modelos de la plataforma (${modelsList.length} disponibles)`}
-              </span>
+              {isCustomModel ? '← Volver al selector combo' : '✏️ Ingresar ID manual'}
             </button>
           </div>
 
-          {/* Explorador Avanzado Completo */}
-          {showAllDropdown && (
-            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 animate-in fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Todos los Modelos en la Cuenta ({modelsList.length})
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsCustomModel(!isCustomModel)}
-                  className="text-xs text-slate-400 hover:text-cyan-400 transition-colors"
-                >
-                  {isCustomModel ? '← Volver a lista' : '✏️ Ingresar ID manual'}
-                </button>
-              </div>
-
-              {!isCustomModel ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative flex-1 min-w-[180px]">
-                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={searchFilter}
-                        onChange={(e) => setSearchFilter(e.target.value)}
-                        placeholder="Buscar por ID (dall-e, gpt-4o, etc.)..."
-                        className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-cyan-400 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setFilterType('all')}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                          filterType === 'all' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        Todos ({modelsList.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterType('image')}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
-                          filterType === 'image' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <ImageIcon className="w-3 h-3" />
-                        Imágenes ({modelsList.filter((m) => m.type === 'image').length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterType('chat')}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
-                          filterType === 'chat' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                        Chat ({modelsList.filter((m) => m.type === 'chat').length})
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <select
-                      value={modelName}
-                      onChange={(e) => {
-                        setModelName(e.target.value);
-                        setTestResult(null);
-                      }}
-                      className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:border-cyan-400 focus:outline-none cursor-pointer"
-                    >
-                      {filteredModels.map((m) => (
-                        <option key={m.id} value={m.id} className="bg-slate-900 text-white py-1.5">
-                          {m.type === 'image' ? '🖼️ [IMAGEN] ' : m.type === 'chat' ? '💬 [CHAT] ' : '⚙️ '}
-                          {m.id} — {m.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
+          {!isCustomModel ? (
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+              {/* Barra de Filtros y Búsqueda */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    value={modelName}
-                    onChange={(e) => {
-                      setModelName(e.target.value);
-                      setTestResult(null);
-                    }}
-                    placeholder="Ingresá el ID exacto del modelo (ej: ft:dall-e-3:...)"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-cyan-500/50 text-white font-mono text-xs focus:border-cyan-400 focus:outline-none"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Buscar entre los 134 modelos (ej: gpt-image, dall-e, gpt-4o)..."
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-cyan-400 focus:outline-none"
                   />
                 </div>
-              )}
+
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setFilterType('all')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                      filterType === 'all' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Todos ({modelsList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterType('image')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                      filterType === 'image' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                    Imágenes ({modelsList.filter((m) => m.type === 'image').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterType('chat')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                      filterType === 'chat' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    Chat ({modelsList.filter((m) => m.type === 'chat').length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Combo Dropdown Select */}
+              <div className="relative">
+                <select
+                  value={modelName}
+                  onChange={(e) => {
+                    setModelName(e.target.value);
+                    setTestResult(null);
+                  }}
+                  className="w-full appearance-none pl-4 pr-10 py-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs sm:text-sm focus:border-cyan-400 focus:outline-none cursor-pointer"
+                >
+                  {filteredModels.map((m) => (
+                    <option key={m.id} value={m.id} className="bg-slate-900 text-white py-1.5">
+                      {m.type === 'image' ? '🖼️ [IMAGEN] ' : m.type === 'chat' ? '💬 [CHAT] ' : '⚙️ '}
+                      {m.id} — {m.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+          ) : (
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+              <input
+                type="text"
+                value={modelName}
+                onChange={(e) => {
+                  setModelName(e.target.value);
+                  setTestResult(null);
+                }}
+                placeholder="Ingresá el ID exacto del modelo (ej: ft:dall-e-3:...)"
+                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-cyan-500/50 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none"
+              />
             </div>
           )}
 
@@ -590,7 +548,7 @@ export const AISettings: React.FC = () => {
                 <Zap className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs text-slate-400">Modelo Activo Seleccionado:</div>
+                <div className="text-xs text-slate-400">Modelo Seleccionado para Usar:</div>
                 <div className="text-sm font-bold text-white font-mono text-cyan-300">{modelName}</div>
               </div>
             </div>
