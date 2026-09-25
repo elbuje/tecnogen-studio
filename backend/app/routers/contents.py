@@ -404,16 +404,53 @@ def regenerate_slide(
     new_version = (existing_slide.version + 1) if existing_slide else 1
     
     ai_setting = db.query(AISetting).filter(AISetting.is_active == True, AISetting.category == "image").first()
-    model_name = ai_setting.model_name if ai_setting else "dall-e-3"
+    model_name = ai_setting.model_name if ai_setting else "gpt-image-2.5-sunburst"
     api_key = ai_setting.api_key_override if (ai_setting and ai_setting.api_key_override) else None
     
     try:
         image_service = AIImageService(api_key=api_key, model=model_name)
         brand = content.brand
-        prompt = f"Lámina #{slide_number} de {content.total_slides} para {brand.name}. Tema: {content.title}. MODIFICACIÓN SOLICITADA POR EL USUARIO: {payload.feedback}. Estilo clínico premium, fondo {brand.bg_color}, detalles en {brand.accent_color}."
+        brand_info = {
+            "name": brand.name or "JM Odontología Integral",
+            "primary_color": brand.primary_color or "#16345F",
+            "accent_color": brand.accent_color or "#7DD3FC",
+            "bg_color": brand.bg_color or "#1D1D1B",
+            "layout_preset": brand.layout_preset or "editorial-top",
+            "logo_position": brand.logo_position or "top-left",
+            "logo_width_px": brand.logo_width_px or 220
+        }
         
-        img_bytes = image_service.generate_slide_image(prompt=prompt)
-        b64_str = base64.b64encode(img_bytes).decode('utf-8')
+        slide_data = {
+            "slide_number": slide_number,
+            "total_slides": content.total_slides,
+            "slide_type": "cover" if slide_number == 1 else ("cta" if slide_number == content.total_slides else "content"),
+            "badge": f"PASO {slide_number}" if (1 < slide_number < content.total_slides) else ("PORTADA" if slide_number == 1 else "CONSULTA"),
+            "headline": payload.feedback or f"Lámina #{slide_number} - {content.title}",
+            "body_text": payload.feedback or f"Contenido clínico especializado de {brand.name}."
+        }
+        
+        prompt = build_openai_slide_prompt(brand, slide_number, content.total_slides, slide_data, global_feedback=payload.feedback)
+        
+        # 1. Generar placa limpia de fondo con el modelo seleccionado por el usuario en BD
+        bg_bytes = image_service.generate_slide_image(prompt=prompt, slide_info=slide_data, brand_info=brand_info)
+        
+        # 2. Descargar activos de Drive
+        g_svc = GoogleAutomationService()
+        logo_bytes = g_svc.get_brand_logo_bytes(brand) if g_svc.is_ready else None
+        subject_bytes = g_svc.get_brand_subject_bytes(brand, "Jessica") if (g_svc.is_ready and (slide_number == 1 or slide_number == 3 or slide_number == 7)) else None
+        
+        # 3. Composición determinista HD
+        final_png_bytes = render_slide_composite(
+            slide_num=slide_number,
+            total_slides=content.total_slides,
+            slide_data=slide_data,
+            brand_info=brand_info,
+            background_bytes=bg_bytes,
+            logo_bytes=logo_bytes,
+            subject_bytes=subject_bytes
+        )
+        
+        b64_str = base64.b64encode(final_png_bytes).decode('utf-8')
         data_uri = f"data:image/png;base64,{b64_str}"
 
         if existing_slide:
