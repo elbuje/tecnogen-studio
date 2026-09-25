@@ -15,7 +15,14 @@ import {
   Share2,
   Trash2,
   Layers,
-  RotateCw
+  RotateCw,
+  ExternalLink,
+  Copy,
+  Check,
+  Eye,
+  FileText,
+  Sliders,
+  FolderDown
 } from 'lucide-react';
 
 export const ContentViewer: React.FC = () => {
@@ -40,6 +47,9 @@ export const ContentViewer: React.FC = () => {
 
   // Deleting state
   const [deleting, setDeleting] = useState(false);
+  const [copiedCaption, setCopiedCaption] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
 
   const pollingRef = useRef<any>(null);
 
@@ -60,7 +70,6 @@ export const ContentViewer: React.FC = () => {
   useEffect(() => {
     fetchContent();
 
-    // Auto-polling cada 3 segundos si el contenido se está generando
     pollingRef.current = setInterval(async () => {
       const data = await fetchContent(true);
       if (data && data.status !== 'generating') {
@@ -73,12 +82,21 @@ export const ContentViewer: React.FC = () => {
     };
   }, [contentId]);
 
-  // Si el estado cambia a listo, detener polling
   useEffect(() => {
     if (content && content.status !== 'generating' && pollingRef.current) {
       clearInterval(pollingRef.current);
     }
   }, [content?.status]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight') handleNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, content?.slides?.length]);
 
   const slides = content?.slides || [];
   const currentSlide = slides[currentIndex];
@@ -95,6 +113,34 @@ export const ContentViewer: React.FC = () => {
     }
   };
 
+  // Descargar lámina actual
+  const handleDownloadCurrent = () => {
+    if (!currentSlide?.image_url) return;
+    const a = document.createElement('a');
+    a.href = currentSlide.image_url;
+    a.download = `${content.title.replace(/\s+/g, '_')}_Slide_${currentIndex + 1}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // Descargar todas las láminas
+  const handleDownloadAll = () => {
+    if (!slides.length) return;
+    slides.forEach((s: any, idx: number) => {
+      if (s.image_url) {
+        setTimeout(() => {
+          const a = document.createElement('a');
+          a.href = s.image_url;
+          a.download = `${content.title.replace(/\s+/g, '_')}_Slide_${idx + 1}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }, idx * 250);
+      }
+    });
+  };
+
   // 1. Regenerar Solo este Slide (1 crédito)
   const handleRegenerateSingle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +154,7 @@ export const ContentViewer: React.FC = () => {
       await refreshUser();
       setSingleFeedback('');
       await fetchContent(false);
-      alert(`Lámina #${currentSlide.slide_number} regenerada con éxito con OpenAI (1 crédito consumido).`);
+      alert(`Lámina #${currentSlide.slide_number} regenerada con éxito.`);
     } catch (err: any) {
       alert(err.response?.data?.detail?.message || err.response?.data?.detail || 'Error al regenerar slide.');
     } finally {
@@ -129,7 +175,6 @@ export const ContentViewer: React.FC = () => {
       setGlobalFeedback('');
       await fetchContent(false);
 
-      // Reiniciar polling para esperar la regeneración completa
       if (pollingRef.current) clearInterval(pollingRef.current);
       pollingRef.current = setInterval(async () => {
         const data = await fetchContent(true);
@@ -138,7 +183,7 @@ export const ContentViewer: React.FC = () => {
         }
       }, 3000);
 
-      alert(`Regeneración completa iniciada (${content.total_slides} créditos consumidos). Procesando con OpenAI...`);
+      alert(`Regeneración completa iniciada (${content.total_slides} créditos). Procesando con IA...`);
     } catch (err: any) {
       alert(err.response?.data?.detail?.message || err.response?.data?.detail || 'Error al regenerar todo el carrusel.');
     } finally {
@@ -167,94 +212,112 @@ export const ContentViewer: React.FC = () => {
     try {
       await api.post(`/contents/${contentId}/approve`);
       await fetchContent(false);
-      alert('¡Carrusel aprobado exitosamente! Ahora podés descargarlo o programarlo en Metricool.');
+      alert('¡Carrusel aprobado exitosamente!');
     } catch (e) {
       alert('Error al aprobar carrusel.');
     }
   };
 
+  const driveOutputFolder = content?.brand?.gdrive_output_folder_id || 'https://drive.google.com/drive/folders/10yYnkHa-l0oiotNxq8aalRUwRDv6dOJi?usp=sharing';
+
   if (loading && !content) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-cyan-400 mr-2" /> Cargando visor interactivo...
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-slate-400 space-y-4">
+        <RefreshCw className="w-8 h-8 animate-spin text-cyan-400" />
+        <span className="text-sm font-semibold">Cargando visor de estudio...</span>
       </div>
     );
   }
 
   if (!content) {
     return (
-      <div className="p-8 text-center space-y-4">
-        <div className="text-rose-400 font-bold">Contenido no encontrado</div>
-        <Link to="/app/library" className="text-cyan-400 underline text-sm">Ir a Mi Biblioteca</Link>
+      <div className="p-12 text-center space-y-4">
+        <div className="text-rose-400 font-bold text-lg">Contenido no encontrado</div>
+        <p className="text-xs text-slate-400">Es posible que el contenido pertenezca a otra marca o se haya eliminado.</p>
+        <Link to="/app/library" className="inline-block px-5 py-2.5 rounded-xl bg-cyan-500 text-black font-bold text-xs">
+          Ir a Mi Biblioteca
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Top Bar Navigation & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* Top Header Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
         <div className="flex items-center gap-4">
           <Link
             to="/app/library"
-            className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+            className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors"
             title="Volver a Mi Biblioteca"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-white tracking-tight">{content.title}</h1>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl font-bold text-white tracking-tight">{content.title}</h1>
               {content.status === 'generating' && (
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[11px] font-semibold animate-pulse">
-                  <RotateCw className="w-3 h-3 animate-spin" /> Procesando con OpenAI...
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[11px] font-bold animate-pulse">
+                  <RotateCw className="w-3 h-3 animate-spin" /> Procesando con IA...
                 </span>
               )}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-              <span>{content.total_slides} slides</span>
-              <span>•</span>
-              <span className="capitalize text-cyan-300">{content.type}</span>
-              <span>•</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                className={`px-3 py-1 rounded-full text-[11px] font-bold ${
                   content.status === 'ready_for_review'
-                    ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40'
                     : content.status === 'approved'
-                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40'
                     : content.status === 'failed'
-                    ? 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                    ? 'bg-rose-500/15 text-rose-300 border border-rose-500/40'
                     : 'bg-slate-800 text-slate-300'
                 }`}
               >
                 {content.status === 'ready_for_review'
                   ? 'Listo para Revisar'
                   : content.status === 'approved'
-                  ? 'Aprobado'
+                  ? 'Aprobado Oficial'
                   : content.status === 'failed'
                   ? 'Error'
                   : 'Generando...'}
               </span>
             </div>
+            <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+              <span className="font-semibold text-cyan-400">{content.brand?.name || 'JM Odontología Integral'}</span>
+              <span>•</span>
+              <span>{content.total_slides} Láminas</span>
+              <span>•</span>
+              <span className="capitalize text-slate-300">Formato Instagram 4:5 HD</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Botón Refrescar Manual */}
-          <button
-            onClick={() => fetchContent(false)}
-            title="Actualizar estado"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+        {/* Global Action Buttons */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Abrir en Google Drive */}
+          <a
+            href={driveOutputFolder}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 flex items-center gap-1.5 transition-all shadow-sm"
           >
-            <RotateCw className="w-4 h-4" />
+            <ExternalLink className="w-3.5 h-3.5" /> Carpeta en Drive
+          </a>
+
+          {/* Descargar Todas */}
+          <button
+            onClick={handleDownloadAll}
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all"
+            title="Descargar todos los PNGs"
+          >
+            <FolderDown className="w-3.5 h-3.5 text-cyan-400" /> Descargar Todos los PNG
           </button>
 
-          {/* Botón Regenerar Todo */}
+          {/* Regenerar Todo */}
           <button
             onClick={() => setShowRegenerateAllModal(true)}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-cyan-400" /> Regenerar Todo el Carrusel
+            <RefreshCw className="w-3.5 h-3.5 text-amber-400" /> Regenerar Todo
           </button>
 
           {/* Aprobar */}
@@ -263,35 +326,28 @@ export const ContentViewer: React.FC = () => {
               onClick={handleApproveAll}
               className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/20"
             >
-              <CheckCircle2 className="w-4 h-4" /> Aprobar Todo
+              <CheckCircle2 className="w-4 h-4" /> Aprobar Carrusel
             </button>
           )}
 
-          {/* Programar */}
-          <button
-            onClick={() => setShowScheduleModal(true)}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-black flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/20"
-          >
-            <Calendar className="w-4 h-4" /> Programar Metricool
-          </button>
-
-          {/* Eliminar Carrusel */}
+          {/* Eliminar */}
           <button
             onClick={handleDelete}
             disabled={deleting}
-            title="Eliminar este carrusel por completo"
-            className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-colors"
+            title="Eliminar carrusel"
+            className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Main Studio Viewer Area */}
+      {/* Main Studio Viewport & Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: 1024x1536 Viewport Stage */}
-        <div className="lg:col-span-7 flex flex-col items-center space-y-4">
-          <div className="relative w-full max-w-[420px] aspect-[2/3] rounded-3xl overflow-hidden glass-panel border border-slate-700/80 shadow-2xl flex items-center justify-center bg-[#0B1E38]">
+        {/* Left Column: Big Stage + Filmstrip Strip */}
+        <div className="lg:col-span-7 flex flex-col items-center space-y-5">
+          {/* Main Stage Canvas (1080x1350 proportion) */}
+          <div className="relative w-full max-w-[440px] aspect-[4/5] rounded-3xl overflow-hidden glass-panel border border-slate-700/80 shadow-2xl flex items-center justify-center bg-[#0B1E38] group">
             {currentSlide?.image_url ? (
               <img
                 src={currentSlide.image_url}
@@ -299,164 +355,249 @@ export const ContentViewer: React.FC = () => {
                 className="w-full h-full object-contain select-none"
               />
             ) : (
-              <div className="text-center p-6 space-y-3">
-                <Sparkles className="w-8 h-8 text-cyan-400 mx-auto animate-spin" />
-                <div className="text-sm font-semibold text-slate-300">
+              <div className="text-center p-8 space-y-4">
+                <Sparkles className="w-10 h-10 text-cyan-400 mx-auto animate-spin" />
+                <div className="text-sm font-bold text-slate-200">
                   {currentSlide?.status === 'failed' ? (
-                    <span className="text-rose-400">Error en OpenAI: {currentSlide?.feedback}</span>
+                    <span className="text-rose-400">Error: {currentSlide?.feedback}</span>
                   ) : (
-                    `Generando Slide #${currentIndex + 1}...`
+                    `Renderizando Lámina #${currentIndex + 1} de ${slides.length}...`
                   )}
                 </div>
+                <p className="text-xs text-slate-400 max-w-xs">
+                  Componiendo fondo limpio, foto del sujeto, logo oficial y tipografía en español...
+                </p>
               </div>
             )}
 
-            {/* Slide Number Overlay */}
+            {/* Top Indicator Badge */}
             {slides.length > 0 && (
-              <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[11px] font-bold text-white border border-white/10">
-                Slide {currentIndex + 1} de {slides.length} (v{currentSlide?.version || 1})
+              <div className="absolute top-4 right-4 px-3.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-xs font-bold text-white border border-white/15 flex items-center gap-1.5 shadow-lg">
+                <span className="text-cyan-400">Lámina {currentIndex + 1}</span> de {slides.length}
               </div>
+            )}
+
+            {/* Quick Download Overlay Button */}
+            {currentSlide?.image_url && (
+              <button
+                onClick={handleDownloadCurrent}
+                className="absolute bottom-4 right-4 p-2.5 rounded-xl bg-black/70 hover:bg-cyan-500 hover:text-black text-white border border-white/20 backdrop-blur-md text-xs font-bold transition-all opacity-0 group-hover:opacity-100 flex items-center gap-1.5 cursor-pointer shadow-lg"
+                title="Descargar este PNG"
+              >
+                <Download className="w-3.5 h-3.5" /> Descargar PNG
+              </button>
             )}
           </div>
 
-          {/* Navigation Controls */}
+          {/* Navigation Arrows & Counter */}
           {slides.length > 0 && (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <button
                 onClick={handlePrev}
                 disabled={currentIndex === 0}
-                className="p-3 rounded-2xl glass-card hover:bg-slate-800 text-white disabled:opacity-30 transition-all"
+                className="p-3 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white disabled:opacity-30 transition-all cursor-pointer"
+                title="Anterior (Flecha izquierda)"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
 
-              {/* Dot indicators */}
-              <div className="flex items-center gap-2">
-                {slides.map((s: any, idx: number) => (
-                  <button
-                    key={s.id || idx}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`w-3 h-3 rounded-full transition-all ${
-                      idx === currentIndex
-                        ? 'bg-cyan-400 w-8'
-                        : 'bg-slate-700 hover:bg-slate-600'
-                    }`}
-                  />
-                ))}
+              <div className="text-xs font-bold text-slate-300 tracking-wide">
+                <span className="text-cyan-400 text-sm font-extrabold">{currentIndex + 1}</span> / {slides.length}
               </div>
 
               <button
                 onClick={handleNext}
                 disabled={currentIndex === slides.length - 1}
-                className="p-3 rounded-2xl glass-card hover:bg-slate-800 text-white disabled:opacity-30 transition-all"
+                className="p-3 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white disabled:opacity-30 transition-all cursor-pointer"
+                title="Siguiente (Flecha derecha)"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           )}
+
+          {/* Filmstrip Carousel Thumbnails */}
+          {slides.length > 0 && (
+            <div className="w-full max-w-[480px] p-3 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex gap-2.5 overflow-x-auto">
+              {slides.map((s: any, idx: number) => (
+                <button
+                  key={s.id || idx}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`relative flex-shrink-0 w-14 h-18 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                    idx === currentIndex
+                      ? 'border-cyan-400 shadow-lg shadow-cyan-500/25 scale-105'
+                      : 'border-slate-800 hover:border-slate-700 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  {s.image_url ? (
+                    <img src={s.image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-slate-950 flex items-center justify-center text-[10px] text-slate-500">
+                      #{idx + 1}
+                    </div>
+                  )}
+                  <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-black/80 text-[9px] font-bold text-white">
+                    {idx + 1}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Right: Individual Slide Controls & Regeneration */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Slide Details & Prompt info */}
+        {/* Right Column: Slide Inspector, Guion & Prompt Audit */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* Slide Details Card */}
           <div className="p-6 rounded-3xl glass-card space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-semibold text-slate-400 tracking-wider">
-                Lámina #{currentIndex + 1} ({currentSlide?.slide_type || 'content'})
-              </span>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 font-semibold border border-cyan-500/20">
-                Versión {currentSlide?.version || 1}
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase font-extrabold text-cyan-400 tracking-wider">
+                  Lámina #{currentIndex + 1}
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold uppercase">
+                  {currentSlide?.slide_type || 'content'}
+                </span>
+              </div>
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 font-semibold border border-cyan-500/20">
+                v{currentSlide?.version || 1}
               </span>
             </div>
 
-            {/* Prompt exacto enviado a la IA */}
-            <div className="p-4 rounded-2xl bg-slate-900/90 border border-indigo-500/30 space-y-2">
+            {/* Texto / Guión Oficial en Español */}
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-indigo-400 font-bold text-xs flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> Prompt Enviado a la IA para este Slide
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-cyan-400" /> Guión & Contenido en Español
                 </span>
                 <button
                   type="button"
                   onClick={() => {
                     if (currentSlide?.prompt_used) {
                       navigator.clipboard.writeText(currentSlide.prompt_used);
-                      alert('¡Prompt copiado al portapapeles!');
+                      setCopiedText(true);
+                      setTimeout(() => setCopiedText(false), 2000);
                     }
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-semibold border border-indigo-500/30 transition-all flex items-center gap-1"
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 cursor-pointer"
                 >
-                  <Share2 className="w-3 h-3" /> Copiar Prompt
+                  {copiedText ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  {copiedText ? 'Copiado' : 'Copiar Texto'}
                 </button>
               </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto selection:bg-indigo-500 selection:text-white">
+              <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                {currentSlide?.prompt_used || 'Generando contenido...'}
+              </p>
+            </div>
+
+            {/* Auditoría de Prompt IA con Pre-Prompt */}
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-indigo-500/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" /> Prompt Enviado a la IA
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentSlide?.prompt_used) {
+                      navigator.clipboard.writeText(currentSlide.prompt_used);
+                      setCopiedPrompt(true);
+                      setTimeout(() => setCopiedPrompt(false), 2000);
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-semibold border border-indigo-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedPrompt ? <Check className="w-3 h-3 text-emerald-400" /> : <Share2 className="w-3 h-3" />}
+                  {copiedPrompt ? 'Copiado' : 'Copiar Prompt'}
+                </button>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 font-mono leading-relaxed max-h-36 overflow-y-auto">
                 {currentSlide?.prompt_used || 'Generando prompt con OpenAI...'}
               </div>
             </div>
 
-            {/* Granular Regeneration Form (1 Credit) */}
+            {/* Granular Single Slide Regeneration */}
             <form onSubmit={handleRegenerateSingle} className="pt-3 border-t border-slate-800 space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" /> Regenerar solo esta lámina (#{currentIndex + 1})
+                <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-400" /> Regenerar Solo Esta Lámina (#{currentIndex + 1})
                 </span>
                 <span className="text-amber-300 font-bold">1 crédito</span>
               </div>
               <textarea
                 value={singleFeedback}
                 onChange={(e) => setSingleFeedback(e.target.value)}
-                placeholder="Ej: Cambiar el fondo por más iluminado, o mostrar primer plano de sonrisa..."
-                rows={3}
-                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs focus:border-cyan-400 focus:outline-none resize-none"
+                placeholder="Directiva de ajuste para esta lámina (ej: cambiar iluminación, primer plano de consulta...)"
+                rows={2}
+                className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 text-xs focus:border-cyan-400 focus:outline-none resize-none"
               />
               <button
                 type="submit"
                 disabled={regeneratingSingle || !singleFeedback.trim()}
-                className="w-full py-2.5 rounded-xl font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-40"
+                className="w-full py-2.5 rounded-xl font-bold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
               >
-                {regeneratingSingle ? 'Regenerando con OpenAI...' : `Regenerar Lámina #${currentIndex + 1} (1 Crédito)`}
+                {regeneratingSingle ? 'Regenerando con IA...' : `Rehacer Lámina #${currentIndex + 1} (1 Crédito)`}
               </button>
             </form>
           </div>
 
-          {/* Social Caption & Copy */}
+          {/* Social Caption & Copy Box */}
           <div className="p-6 rounded-3xl glass-card space-y-3">
-            <h3 className="text-xs uppercase font-semibold text-slate-400 tracking-wider">
-              Copy para Redes Sociales
-            </h3>
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-line">
-              {content.caption_copy}
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs uppercase font-extrabold text-cyan-400 tracking-wider">
+                Copy para Redes Sociales
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  if (content.caption_copy) {
+                    const full = `${content.caption_copy}\n\n${content.hashtags || ''}`;
+                    navigator.clipboard.writeText(full);
+                    setCopiedCaption(true);
+                    setTimeout(() => setCopiedCaption(false), 2000);
+                  }
+                }}
+                className="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold border border-cyan-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                {copiedCaption ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedCaption ? '¡Copiado!' : 'Copiar Copy Completo'}
+              </button>
             </div>
-            <div className="text-xs text-cyan-400 font-semibold">{content.hashtags}</div>
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">
+              {content.caption_copy || 'Generando copy de Instagram...'}
+            </div>
+            {content.hashtags && (
+              <div className="text-xs text-cyan-400 font-semibold font-mono">{content.hashtags}</div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Modal: Regenerar Todo el Carrusel */}
       {showRegenerateAllModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-3xl glass-panel p-8 space-y-6 border border-slate-700 shadow-2xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
                   <RefreshCw className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">Regenerar Todo el Carrusel</h3>
                   <p className="text-xs text-slate-400">
-                    Se generarán nuevamente las {content.total_slides} láminas con OpenAI
+                    Se recrearán las {content.total_slides} láminas con el motor determinista
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowRegenerateAllModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleRegenerateAll} className="space-y-4">
-              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 space-y-1">
+              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-1">
                 <div className="font-semibold text-white flex items-center justify-between">
                   <span>Costo de Regeneración:</span>
                   <span className="text-amber-300 font-bold text-sm">{content.total_slides} créditos</span>
@@ -468,12 +609,12 @@ export const ContentViewer: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  Directiva Global / Feedback (Opcional)
+                  Directiva Global / Ajuste Estético (Opcional)
                 </label>
                 <textarea
                   value={globalFeedback}
                   onChange={(e) => setGlobalFeedback(e.target.value)}
-                  placeholder="Ej: Usar tono más minimalista, fotos con luz natural y colores más pasteles en todas las láminas..."
+                  placeholder="Ej: Mayor iluminación natural, tonos más suaves, encuadre frontal en todas las láminas..."
                   rows={3}
                   className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs focus:border-cyan-400 focus:outline-none resize-none"
                 />
@@ -483,88 +624,21 @@ export const ContentViewer: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowRegenerateAllModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={regeneratingAll}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25 flex items-center gap-2 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-lg shadow-amber-500/25 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   {regeneratingAll
-                    ? 'Iniciando...'
+                    ? 'Procesando...'
                     : `Confirmar y Regenerar (${content.total_slides} Créditos)`}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Metricool Scheduling Modal */}
-      {showScheduleModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-3xl glass-panel p-8 space-y-6 border border-slate-700 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">Programar en Metricool</h3>
-                  <p className="text-xs text-slate-400">Mejores horarios recomendados por IA</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowScheduleModal(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-xs font-semibold text-slate-300">Mejores horarios de audiencia:</div>
-              <div className="space-y-2">
-                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-cyan-500/40 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <input type="radio" name="slot" defaultChecked className="text-cyan-500" />
-                    <span className="text-sm text-white font-medium">Hoy 19:30</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-xs font-bold">
-                    96% Actividad
-                  </span>
-                </label>
-                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800 cursor-pointer hover:border-slate-700">
-                  <div className="flex items-center gap-2">
-                    <input type="radio" name="slot" className="text-cyan-500" />
-                    <span className="text-sm text-white font-medium">Mañana 13:00</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-xs font-bold">
-                    91% Actividad
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
-              <button
-                onClick={() => setShowScheduleModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  setShowScheduleModal(false);
-                  alert('¡Contenido enviado a la cola de Metricool con éxito!');
-                }}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20"
-              >
-                Confirmar y Programar
-              </button>
-            </div>
           </div>
         </div>
       )}

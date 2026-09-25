@@ -18,13 +18,24 @@ import {
   BookOpen,
   LayoutTemplate,
   ShoppingBag,
-  RefreshCw
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 
 export const Integrations: React.FC = () => {
   const [brands, setBrands] = useState<any[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Helper para abrir carpetas de Drive o Sheets en nueva pestaña
+  const openDriveLink = (urlOrId: string) => {
+    if (!urlOrId || !urlOrId.trim()) return;
+    const clean = urlOrId.trim();
+    const fullUrl = clean.startsWith('http://') || clean.startsWith('https://')
+      ? clean
+      : `https://drive.google.com/drive/folders/${clean}`;
+    window.open(fullUrl, '_blank', 'noopener,noreferrer');
+  };
 
   // 5 Specialized Drive Folders state
   const [logosFolderId, setLogosFolderId] = useState('');
@@ -303,13 +314,23 @@ export const Integrations: React.FC = () => {
                 <div><strong>🏷️ En el Sheet / Prompt:</strong> Se referencian como <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">logo_white.png</code>, <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">logo_color.png</code> o <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">logo_black.png</code>.</div>
               </div>
             )}
-            <input
-              type="text"
-              value={logosFolderId}
-              onChange={(e) => setLogosFolderId(e.target.value)}
-              placeholder="ID o link de la carpeta de Logos en Google Drive (ej: 1aBcDeF...)"
-              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={logosFolderId}
+                onChange={(e) => setLogosFolderId(e.target.value)}
+                placeholder="ID o link de la carpeta de Logos en Google Drive (ej: 1aBcDeF...)"
+                className="flex-1 p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDriveLink(logosFolderId)}
+                disabled={!logosFolderId}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none shadow-sm cursor-pointer shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Carpeta
+              </button>
+            </div>
           </div>
 
           {/* Carpeta 2: Personajes / Sujetos */}
@@ -332,13 +353,23 @@ export const Integrations: React.FC = () => {
                 <div><strong>🏷️ En el Sheet / Prompt:</strong> En la columna <strong>"Doctora/Sujeto"</strong> poné el nombre exacto del archivo, ej: <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">Jessica1</code>, <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">Jessica2</code>, <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">Karina</code>.</div>
               </div>
             )}
-            <input
-              type="text"
-              value={subjectsFolderId}
-              onChange={(e) => setSubjectsFolderId(e.target.value)}
-              placeholder="ID o link de la carpeta de Personajes/Fotos en Google Drive"
-              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={subjectsFolderId}
+                onChange={(e) => setSubjectsFolderId(e.target.value)}
+                placeholder="ID o link de la carpeta de Personajes/Fotos en Google Drive"
+                className="flex-1 p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDriveLink(subjectsFolderId)}
+                disabled={!subjectsFolderId}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none shadow-sm cursor-pointer shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Carpeta
+              </button>
+            </div>
           </div>
 
           {/* Carpeta 3: Manual de Marca */}
@@ -361,13 +392,23 @@ export const Integrations: React.FC = () => {
                 <div><strong>🏷️ En el Sheet / Prompt:</strong> Se lee como fuente canónica de la marca para mantener la coherencia estética en todas las generaciones.</div>
               </div>
             )}
-            <input
-              type="text"
-              value={brandManualFolderId}
-              onChange={(e) => setBrandManualFolderId(e.target.value)}
-              placeholder="ID o link de la carpeta con el Manual de Marca en Google Drive"
-              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={brandManualFolderId}
+                onChange={(e) => setBrandManualFolderId(e.target.value)}
+                placeholder="ID o link de la carpeta con el Manual de Marca en Google Drive"
+                className="flex-1 p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDriveLink(brandManualFolderId)}
+                disabled={!brandManualFolderId}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none shadow-sm cursor-pointer shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Carpeta
+              </button>
+            </div>
           </div>
 
           {/* Carpeta 4: Plantillas */}
@@ -390,13 +431,23 @@ export const Integrations: React.FC = () => {
                 <div><strong>🏷️ En el Sheet / Prompt:</strong> En la columna <strong>"Notas"</strong> podés escribir <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">Template: FondoClinicoAzul</code> para obligar al render a usarlo como capa base.</div>
               </div>
             )}
-            <input
-              type="text"
-              value={templatesFolderId}
-              onChange={(e) => setTemplatesFolderId(e.target.value)}
-              placeholder="ID o link de la carpeta de Plantillas/Templates en Google Drive"
-              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={templatesFolderId}
+                onChange={(e) => setTemplatesFolderId(e.target.value)}
+                placeholder="ID o link de la carpeta de Plantillas/Templates en Google Drive"
+                className="flex-1 p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDriveLink(templatesFolderId)}
+                disabled={!templatesFolderId}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none shadow-sm cursor-pointer shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Carpeta
+              </button>
+            </div>
           </div>
 
           {/* Carpeta 5: Productos / Servicios */}
@@ -419,13 +470,23 @@ export const Integrations: React.FC = () => {
                 <div><strong>🏷️ En el Sheet / Prompt:</strong> Nombralos en la columna <strong>"Notas"</strong>, ej: <code className="bg-black/40 px-1.5 py-0.5 rounded text-white font-mono">Producto: AlineadorInvisalign</code>.</div>
               </div>
             )}
-            <input
-              type="text"
-              value={productsFolderId}
-              onChange={(e) => setProductsFolderId(e.target.value)}
-              placeholder="ID o link de la carpeta de Productos en Google Drive"
-              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={productsFolderId}
+                onChange={(e) => setProductsFolderId(e.target.value)}
+                placeholder="ID o link de la carpeta de Productos en Google Drive"
+                className="flex-1 p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDriveLink(productsFolderId)}
+                disabled={!productsFolderId}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none shadow-sm cursor-pointer shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Carpeta
+              </button>
+            </div>
           </div>
 
           {/* Carpeta Output */}
@@ -433,20 +494,30 @@ export const Integrations: React.FC = () => {
             <label className="block text-xs font-bold text-white">
               📁 Carpeta de DESTINO (Donde se depositarán los Carruseles Terminados)
             </label>
-            <input
-              type="text"
-              value={outputFolderId}
-              onChange={(e) => setOutputFolderId(e.target.value)}
-              placeholder="ID o link de la carpeta donde se guardarán los PNGs finales en Drive"
-              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={outputFolderId}
+                onChange={(e) => setOutputFolderId(e.target.value)}
+                placeholder="ID o link de la carpeta donde se guardarán los PNGs finales en Drive"
+                className="flex-1 p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDriveLink(outputFolderId)}
+                disabled={!outputFolderId}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none shadow-sm cursor-pointer shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Carpeta
+              </button>
+            </div>
           </div>
 
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={savingDrive}
-              className="px-8 py-3.5 rounded-2xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-xl shadow-cyan-500/25 text-xs transition-all disabled:opacity-50"
+              className="px-8 py-3.5 rounded-2xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-xl shadow-cyan-500/25 text-xs transition-all disabled:opacity-50 cursor-pointer"
             >
               {savingDrive ? 'Guardando...' : 'Guardar las 5 Carpetas de Google Drive'}
             </button>
@@ -473,13 +544,23 @@ export const Integrations: React.FC = () => {
             <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
               URL Completa del Google Sheet
             </label>
-            <input
-              type="url"
-              value={sheetsUrl}
-              onChange={(e) => setSheetsUrl(e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/d/1q9f.../edit"
-              className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={sheetsUrl}
+                onChange={(e) => setSheetsUrl(e.target.value)}
+                placeholder="https://docs.google.com/spreadsheets/d/1q9f.../edit"
+                className="flex-1 p-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDriveLink(sheetsUrl)}
+                disabled={!sheetsUrl}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-emerald-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none shadow-sm cursor-pointer shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Hoja
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-3">

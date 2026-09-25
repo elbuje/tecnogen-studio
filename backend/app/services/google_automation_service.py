@@ -223,29 +223,73 @@ class GoogleAutomationService:
                 body={"values": [[content_id or "", preview_url or "", now_str]]}
             ).execute()
 
-    def get_doctor_photos(self, doctor_ref: str, subjects_folder_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """
-        Encuentra las fotos de la doctora indicada (por link de Drive o por nombre en subjects_folder).
-        """
-        if not self.is_ready or not doctor_ref:
-            return []
+    def download_file_bytes(self, file_id: str) -> Optional[bytes]:
+        """Descarga el contenido binario de un archivo en Google Drive."""
+        if not self.is_ready or not file_id:
+            return None
+        try:
+            req = self.drive_service.files().get_media(fileId=file_id)
+            return req.execute()
+        except Exception as e:
+            logger.error(f"Error descargando archivo {file_id} de Drive: {e}")
+            return None
 
-        folder_id = self.extract_id(doctor_ref)
-        if not folder_id and subjects_folder_id:
-            # Buscar subcarpeta por nombre
-            parent_id = self.extract_id(subjects_folder_id)
-            if parent_id:
-                q = f"'{parent_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-                res = self.drive_service.files().list(q=q, fields="files(id, name)").execute()
-                for f in res.get("files", []):
-                    if f["name"].lower() in doctor_ref.lower():
-                        folder_id = f["id"]
-                        break
-
+    def get_brand_logo_bytes(self, brand) -> Optional[bytes]:
+        """Obtiene el mejor logo de la marca desde la carpeta de Logos en Google Drive."""
+        if not self.is_ready or not brand.gdrive_logos_folder_id:
+            return None
+        folder_id = self.extract_id(brand.gdrive_logos_folder_id)
         if not folder_id:
-            return []
+            return None
+        try:
+            q = f"'{folder_id}' in parents and trashed = false"
+            res = self.drive_service.files().list(q=q, fields="files(id, name, mimeType)").execute()
+            files = res.get("files", [])
+            if not files:
+                return None
+            # Priorizar logos PNG transparentes o en blanco/negro/color
+            png_files = [f for f in files if "png" in f.get("name", "").lower()]
+            selected = png_files[0] if png_files else files[0]
+            logger.info(f"Usando logo de Drive: {selected.get('name')} (id={selected.get('id')})")
+            return self.download_file_bytes(selected.get("id"))
+        except Exception as e:
+            logger.error(f"Error obteniendo logo de Drive: {e}")
+            return None
 
-        # Listar fotos de la carpeta
-        q = f"'{folder_id}' in parents and trashed = false"
-        res = self.drive_service.files().list(q=q, fields="files(id, name, mimeType)").execute()
-        return res.get("files", [])
+    def get_brand_subject_bytes(self, brand, doctor_ref: Optional[str] = None) -> Optional[bytes]:
+        """Obtiene la foto del sujeto/doctora desde la subcarpeta de Personajes en Google Drive."""
+        if not self.is_ready or not brand.gdrive_subjects_folder_id:
+            return None
+        parent_id = self.extract_id(brand.gdrive_subjects_folder_id)
+        if not parent_id:
+            return None
+        try:
+            # 1. Buscar subcarpeta del doctor/personaje
+            q = f"'{parent_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+            res = self.drive_service.files().list(q=q, fields="files(id, name)").execute()
+            folders = res.get("files", [])
+            
+            target_folder_id = None
+            if doctor_ref:
+                for f in folders:
+                    if f.get("name", "").lower() in doctor_ref.lower() or doctor_ref.lower() in f.get("name", "").lower():
+                        target_folder_id = f.get("id")
+                        break
+            if not target_folder_id and folders:
+                target_folder_id = folders[0].get("id")
+            if not target_folder_id:
+                target_folder_id = parent_id
+
+            q_files = f"'{target_folder_id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
+            res_files = self.drive_service.files().list(q=q_files, fields="files(id, name, mimeType)").execute()
+            files = res_files.get("files", [])
+            if not files:
+                return None
+            
+            # Seleccionar foto (preferir HIF / PNG / JPG de Jessica/Doctora)
+            selected_file = files[0]
+            logger.info(f"Usando foto de sujeto de Drive: {selected_file.get('name')} (id={selected_file.get('id')})")
+            return self.download_file_bytes(selected_file.get("id"))
+        except Exception as e:
+            logger.error(f"Error obteniendo foto de sujeto de Drive: {e}")
+            return None

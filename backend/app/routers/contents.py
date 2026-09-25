@@ -23,6 +23,9 @@ router = APIRouter(prefix="/contents", tags=["Contenidos & Carruseles"])
 class RegenerateAllRequest(BaseModel):
     global_feedback: Optional[str] = None
 
+from app.services.composer_service import render_slide_composite
+from app.services.google_automation_service import GoogleAutomationService
+
 def build_openai_slide_prompt(
     brand: Brand,
     slide_num: int,
@@ -33,20 +36,21 @@ def build_openai_slide_prompt(
 ) -> str:
     slide_type = slide_data.get("slide_type", "content")
     title = slide_data.get("title", "")
-    body = slide_data.get("body", "")
-    subtitle = slide_data.get("subtitle", "")
     
-    feedback_instruction = f"Note: {global_feedback}. " if global_feedback else ""
+    feedback_instruction = f"Directive: {global_feedback}. " if global_feedback else ""
     
-    # Prompt de alta fidelidad fotográfica y médica
+    # Directiva estricta de pre-prompt: Fondo fotográfico de alta gama 100% libre de texto
+    preprompt = "Cinematic luxury dental clinic and aesthetic dentistry editorial photography. Bright clean medical studio, soft natural daylight, shallow depth of field, 8k resolution."
+    negative_rules = "STRICTLY NO TEXT, NO LETTERS, NO TYPOGRAPHY, NO WORDS, NO CHARTS, NO GRAPHICS, NO SIGNS, NO WATERMARK. Pure visual photographic background plate only."
+    
     if slide_type == "cover" or slide_num == 1:
-        scene = f"A stunning photorealistic hero shot for: {title}. Bright, ultra-clean modern dental studio, confident friendly female dentist in modern stylish medical uniform, smiling patient, aesthetic clinical environment, soft natural daylight, shallow depth of field, 8k resolution, award-winning healthcare photography."
+        scene = f"Hero shot of modern aesthetic dental practice interior for: {title}."
     elif slide_type == "cta" or slide_num == total_slides:
-        scene = f"A welcoming modern dental clinic reception with radiant healthy smiles, patient receiving care consultation, warm ambient light, high-end medical practice atmosphere, clean architectural design, 8k."
+        scene = "Warm elegant clinic reception and welcoming consultation atmosphere."
     else:
-        scene = f"High-end aesthetic dental photography illustrating {title}. State-of-the-art dental equipment, clean aesthetic composition, close-up details of dental care, pristine clinic setting, soft studio lighting, professional medical magazine editorial."
+        scene = f"High-end aesthetic dental care details, state-of-the-art dental equipment, clean pristine clinic setting for: {title}."
 
-    prompt = f"{scene} {feedback_instruction} Color harmony with subtle brand accents in {brand.accent_color or '#7DD3FC'}. Hyper-realistic, 8k, crisp focus, no distortion."
+    prompt = f"{preprompt} {scene} {feedback_instruction} Color harmony with subtle brand accents in {brand.accent_color or '#7DD3FC'}. {negative_rules}"
     return prompt.strip()
 
 def process_content_generation(content_id: str, db_factory, global_feedback: Optional[str] = None):
@@ -74,13 +78,18 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
 
         brand = content.brand
         brand_info = {
-            "name": brand.name,
-            "primary_color": brand.primary_color,
-            "accent_color": brand.accent_color,
-            "bg_color": brand.bg_color,
-            "font_style_title": brand.font_style_title,
-            "font_style_body": brand.font_style_body
+            "name": brand.name or "JM Odontología Integral",
+            "primary_color": brand.primary_color or "#16345F",
+            "accent_color": brand.accent_color or "#7DD3FC",
+            "bg_color": brand.bg_color or "#1D1D1B",
+            "font_style_title": brand.font_style_title or "serif-editorial",
+            "font_style_body": brand.font_style_body or "sans-modern"
         }
+
+        # Descargar Logo oficial y Fotos de Personajes desde Google Drive
+        g_svc = GoogleAutomationService()
+        logo_bytes = g_svc.get_brand_logo_bytes(brand) if g_svc.is_ready else None
+        subject_bytes = g_svc.get_brand_subject_bytes(brand, "Jessica") if g_svc.is_ready else None
 
         # Verificar si ya existen láminas pre-cargadas (ej. originadas del GUION del Sheet)
         existing_slides = db.query(Slide).filter(Slide.content_id == content.id).order_by(Slide.slide_number).all()
@@ -92,7 +101,9 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
                     "slide_number": es.slide_number,
                     "slide_type": es.slide_type,
                     "badge": f"PASO {es.slide_number}" if es.slide_type == "content" else es.slide_type.upper(),
+                    "headline": es.prompt_used or content.title,
                     "title": es.prompt_used or content.title,
+                    "body_text": es.prompt_used or content.title,
                     "body": es.prompt_used or content.title
                 })
         else:
@@ -125,12 +136,28 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             prompt = build_openai_slide_prompt(brand, i, content.total_slides, slide_data, global_feedback=global_feedback)
             
             try:
-                img_bytes = image_service.generate_slide_image(
+                # 1. Generar placa de fondo limpia con IA (Strict NO-TEXT)
+                bg_bytes = image_service.generate_slide_image(
                     prompt=prompt,
                     slide_info=slide_data,
                     brand_info=brand_info
                 )
-                b64_str = base64.b64encode(img_bytes).decode('utf-8')
+                
+                # 2. Asignar foto de sujeto real (Jessica) en Portada y láminas estratégicas
+                curr_subject_bytes = subject_bytes if (i == 1 or i == 3 or i == 7) else None
+                
+                # 3. Composición determinista con Pillow (Numeración 1/8, Logo oficial, Textos en español)
+                final_png_bytes = render_slide_composite(
+                    slide_num=i,
+                    total_slides=content.total_slides,
+                    slide_data=slide_data,
+                    brand_info=brand_info,
+                    background_bytes=bg_bytes,
+                    logo_bytes=logo_bytes,
+                    subject_bytes=curr_subject_bytes
+                )
+
+                b64_str = base64.b64encode(final_png_bytes).decode('utf-8')
                 data_uri = f"data:image/png;base64,{b64_str}"
                 
                 # Check if slide already exists (for re-generation)
