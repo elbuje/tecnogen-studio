@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Sparkles, Coins, LogOut, User as UserIcon, Settings as SettingsIcon, Link2 } from 'lucide-react';
+import { Sparkles, Coins, LogOut, User as UserIcon, Settings as SettingsIcon, Link2, Terminal } from 'lucide-react';
 import { ThemeSwitcher } from '../common/ThemeSwitcher';
 
 export const Navbar: React.FC = () => {
@@ -56,6 +56,16 @@ export const Navbar: React.FC = () => {
                 <span>Panel Ops / HQ</span>
               </Link>
             )}
+
+            {/* Logs & Debugger Direct Shortcut */}
+            <Link
+              to="/app/logs"
+              title="Consola de Logs & Debugger"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-cyan-300 text-xs font-semibold transition-colors"
+            >
+              <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Logs</span>
+            </Link>
 
             {/* Theme / Look & Feel Switcher */}
             <ThemeSwitcher />
