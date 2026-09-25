@@ -20,3 +20,17 @@ class AISettingOut(AISettingBase):
 
     class Config:
         from_attributes = True
+
+class AITestModelRequest(BaseModel):
+    provider: str = "openai"
+    model_name: str = "dall-e-3"
+    api_key: Optional[str] = None
+    prompt: Optional[str] = None
+
+class AITestModelResponse(BaseModel):
+    status: str  # success, error
+    provider: str
+    model_used: str
+    image_url: Optional[str] = None
+    message: str
+    duration_seconds: Optional[float] = None

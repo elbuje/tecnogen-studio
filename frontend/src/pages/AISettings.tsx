@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/client';
-import { Sliders, Sparkles, Check, Key, ShieldCheck, AlertCircle, Cpu } from 'lucide-react';
+import { Sliders, Sparkles, Check, Key, ShieldCheck, AlertCircle, Cpu, FlaskConical, RefreshCw, XCircle, CheckCircle2 } from 'lucide-react';
 
 const PROVIDER_MODELS: Record<string, { label: string; models: { id: string; name: string; desc: string }[] }> = {
   openai: {
@@ -48,6 +48,16 @@ export const AISettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Testing states
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    status: 'success' | 'error';
+    message: string;
+    image_url?: string;
+    model_used?: string;
+    duration?: number;
+  } | null>(null);
+
   const fetchSettings = async () => {
     try {
       const res = await api.get('/settings/ai');
@@ -68,9 +78,45 @@ export const AISettings: React.FC = () => {
 
   const handleProviderChange = (newProvider: string) => {
     setProvider(newProvider);
+    setTestResult(null);
     const available = PROVIDER_MODELS[newProvider]?.models;
     if (available && available.length > 0) {
       setModelName(available[0].id);
+    }
+  };
+
+  const handleTestModel = async () => {
+    if (!apiKey.trim()) {
+      alert('Por favor ingresá tu API Key para probar la conexión con el modelo.');
+      return;
+    }
+
+    try {
+      setTesting(true);
+      setTestResult(null);
+      const res = await api.post('/settings/ai/test', {
+        provider,
+        model_name: modelName,
+        api_key: apiKey.trim(),
+        prompt: 'Close-up portrait of a cheerful person with a radiant natural healthy smile, soft studio lighting, high resolution dental editorial photography.'
+      });
+
+      setTestResult({
+        status: 'success',
+        message: res.data.message || 'Prueba completada con éxito.',
+        image_url: res.data.image_url,
+        model_used: res.data.model_used,
+        duration: res.data.duration_seconds
+      });
+    } catch (err: any) {
+      const errMsg = err.response?.data?.detail || err.message || 'Error al comunicarse con el proveedor de IA.';
+      setTestResult({
+        status: 'error',
+        message: errMsg,
+        model_used: modelName
+      });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -159,7 +205,10 @@ export const AISettings: React.FC = () => {
               type="password"
               required
               value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              onChange={(e) => {
+                setApiKey(e.target.value);
+                setTestResult(null);
+              }}
               placeholder={`Ingresá tu API Key de ${PROVIDER_MODELS[provider]?.label}...`}
               className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none"
             />
@@ -179,7 +228,10 @@ export const AISettings: React.FC = () => {
             {currentModels.map((m) => (
               <label
                 key={m.id}
-                onClick={() => setModelName(m.id)}
+                onClick={() => {
+                  setModelName(m.id);
+                  setTestResult(null);
+                }}
                 className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${
                   modelName === m.id
                     ? 'bg-cyan-500/10 border-cyan-400 text-white shadow-md'
@@ -191,7 +243,10 @@ export const AISettings: React.FC = () => {
                   name="ai_model"
                   value={m.id}
                   checked={modelName === m.id}
-                  onChange={() => setModelName(m.id)}
+                  onChange={() => {
+                    setModelName(m.id);
+                    setTestResult(null);
+                  }}
                   className="mt-1 text-cyan-400"
                 />
                 <div className="space-y-0.5">
@@ -203,12 +258,94 @@ export const AISettings: React.FC = () => {
           </div>
         </div>
 
-        {/* Botón Guardar */}
-        <div className="pt-4 border-t border-slate-800 flex justify-end">
+        {/* Test Result Card */}
+        {testResult && (
+          <div
+            className={`p-6 rounded-3xl border transition-all ${
+              testResult.status === 'success'
+                ? 'bg-emerald-950/40 border-emerald-500/40 shadow-xl shadow-emerald-500/10'
+                : 'bg-rose-950/40 border-rose-500/40 shadow-xl shadow-rose-500/10'
+            }`}
+          >
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                {testResult.status === 'success' ? (
+                  <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                    <XCircle className="w-6 h-6" />
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-base font-bold text-white">
+                      {testResult.status === 'success' ? '¡Conexión y Modelo Operativos!' : 'Error al Probar Modelo'}
+                    </h4>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold ${
+                        testResult.status === 'success'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                      }`}
+                    >
+                      Modelo: {testResult.model_used}
+                    </span>
+                    {testResult.duration && (
+                      <span className="text-xs text-slate-400 font-medium">
+                        ⏱️ {testResult.duration}s
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-300 max-w-xl">
+                    {testResult.message}
+                  </p>
+                </div>
+              </div>
+
+              {/* Imagen de prueba generada (Persona Sonriente) */}
+              {testResult.image_url && (
+                <div className="relative group self-center md:self-auto">
+                  <img
+                    src={testResult.image_url}
+                    alt="Prueba de Modelo - Persona Sonriente"
+                    className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-cover border-2 border-emerald-400/50 shadow-lg shadow-emerald-500/20"
+                  />
+                  <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full bg-black/80 text-[10px] text-emerald-300 font-bold border border-emerald-500/40">
+                    OK
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Botones de Acción: Probar y Guardar */}
+        <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={handleTestModel}
+            disabled={testing || saving || !apiKey.trim()}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-40"
+          >
+            {testing ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
+                <span>Generando imagen de prueba...</span>
+              </>
+            ) : (
+              <>
+                <FlaskConical className="w-4 h-4 text-cyan-400" />
+                <span>Probar Modelo Seleccionado</span>
+              </>
+            )}
+          </button>
+
           <button
             type="submit"
-            disabled={saving}
-            className="px-8 py-3.5 rounded-2xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-xl shadow-cyan-500/25 transition-all text-sm disabled:opacity-50"
+            disabled={saving || testing}
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-xl shadow-cyan-500/25 transition-all text-sm disabled:opacity-50"
           >
             {saving ? 'Guardando...' : 'Guardar y Activar Modelo en mi Perfil'}
           </button>
