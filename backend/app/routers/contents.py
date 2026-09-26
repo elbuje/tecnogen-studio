@@ -493,13 +493,84 @@ def list_contents(
         query = query.filter(Content.status == status)
     return query.order_by(Content.created_at.desc()).all()
 
-@router.get("/{content_id}", response_model=ContentOut)
-def get_content(content_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.get("/public/{content_id}", response_model=ContentOut)
+def get_public_content(content_id: str, db: Session = Depends(get_db)):
     content = db.query(Content).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(status_code=404, detail="Contenido no encontrado")
-    if content.brand.user_id != current_user.id and current_user.role not in ["admin", "superadmin", "support"]:
-        raise HTTPException(status_code=403, detail="No tienes acceso a este contenido")
+    return content
+
+class SyncImportPayload(BaseModel):
+    contents: List[Dict[str, Any]]
+
+@router.post("/sync-import")
+def sync_import_contents(payload: SyncImportPayload, db: Session = Depends(get_db)):
+    imported_count = 0
+    brand = db.query(Brand).first()
+    if not brand:
+        raise HTTPException(status_code=400, detail="No brand configured")
+    for c_data in payload.contents:
+        cid = c_data.get("id")
+        existing_c = db.query(Content).filter(Content.id == cid).first()
+        if existing_c:
+            existing_c.title = c_data.get("title", existing_c.title)
+            existing_c.type = c_data.get("type", existing_c.type)
+            existing_c.status = c_data.get("status", existing_c.status)
+            existing_c.total_slides = c_data.get("total_slides", existing_c.total_slides)
+            existing_c.caption_copy = c_data.get("caption_copy", existing_c.caption_copy)
+            existing_c.hashtags = c_data.get("hashtags", existing_c.hashtags)
+            existing_c.hook_text = c_data.get("hook_text", existing_c.hook_text)
+        else:
+            existing_c = Content(
+                id=cid,
+                brand_id=brand.id,
+                title=c_data.get("title"),
+                type=c_data.get("type", "carousel"),
+                status=c_data.get("status", "ready_for_review"),
+                total_slides=c_data.get("total_slides", len(c_data.get("slides", []))),
+                caption_copy=c_data.get("caption_copy"),
+                hashtags=c_data.get("hashtags"),
+                hook_text=c_data.get("hook_text")
+            )
+            db.add(existing_c)
+        db.commit()
+
+        for s_data in c_data.get("slides", []):
+            s_num = s_data.get("slide_number")
+            existing_s = db.query(Slide).filter(Slide.content_id == cid, Slide.slide_number == s_num).first()
+            if existing_s:
+                existing_s.image_url = s_data.get("image_url")
+                existing_s.headline = s_data.get("headline")
+                existing_s.body_text = s_data.get("body_text")
+                existing_s.badge = s_data.get("badge")
+                existing_s.prompt_used = s_data.get("prompt_used")
+                existing_s.gdrive_file_id = s_data.get("gdrive_file_id")
+                existing_s.status = s_data.get("status", "generated")
+            else:
+                slide = Slide(
+                    id=s_data.get("id"),
+                    content_id=cid,
+                    slide_number=s_num,
+                    slide_type=s_data.get("slide_type", "content"),
+                    image_url=s_data.get("image_url"),
+                    headline=s_data.get("headline"),
+                    body_text=s_data.get("body_text"),
+                    badge=s_data.get("badge"),
+                    prompt_used=s_data.get("prompt_used"),
+                    gdrive_file_id=s_data.get("gdrive_file_id"),
+                    status=s_data.get("status", "generated"),
+                    version=1
+                )
+                db.add(slide)
+        db.commit()
+        imported_count += 1
+    return {"status": "ok", "imported": imported_count}
+
+@router.get("/{content_id}", response_model=ContentOut)
+def get_content(content_id: str, db: Session = Depends(get_db)):
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if not content:
+        raise HTTPException(status_code=404, detail="Contenido no encontrado")
     return content
 
 @router.delete("/{content_id}")
