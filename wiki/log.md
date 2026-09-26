@@ -4,6 +4,12 @@ Historial cronológico de cambios, decisiones técnicas e hitos del proyecto.
 
 ---
 
+## 2026-09-26
+* `FEAT`: **Pipeline Oficial OpenAI Sunburst con Assets Reales (`images.edit`)**: integración de `client.images.edit(model="gpt-image-2.5-sunburst", image=buf, prompt=prompt)` pasando el buffer binario con la fotografía real de la profesional (`Karina1.HIF`) y el logotipo oficial transparente (`JM_blanco_negro.png`).
+* `FEAT`: **Sincronización Bidireccional de Producción (`/contents/sync-import`)**: creación de endpoints de importación masiva y visualizador público (`/contents/public/{id}`) para previsualización inmediata de carruseles en producción sin fricción de login.
+* `FEAT`: **Columnas de Configuración Dinámica en Google Sheet**: soporte de `PRESENCIA DOCTORA`, `ESTILO PAGINADOR`, `BADGE ESTILO` e `IDIOMA PROMPTS` leídas y aplicadas automáticamente en cada lote de generación.
+* `DEPLOY`: Generación completa de las 8 láminas del Carrusel #2 (ID: `57536732-f7dc-41ee-9008-b37ee4b9ea2f`), subida a Google Drive y despliegue en producción en **`https://studio.tecnogen.ar`**.
+
 ## 2026-09-25
 * `FEAT`: **Identidad de Marca Oficial JM Odontología Integral**: extracción de colores corporativos (`#16345F`, `#7DD3FC`, `#1D1D1B`), tipografías y logo transparente desde el Manual de Marca en Google Drive (`Manual de identidad JM.pdf`).
 * `FEAT`: **Soporte Nativo de Fotos iPhone (`pillow-heif`)**: integración y decodificación directa de imágenes `.HIF` / `.HEIC` de las carpetas de personajes (`Jessica.HIF`).
