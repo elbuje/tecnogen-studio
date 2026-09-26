@@ -32,6 +32,10 @@ def build_openai_slide_prompt(
     total_slides: int,
     slide_data: dict,
     doctor_name: str = "Karina",
+    presencia_doctora: str = "Portada y Cierre",
+    estilo_paginador: str = "Puntos y Flechas",
+    badge_estilo: str = "Conceptos / Beneficios",
+    idioma_prompts: str = "Español",
     global_feedback: Optional[str] = None
 ) -> str:
     slide_type = slide_data.get("slide_type", "content")
@@ -44,59 +48,112 @@ def build_openai_slide_prompt(
     bg_color = brand.bg_color or "#0B1E38"
     
     clean_doctor = "Dra. Karina"
+    doctor_file = "Karina.HIF"
     doc_lower = (doctor_name or "").lower()
     if "luciana" in doc_lower:
         clean_doctor = "Dra. Luciana"
+        doctor_file = "Luciana.JPG"
     elif "jessica" in doc_lower:
         clean_doctor = "Dra. Jessica"
+        doctor_file = "Jessica.HIF"
     elif "karina" in doc_lower:
         clean_doctor = "Dra. Karina"
+        doctor_file = "Karina.HIF"
     elif doctor_name:
         clean_doctor = f"Dra. {doctor_name.strip()}"
+        doctor_file = f"{doctor_name.strip()}.JPG"
 
-    feedback_instruction = f"Additional artistic direction: {global_feedback}. " if global_feedback else ""
+    # Determinar si la doctora debe aparecer en este slide según la regla configurada en el Sheet
+    show_doctor = False
+    pres_lower = presencia_doctora.lower()
+    if "todas" in pres_lower:
+        show_doctor = True
+    elif "portada y cierre" in pres_lower:
+        show_doctor = (slide_num == 1 or slide_num == total_slides or slide_type in ["cover", "cta"])
+    elif "solo portada" in pres_lower:
+        show_doctor = (slide_num == 1 or slide_type == "cover")
+    elif "solo en cierre" in pres_lower:
+        show_doctor = (slide_num == total_slides or slide_type == "cta")
+    elif "ninguna" in pres_lower:
+        show_doctor = False
+    else:
+        show_doctor = (slide_num == 1 or slide_num == total_slides)
+
+    # Formatear Paginador según la regla del Sheet
+    pag_lower = estilo_paginador.lower()
+    if "línea" in pag_lower or "linea" in pag_lower or "conectada" in pag_lower:
+        pag_desc = f'Paginador al pie: Indicador con línea conectada interactiva {slide_num}/{total_slides} y botón de deslizamiento.'
+    elif "pastilla" in pag_lower:
+        pag_desc = f'Paginador superior derecho: Pastilla de navegación elegante con texto "{slide_num}/{total_slides} >".'
+    elif "puntos" in pag_lower or "flechas" in pag_lower:
+        pag_desc = f'Paginador: Indicador con puntos de carrusel interactivos ● ○ ○ y flechas de navegación "< {slide_num}/{total_slides} >".'
+    else:
+        pag_desc = f'Paginador en esquina superior derecha: Texto simple "{slide_num}/{total_slides}".'
+
+    feedback_instruction = f"Instrucción artística adicional: {global_feedback}. " if global_feedback else ""
     
     if slide_type == "cover" or slide_num == 1:
+        visual_desc = (
+            f'Lado derecho: Foto real de {clean_doctor} (usando asset oficial "/{clean_doctor.replace("Dra. ", "")}/{doctor_file}") '
+            f'en ambo clínico azul marino, con expresión cálida, atenta y sonriente en consultorio dental moderno con iluminación de estudio.'
+            if show_doctor else
+            f'Visual central: Renderizado 3D de precisión médica y estética de sonrisa moderna de alta gama.'
+        )
         prompt = (
-            f"High-end editorial social media carousel cover graphic (portrait 4:5 format) for dental clinic '{brand_name}'. "
-            f"On the left half: Clean graphic card overlay with deep navy background ({primary_color}) and luminous cyan accent ({accent_color}). "
-            f"Large typography clearly reading in Spanish: "
-            f'Top badge: "{badge}" '
-            f'Main headline in bold modern sans-serif: "{headline}" '
-            f'Slide counter in top right: "{slide_num}/{total_slides}" '
-            f'Brand label at the bottom: "{brand_name}". '
-            f"On the right half: Warm and trustworthy professional portrait of female dentist {clean_doctor} wearing modern navy blue medical scrubs, friendly and confident smile, in a state-of-the-art modern dental clinic with soft bokeh and studio lighting. "
-            f"Atmosphere: Premium medical branding, ultra-sharp typography in Spanish, elegant minimalism. {feedback_instruction}"
+            f"Diseño de portada para carrusel de Instagram en formato vertical 4:5 (1080x1350 px) de '{brand_name}'. "
+            f"Lado izquierdo: Bloque gráfico con fondo azul marino ({primary_color}) y detalles en celeste luminoso ({accent_color}). "
+            f"Logo oficial transparente exacto: '/Logos/JM_blanco_negro.png' en esquina inferior izquierda. "
+            f'{visual_desc} '
+            f'Badge superior: "{badge}". '
+            f'Título principal en negrita: "{headline}". '
+            f'{pag_desc} '
+            f'Firma de marca: "{brand_name}". '
+            f"Estilo: Pieza publicitaria premium, sin textos adicionales inventados, diseño limpio y profesional. {feedback_instruction}"
         )
     elif slide_type == "cta" or slide_num == total_slides:
+        visual_desc = (
+            f'Lado derecho: Foto real de {clean_doctor} (usando asset oficial "/{clean_doctor.replace("Dra. ", "")}/{doctor_file}") '
+            f'en primer plano sonriendo con cercanía y amabilidad, invitando a la interacción.'
+            if show_doctor else
+            f'Visual: Composición estética y limpia con instrumental odontológico y tarjeta de consulta.'
+        )
         prompt = (
-            f"Engaging closing call-to-action carousel slide {slide_num} of {total_slides} for '{brand_name}'. "
-            f"Visual composition: On the right, a warm portrait of female dentist {clean_doctor} smiling directly at the camera in medical scrubs, inviting conversation. "
-            f"On the left, prominent high-contrast graphic card in navy ({primary_color}) with cyan ({accent_color}) border: "
-            f'Top badge: "RESPONDE {clean_doctor.upper()}" '
-            f'Headline: "{headline}" '
-            f'Body text in clear Spanish: "{body_text or "Dejanos tu consulta en los comentarios y la respondemos en el próximo video 👇"}" '
-            f'Slide counter: "{slide_num}/{total_slides}" '
-            f'Brand signature: "{brand_name}". '
-            f"Atmosphere: Welcoming, prestigious, polished social media closing card. {feedback_instruction}"
+            f"Lámina de cierre y llamada a la acción ({slide_num}/{total_slides}) en formato vertical 4:5 para '{brand_name}'. "
+            f"Fondo: Azul marino ({primary_color}) con detalles en ({accent_color}). "
+            f"Logo oficial: '/Logos/JM_blanco_negro.png' en esquina inferior izquierda. "
+            f'{visual_desc} '
+            f'Badge superior con ícono: "RESPONDE {clean_doctor.upper()}". '
+            f'Título: "{headline}". '
+            f'Llamado a la acción (CTA): "{body_text or "Dejanos tu consulta en los comentarios o agendá tu turno hoy mismo 👇"}". '
+            f'{pag_desc} '
+            f'Firma: "{brand_name}". {feedback_instruction}'
         )
     else:
         is_myth = "mito" in headline.lower() or "mito" in body_text.lower() or "❌" in headline or "❌" in body_text
-        if is_myth:
-            visual_desc = "Visual element: High-contrast educational visual showing realistic 3D dental detail, contrasting clean modern ceramic crown with titanium implant aesthetics under clean studio lighting."
+        if show_doctor:
+            visual_desc = (
+                f'Elemento visual: {clean_doctor} (asset "/{clean_doctor.replace("Dra. ", "")}/{doctor_file}") '
+                f'explicando en consultorio junto a una pantalla con modelo 3D de diagnóstico dental.'
+            )
+        elif is_myth:
+            visual_desc = (
+                f'Elemento visual: Renderizado 3D de precisión médica mostrando la pieza dental protegida y la estructura anatómica en alto detalle.'
+            )
         else:
-            visual_desc = f"Visual element: Female dentist {clean_doctor} in a clinical setting pointing to a digital dental scan or modern 3D model, explaining with professionalism and warmth in an ultra-clean clinic with natural studio lighting."
+            visual_desc = (
+                f'Elemento visual: Composición médica moderna con tecnología e instrumental odontológico de alta precisión sobre superficie mate.'
+            )
 
         prompt = (
-            f"Modern editorial social media carousel slide {slide_num} of {total_slides} for '{brand_name}'. "
-            f"Layout: Balanced vertical composition with dark navy blue ({bg_color}) background and refined cyan ({accent_color}) highlights. "
-            f"Clear graphic text prominently displayed in Spanish: "
-            f'Top badge: "{badge}" '
-            f'Headline: "{headline}" '
-            f'Body text in clear legible Spanish: "{body_text}" '
-            f'Slide index: "{slide_num}/{total_slides}" '
-            f"{visual_desc} "
-            f"Style: High-contrast typography, premium healthcare graphic design, no spelling errors. {feedback_instruction}"
+            f"Lámina educativa {slide_num} de {total_slides} en formato vertical 4:5 para '{brand_name}'. "
+            f"Fondo: Azul marino ({bg_color}) con sutil marco y acentos en ({accent_color}). "
+            f"Logo oficial: '/Logos/JM_blanco_negro.png' en esquina inferior izquierda. "
+            f'{visual_desc} '
+            f'Badge superior: "{badge}". '
+            f'Título: "{headline}". '
+            f'Cuerpo explicativo en español: "{body_text}". '
+            f'{pag_desc} '
+            f"Estilo: Tipografía de alto contraste, sobrio, estético y profesional. {feedback_instruction}"
         )
 
     return prompt.strip()

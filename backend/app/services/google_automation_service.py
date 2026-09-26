@@ -147,8 +147,10 @@ class GoogleAutomationService:
         idx_estado = get_idx(["ESTADO"])
         idx_nota = get_idx(["NOTA", "NOTAS"])
         idx_id_content = get_idx(["ID_CONTENIDO"])
-        idx_link_preview = get_idx(["LINK_PREVIEW"])
-        idx_fecha = get_idx(["FECHA_PROCESADO"])
+        idx_presencia = get_idx(["PRESENCIA DOCTORA", "PRESENCIA"])
+        idx_paginador = get_idx(["ESTILO PAGINADOR", "PAGINADOR"])
+        idx_badge = get_idx(["BADGE ESTILO", "BADGE"])
+        idx_idioma = get_idx(["IDIOMA PROMPTS", "IDIOMA"])
 
         jobs = []
         for row_num, row in enumerate(all_rows[1:], start=2):
@@ -178,8 +180,12 @@ class GoogleAutomationService:
                 "content_id": content_id,
                 "link_preview": val(idx_link_preview),
                 "fecha_procesado": val(idx_fecha),
+                "presencia_doctora": val(idx_presencia) or "Portada y Cierre",
+                "estilo_paginador": val(idx_paginador) or "Puntos y Flechas",
+                "badge_estilo": val(idx_badge) or "Conceptos / Beneficios",
+                "idioma_prompts": val(idx_idioma) or "Español",
                 # Determinar si está listo para procesar
-                "is_pending": "pendiente" in estado.lower() and not content_id
+                "is_pending": "pendiente" in estado.lower()
             })
 
         return jobs
