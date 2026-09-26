@@ -145,6 +145,7 @@ class GoogleAutomationService:
         idx_instagram = get_idx(["INSTAGRAM", "COPY"])
         idx_fotos = get_idx(["FOTOS DOCTORA", "LINK FOTOS", "DOCTORA"])
         idx_estado = get_idx(["ESTADO"])
+        idx_nota = get_idx(["NOTA", "NOTAS"])
         idx_id_content = get_idx(["ID_CONTENIDO"])
         idx_link_preview = get_idx(["LINK_PREVIEW", "PREVIEW"])
         idx_fecha = get_idx(["FECHA_PROCESADO", "FECHA"])
