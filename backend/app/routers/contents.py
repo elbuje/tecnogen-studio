@@ -270,7 +270,23 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             )
             
             try:
-                # Generar imagen directamente con el modelo OpenAI Sunburst
+                # Determinar si en este slide se incluye la foto de la profesional
+                pres_lower = (slide_data.get("presencia_doctora") or "portada y cierre").lower()
+                show_doc = False
+                if "todas" in pres_lower:
+                    show_doc = True
+                elif "portada y cierre" in pres_lower:
+                    show_doc = (i == 1 or i == len(slides_copy) or slide_type in ["cover", "cta"])
+                elif "solo portada" in pres_lower:
+                    show_doc = (i == 1 or slide_type == "cover")
+                elif "solo en cierre" in pres_lower:
+                    show_doc = (i == len(slides_copy) or slide_type == "cta")
+                elif "ninguna" in pres_lower:
+                    show_doc = False
+                else:
+                    show_doc = (i == 1 or i == len(slides_copy))
+
+                # Generar imagen directamente con el modelo OpenAI Sunburst transmitiendo foto y logo real
                 img_bytes = image_service.generate_slide_image(
                     prompt=prompt,
                     slide_info=slide_data,
@@ -279,7 +295,9 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
                         "primary_color": brand.primary_color or "#16345F",
                         "accent_color": brand.accent_color or "#7DD3FC",
                         "doctor": doctor_name
-                    }
+                    },
+                    subject_bytes=subject_bytes if show_doc else None,
+                    logo_bytes=logo_bytes
                 )
 
                 b64_str = base64.b64encode(img_bytes).decode('utf-8')
