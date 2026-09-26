@@ -1,45 +1,45 @@
 ---
 title: "Servicios de IA y Composición Visual"
-description: "Motor de prompts dinámicos, lectura de modelos de BD (gpt-image-2.5-sunburst), decodificación HEIF/HIF y composición determinista HD con Pillow."
+description: "Motor de prompts dinámicos, lectura de modelos de BD (gpt-image-2.5-sunburst), decodificación HEIF/HIF y transmisión de assets reales a OpenAI images.edit."
 tags:
   - ai
   - openai
   - gpt-image-2.5-sunburst
-  - pillow
+  - images.edit
   - pillow-heif
-  - composer
+  - real-assets
   - prompt-engineering
 ---
 
-# 🤖 Servicios de IA & Composición de Marca
+# 🤖 Servicios de IA & Composición de Marca con Assets Reales
 
-El pipeline visual combina generación por difusión/red neuronal con composición determinista por capas para garantizar nitidez tipográfica, fidelidad de marca y cero artefactos de texto en inglés.
-
----
-
-## 🎨 1. Motor de Generación de Imágenes (OpenAI)
-
-* **Resolución del Modelo:** Dinámica desde la tabla `ai_settings` en la Base de Datos según la configuración activa del usuario en `/app/ai-settings` (por defecto `gpt-image-2.5-sunburst`, con soporte para `dall-e-3`, `flux-1.1-pro`, etc.).
-* **Formato & Proporción:** `1024x1024` / `1024x1536` px (re-escalado a formato Instagram Portrait 1080x1350).
-* **Negative Prompting Estricto:** Instrucciones mandatorias de no inclusión de texto (`STRICTLY NO TEXT, NO LETTERS, NO TYPOGRAPHY, NO SIGNS`) para obtener placas de fondo fotográficas puras.
-* **Salida:** Decodificación automática de `b64_json` o descarga de `url`.
+El pipeline visual combina la potencia de **OpenAI `gpt-image-2.5-sunburst`** a través del endpoint `client.images.edit` junto con la **decodificación de fotografías reales (`pillow-heif`) y logos corporativos** para garantizar fidelidad absoluta de la persona y de la marca.
 
 ---
 
-## 🖼️ 2. Motor de Composición Determinista (Pillow RGBA HD)
+## 🎨 1. Motor de Generación con Assets Reales (`images.edit`)
 
-El servicio `composer_service.py` ejecuta el renderizado en alta definición (1080x1350 px):
-
-1. **Numeración Obligatoria de Láminas:** Pastilla superior derecha (`1/8`, `2/8`, etc.).
-2. **Logo Oficial de Google Drive:** Posicionado en la esquina superior izquierda con transparencia.
-3. **Fotografía Real del Profesional (`pillow-heif`):** Decodificación directa de fotos iPhone `.HIF` / `.HEIC` e inserción en tarjeta encuadrada con borde en color acento (`#7DD3FC`).
-4. **Tipografía y Badges en Español:** Título y cuerpo con respaldo de alto contraste para máxima legibilidad.
-5. **Pastilla de Deslizamiento:** `Deslizá para leer »` y llamada a la acción en la lámina final.
+* **Resolución del Modelo:** Dinámica desde la tabla `ai_settings` en la Base de Datos según la configuración activa del usuario en `/app/ai-settings` (por defecto `gpt-image-2.5-sunburst`).
+* **Endpoint Utilizado:** `client.images.edit(model="gpt-image-2.5-sunburst", image=buf, prompt=prompt)`
+* **Paso de Imágenes Binarias:** Se envía un buffer RGBA compuesto en memoria que incluye:
+  1. **Fotografía Real del Profesional (`Karina1.HIF` / `Jessica.HIF`):** Decodificada mediante `pillow-heif` y posicionada en el cuadrante derecho.
+  2. **Logo Oficial Transparente (`JM_blanco_negro.png`):** Posicionado en la esquina inferior izquierda.
+* **Resultado:** El modelo conserva el rostro real de la doctora, su indumentaria clínica (ambo azul marino con ribete rosa) y el logo, mientras diseña la escena odontológica de alta gama, iluminación y tipografía en español.
 
 ---
 
-## 🔄 3. Regeneración Granular de Slides
+## 📐 2. Configuración Dinámica de Layout (Google Sheets)
+
+El pipeline respeta 4 nuevas dimensiones configurables por fila desde el Sheet:
+1. **`PRESENCIA DOCTORA`:** `Portada y Cierre`, `Todas las slides`, `Solo portada`, `Solo en cierre`, `Ninguna`.
+2. **`ESTILO PAGINADOR`:** `Puntos y Flechas`, `Línea Conectada`, `Pastilla Superior`, `Simple`.
+3. **`BADGE ESTILO`:** `Conceptos / Beneficios`, `Mito vs Verdad`, `Pasos Numerados`, `Sin Badge`.
+4. **`IDIOMA PROMPTS`:** `Español`, `Inglés`.
+
+---
+
+## 🔄 3. Regeneración Granular y Sincronización en Producción
 
 * Selección de lámina individual desde el visor `/app/viewer/:id`.
-* Envío de feedback específico con incremento de versión del slide (`version + 1`).
-* Procesamiento inmediato con el modelo activo en base de datos y recomposición completa de la lámina.
+* Endpoint de sincronización masiva `/api/v1/contents/sync-import` para sincronizar de inmediato SQLite y MySQL de producción.
+* Endpoint público `/api/v1/contents/public/:id` para revisión fluida de previews sin requerir login.

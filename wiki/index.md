@@ -45,6 +45,7 @@ Plataforma SaaS multi-tenant que permite a dueños de negocio, clínicas y agenc
 
 ## 📜 Sesiones de Trabajo
 
+* [[sessions/2026-09-26-openai-sunburst-real-assets-pipeline]] — Integración del pipeline oficial con assets reales en OpenAI `gpt-image-2.5-sunburst` (`images.edit`), transmisión de fotos reales (`.HIF` / `.PNG`) y logo corporativo, sincronización masiva y despliegue del Carrusel #2 en producción.
 * [[sessions/2026-09-25-brand-manual-and-ai-pipeline]] — Extracción de identidad de marca oficial (JM Odontología Integral), soporte para fotos HIF de Google Drive, resolución dinámica de modelos de IA en base de datos (`gpt-image-2.5-sunburst`) y rediseño del visor y botones de carpeta.
 * [[sessions/2026-09-24-automatizacion-google-sheets-sync-y-prompts-ia]] — Automatización de Google Sheets, sincronización asíncrona, visor de prompts de IA y resolución de errores de producción.
 * [[sessions/2026-09-23-especificacion-prd-e-instalacion-wiki]] — Análisis de PRD v1.0, instalación de arquitectura Wiki de 3 capas y definición de roadmap hacia Ploi `errante`.
