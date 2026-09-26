@@ -236,36 +236,44 @@ def sync_brand_sheet(
         total_slides = job.get("total_slides") or 4
 
         try:
-            # 1. Crear registro de Contenido con campos exactos del modelo
+            # 1. Desglosar slides desde el guión del sheet primero para tener el conteo real
+            slides_data = g_svc.parse_script_to_slides(script_raw, 5, topic)
+            real_total_slides = len(slides_data) if len(slides_data) > 0 else 5
+            doctora = job.get("doctora_ref") or job.get("subject") or "Karina"
+
+            # 2. Crear registro de Contenido con campos exactos del modelo
             content = Content(
                 brand_id=brand.id,
                 title=topic,
+                hook_text=doctora,
                 type="carousel",
                 status="generating",
                 source="google_sheet",
-                total_slides=total_slides,
+                total_slides=real_total_slides,
                 sheet_row_ref=f"row_{row_idx}"
             )
             db.add(content)
             db.commit()
             db.refresh(content)
 
-            # 2. Desglosar slides desde el guión del sheet
-            slides_data = g_svc.parse_script_to_slides(script_raw, total_slides, topic)
+            # 3. Guardar cada slide con su headline, body_text y badge textual
             for s in slides_data:
                 slide_obj = Slide(
                     content_id=content.id,
-                    slide_number=s.get("order_index") or 1,
+                    slide_number=s.get("order_index") or s.get("slide_number") or 1,
                     slide_type=s.get("slide_type") or "content",
+                    headline=s.get("headline") or s.get("title") or topic,
+                    body_text=s.get("body_text") or s.get("body") or "",
+                    badge=s.get("badge") or "PASO",
                     prompt_used=f"Generando prompt con OpenAI para: {s.get('headline', topic)}...",
                     status="pending"
                 )
                 db.add(slide_obj)
             db.commit()
 
-            # 3. Disparar generación asíncrona en segundo plano
+            # 4. Disparar generación asíncrona en segundo plano
             background_tasks.add_task(process_content_generation, content.id, SessionLocal)
-            triggered.append({"row_index": row_idx, "content_id": content.id, "title": topic})
+            triggered.append({"row_index": row_idx, "content_id": content.id, "title": topic, "doctora": doctora})
         except Exception as e:
             logger.exception(f"Error procesando fila {row_idx}: {e}")
             triggered.append({"row_index": row_idx, "error": str(e)})

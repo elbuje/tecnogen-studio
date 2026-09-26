@@ -31,29 +31,74 @@ def build_openai_slide_prompt(
     slide_num: int,
     total_slides: int,
     slide_data: dict,
-    subject_presence: str = "portada-y-cierre",
+    doctor_name: str = "Karina",
     global_feedback: Optional[str] = None
 ) -> str:
     slide_type = slide_data.get("slide_type", "content")
     headline = (slide_data.get("headline") or slide_data.get("title") or "").strip()
     body_text = (slide_data.get("body_text") or slide_data.get("body") or "").strip()
+    badge = (slide_data.get("badge") or f"PASO {slide_num}").strip()
     brand_name = brand.name or "JM Odontología Integral"
+    primary_color = brand.primary_color or "#16345F"
+    accent_color = brand.accent_color or "#7DD3FC"
+    bg_color = brand.bg_color or "#0B1E38"
     
-    feedback_instruction = f"Directive: {global_feedback}. " if global_feedback else ""
+    clean_doctor = "Dra. Karina"
+    doc_lower = (doctor_name or "").lower()
+    if "luciana" in doc_lower:
+        clean_doctor = "Dra. Luciana"
+    elif "jessica" in doc_lower:
+        clean_doctor = "Dra. Jessica"
+    elif "karina" in doc_lower:
+        clean_doctor = "Dra. Karina"
+    elif doctor_name:
+        clean_doctor = f"Dra. {doctor_name.strip()}"
+
+    feedback_instruction = f"Additional artistic direction: {global_feedback}. " if global_feedback else ""
     
     if slide_type == "cover" or slide_num == 1:
-        scene = f"Cover slide for social media carousel. Topic: '{headline}'. Professional, trustworthy and elegant presentation for {brand_name}."
+        prompt = (
+            f"High-end editorial social media carousel cover graphic (portrait 4:5 format) for dental clinic '{brand_name}'. "
+            f"On the left half: Clean graphic card overlay with deep navy background ({primary_color}) and luminous cyan accent ({accent_color}). "
+            f"Large typography clearly reading in Spanish: "
+            f'Top badge: "{badge}" '
+            f'Main headline in bold modern sans-serif: "{headline}" '
+            f'Slide counter in top right: "{slide_num}/{total_slides}" '
+            f'Brand label at the bottom: "{brand_name}". '
+            f"On the right half: Warm and trustworthy professional portrait of female dentist {clean_doctor} wearing modern navy blue medical scrubs, friendly and confident smile, in a state-of-the-art modern dental clinic with soft bokeh and studio lighting. "
+            f"Atmosphere: Premium medical branding, ultra-sharp typography in Spanish, elegant minimalism. {feedback_instruction}"
+        )
     elif slide_type == "cta" or slide_num == total_slides:
-        scene = f"Final conclusion and call to action slide for social media carousel. Topic: '{headline}'. Welcoming and encouraging consultation with {brand_name}."
+        prompt = (
+            f"Engaging closing call-to-action carousel slide {slide_num} of {total_slides} for '{brand_name}'. "
+            f"Visual composition: On the right, a warm portrait of female dentist {clean_doctor} smiling directly at the camera in medical scrubs, inviting conversation. "
+            f"On the left, prominent high-contrast graphic card in navy ({primary_color}) with cyan ({accent_color}) border: "
+            f'Top badge: "RESPONDE {clean_doctor.upper()}" '
+            f'Headline: "{headline}" '
+            f'Body text in clear Spanish: "{body_text or "Dejanos tu consulta en los comentarios y la respondemos en el próximo video 👇"}" '
+            f'Slide counter: "{slide_num}/{total_slides}" '
+            f'Brand signature: "{brand_name}". '
+            f"Atmosphere: Welcoming, prestigious, polished social media closing card. {feedback_instruction}"
+        )
     else:
-        scene = f"Slide {slide_num} of {total_slides} for social media carousel. Concept: '{headline}'. Key message: '{body_text}'. Professional and clear clinical/educational focus for {brand_name}."
+        is_myth = "mito" in headline.lower() or "mito" in body_text.lower() or "❌" in headline or "❌" in body_text
+        if is_myth:
+            visual_desc = "Visual element: High-contrast educational visual showing realistic 3D dental detail, contrasting clean modern ceramic crown with titanium implant aesthetics under clean studio lighting."
+        else:
+            visual_desc = f"Visual element: Female dentist {clean_doctor} in a clinical setting pointing to a digital dental scan or modern 3D model, explaining with professionalism and warmth in an ultra-clean clinic with natural studio lighting."
 
-    prompt = (
-        f"High-end editorial social media visual slide (1080x1350 portrait format) for {brand_name}. "
-        f"{scene} {feedback_instruction}"
-        f"Color palette harmony featuring primary brand tones {brand.primary_color or '#16345F'} and luminous accents in {brand.accent_color or '#7DD3FC'}. "
-        f"Atmosphere: ultra-clean, modern clinic, soft natural studio lighting, 8k resolution, premium aesthetic."
-    )
+        prompt = (
+            f"Modern editorial social media carousel slide {slide_num} of {total_slides} for '{brand_name}'. "
+            f"Layout: Balanced vertical composition with dark navy blue ({bg_color}) background and refined cyan ({accent_color}) highlights. "
+            f"Clear graphic text prominently displayed in Spanish: "
+            f'Top badge: "{badge}" '
+            f'Headline: "{headline}" '
+            f'Body text in clear legible Spanish: "{body_text}" '
+            f'Slide index: "{slide_num}/{total_slides}" '
+            f"{visual_desc} "
+            f"Style: High-contrast typography, premium healthcare graphic design, no spelling errors. {feedback_instruction}"
+        )
+
     return prompt.strip()
 
 def process_content_generation(content_id: str, db_factory, global_feedback: Optional[str] = None):
@@ -80,33 +125,41 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             return
 
         brand = content.brand
-        brand_info = {
-            "name": brand.name or "JM Odontología Integral",
-            "primary_color": brand.primary_color or "#16345F",
-            "accent_color": brand.accent_color or "#7DD3FC",
-            "bg_color": brand.bg_color or "#1D1D1B",
-            "font_style_title": brand.font_style_title or "serif-editorial",
-            "font_style_body": brand.font_style_body or "sans-modern"
-        }
-
+        doctor_name = content.hook_text or "Karina"
+        
         # Descargar Logo oficial y Fotos de Personajes desde Google Drive
         try:
             g_svc = GoogleAutomationService()
             logo_bytes = g_svc.get_brand_logo_bytes(brand) if g_svc.is_ready else None
-            subject_bytes = g_svc.get_brand_subject_bytes(brand, "Jessica") if g_svc.is_ready else None
+            subject_bytes = g_svc.get_brand_subject_bytes(brand, doctor_name) if g_svc.is_ready else None
         except Exception as e_drive:
             logger.warning(f"Aviso al obtener activos de Drive: {e_drive}")
             g_svc = None
             logo_bytes = None
             subject_bytes = None
 
-        # Generar o resolver el copy estructurado en español
-        slides_copy = generate_carousel_slides_copy(
-            topic=content.title,
-            total_slides=content.total_slides,
-            brand_name=brand.name,
-            openai_client=image_service.client
-        )
+        # Verificar si los slides ya vienen desglosados (ej. desde Google Sheet o BD)
+        existing_slides = db.query(Slide).filter(Slide.content_id == content.id).order_by(Slide.slide_number).all()
+        
+        slides_copy = []
+        if existing_slides and len(existing_slides) > 0 and any(s.headline or s.body_text for s in existing_slides):
+            for s in existing_slides:
+                slides_copy.append({
+                    "slide_number": s.slide_number,
+                    "slide_type": s.slide_type or "content",
+                    "headline": s.headline or content.title,
+                    "title": s.headline or content.title,
+                    "body_text": s.body_text or "",
+                    "body": s.body_text or "",
+                    "badge": s.badge or f"PASO {s.slide_number}"
+                })
+        else:
+            slides_copy = generate_carousel_slides_copy(
+                topic=content.title,
+                total_slides=content.total_slides,
+                brand_name=brand.name,
+                openai_client=image_service.client
+            )
 
         # Generar caption y hashtags con IA si no vienen provistos
         if not content.caption_copy or "💡" in content.caption_copy or "Nuevo contenido generado" in content.caption_copy:
@@ -137,7 +190,7 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
         failed_count = 0
 
         for i, slide_data in enumerate(slides_copy, start=1):
-            slide_data["total_slides"] = content.total_slides
+            slide_data["total_slides"] = len(slides_copy)
             slide_type = slide_data.get("slide_type", "content")
             
             headline = (slide_data.get("headline") or slide_data.get("title") or content.title).strip()
@@ -150,31 +203,43 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
             slide_data["body"] = body_text
             slide_data["badge"] = badge
 
-            prompt = build_openai_slide_prompt(brand, i, content.total_slides, slide_data, global_feedback=global_feedback)
+            prompt = build_openai_slide_prompt(
+                brand=brand,
+                slide_num=i,
+                total_slides=len(slides_copy),
+                slide_data=slide_data,
+                doctor_name=doctor_name,
+                global_feedback=global_feedback
+            )
             
             try:
-                # 1. Generar imagen directamente con el modelo de IA seleccionado
+                # Generar imagen directamente con el modelo OpenAI Sunburst
                 img_bytes = image_service.generate_slide_image(
                     prompt=prompt,
                     slide_info=slide_data,
-                    brand_info=brand_info
+                    brand_info={
+                        "name": brand.name or "JM Odontología Integral",
+                        "primary_color": brand.primary_color or "#16345F",
+                        "accent_color": brand.accent_color or "#7DD3FC",
+                        "doctor": doctor_name
+                    }
                 )
 
                 b64_str = base64.b64encode(img_bytes).decode('utf-8')
                 data_uri = f"data:image/png;base64,{b64_str}"
 
-                # 2. Subir imagen a Google Drive
+                # Subir imagen a Google Drive
                 drive_link = None
                 if carousel_drive_folder_id and g_svc and g_svc.is_ready:
                     try:
-                        file_name = f"Slide_{i}_de_{content.total_slides}.png"
+                        file_name = f"Slide_{i}_de_{len(slides_copy)}.png"
                         upload_res = g_svc.upload_file_bytes(carousel_drive_folder_id, file_name, img_bytes)
                         if upload_res:
                             drive_link = upload_res.get("url")
                     except Exception as e_up:
                         logger.warning(f"Error subiendo slide {i} a Drive: {e_up}")
                 
-                # Check if slide already exists (for re-generation)
+                # Guardar slide en base de datos
                 existing = db.query(Slide).filter(Slide.content_id == content.id, Slide.slide_number == i).first()
                 if existing:
                     existing.image_url = data_uri
@@ -222,20 +287,20 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
                 failed_count += 1
                 refund_credits_atomic(db, brand.user_id, 1, f"Reembolso por fallo en slide {i}", content.id)
 
-        if failed_count == content.total_slides:
+        if failed_count == len(slides_copy):
             content.status = "failed"
         else:
             content.status = "ready_for_review"
         db.commit()
 
-        # Si provino de un Google Sheet, actualizar el Sheet con el nuevo estado y link de preview
+        # Si provino de un Google Sheet, actualizar el Sheet con estado 'Ya realizado' y link de preview
         if content.source == "google_sheet" and content.sheet_row_ref and brand.sheets_url and g_svc and g_svc.is_ready:
             try:
                 digits = re.sub(r'\D', '', str(content.sheet_row_ref))
                 row_idx = int(digits) if digits else 0
                 if row_idx > 0:
                     preview_link = f"https://studio.tecnogen.ar/app/viewer/{content.id}"
-                    final_sheet_status = "Listo para Revisión" if content.status == "ready_for_review" else "Error"
+                    final_sheet_status = "Ya realizado" if content.status == "ready_for_review" else "Pendiente — enviar a la IA"
                     g_svc.update_sheet_row_status(
                         sheet_url=brand.sheets_url,
                         row_number=row_idx,
@@ -243,6 +308,8 @@ def process_content_generation(content_id: str, db_factory, global_feedback: Opt
                         content_id=content.id,
                         preview_url=preview_link
                     )
+            except Exception as e_sheet:
+                logger.error(f"Error actualizando estado en Google Sheet: {e_sheet}")
             except Exception as e_sheet:
                 logger.error(f"Error actualizando estado en Google Sheet: {e_sheet}")
 
