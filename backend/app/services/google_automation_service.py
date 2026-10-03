@@ -151,7 +151,7 @@ class GoogleAutomationService:
         idx_fecha = get_idx(["FECHA_PROCESADO", "FECHA"])
         idx_presencia = get_idx(["PRESENCIA DOCTORA", "PRESENCIA"])
         idx_paginador = get_idx(["ESTILO PAGINADOR", "PAGINADOR"])
-        idx_badge = get_idx(["BADGE ESTILO", "BADGE"])
+        idx_badge = get_idx(["TIPOVISUAL", "TIPO VISUAL", "BADGE ESTILO", "BADGE"])
         idx_idioma = get_idx(["IDIOMA PROMPTS", "IDIOMA"])
 
         jobs = []

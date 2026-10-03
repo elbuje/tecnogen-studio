@@ -1,3 +1,15 @@
+---
+title: "Sesión: Pipeline con Assets Reales en OpenAI Sunburst (images.edit)"
+date: "2026-09-26"
+author: "Antigravity & Marcelo Mujica"
+tags:
+  - openai-sunburst
+  - images.edit
+  - real-assets
+  - heif
+  - deploy
+---
+
 # Sesión 2026-09-26 — Pipeline con Assets Reales en OpenAI Sunburst (`images.edit`)
 
 ## Contexto & Objetivos

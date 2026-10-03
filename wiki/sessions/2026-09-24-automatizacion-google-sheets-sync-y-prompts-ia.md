@@ -1,3 +1,14 @@
+---
+title: "Sesión: Automatización de Google Sheets, Sincronización Asíncrona y Auditoría de Prompts de IA"
+date: "2026-09-24"
+author: "Antigravity & Marcelo Mujica"
+tags:
+  - sheets
+  - async
+  - prompts
+  - background-tasks
+---
+
 # 📝 Sesión: Automatización de Google Sheets, Sincronización Asíncrona y Auditoría de Prompts de IA
 
 **Fecha:** 2026-09-24  

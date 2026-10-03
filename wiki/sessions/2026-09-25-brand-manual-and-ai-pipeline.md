@@ -1,3 +1,15 @@
+---
+title: "Sesión: Integración del Manual de Marca JM, Pipeline IA con gpt-image-2.5-sunburst y Rediseño del Visor"
+date: "2026-09-25"
+author: "Antigravity & Marcelo Mujica"
+tags:
+  - brand-kit
+  - jm-odontologia
+  - pillow-heif
+  - gpt-image-2.5-sunburst
+  - viewer
+---
+
 # Sesión 2026-09-25 — Integración del Manual de Marca JM, Pipeline IA con gpt-image-2.5-sunburst y Rediseño del Visor
 
 ## Contexto & Objetivos

@@ -34,6 +34,12 @@ Plataforma SaaS multi-tenant que permite a dueños de negocio, clínicas y agenc
 
 ---
 
+## 📚 Guías Técnicas
+
+* [[guides/pipeline_sunburst_real_assets_architecture]] — Guía exhaustiva de arquitectura, código y parámetros del pipeline con assets reales y OpenAI `images.edit`.
+
+---
+
 ## 🔗 Fuentes de Verdad & Enlaces
 
 * **Fuentes del Proyecto:** [[sources]]

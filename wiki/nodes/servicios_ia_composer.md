@@ -43,3 +43,9 @@ El pipeline respeta 4 nuevas dimensiones configurables por fila desde el Sheet:
 * Selección de lámina individual desde el visor `/app/viewer/:id`.
 * Endpoint de sincronización masiva `/api/v1/contents/sync-import` para sincronizar de inmediato SQLite y MySQL de producción.
 * Endpoint público `/api/v1/contents/public/:id` para revisión fluida de previews sin requerir login.
+
+---
+
+## 📚 Documentación Técnica Detallada
+* Guía completa de integración y arquitectura: [[guides/pipeline_sunburst_real_assets_architecture]]
+

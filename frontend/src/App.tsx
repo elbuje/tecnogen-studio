@@ -16,6 +16,7 @@ import { Billing } from './pages/Billing';
 import { Profile } from './pages/Profile';
 import { Integrations } from './pages/Integrations';
 import { Library } from './pages/Library';
+import { PaginatorsGallery } from './pages/PaginatorsGallery';
 import { SystemLogs } from './pages/SystemLogs';
 
 // Ops / SuperAdmin Pages
@@ -99,6 +100,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedLayout>
                   <BrandKit />
+                </ProtectedLayout>
+              }
+            />
+            <Route
+              path="/app/paginators"
+              element={
+                <ProtectedLayout>
+                  <PaginatorsGallery />
                 </ProtectedLayout>
               }
             />
