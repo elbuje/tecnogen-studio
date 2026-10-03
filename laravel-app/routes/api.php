@@ -11,6 +11,7 @@ use App\Models\Brand;
 use App\Models\CreditLedger;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
@@ -35,7 +36,12 @@ Route::prefix('v1/auth')->group(function () {
         if ($plan === 'starter') $credits = 75;
         if ($plan === 'agency') $credits = 750;
 
-        $user = User::create([
+        $userId = (string) \Illuminate\Support\Str::uuid();
+        $brandId = (string) \Illuminate\Support\Str::uuid();
+        $ledgerId = (string) \Illuminate\Support\Str::uuid();
+
+        DB::table('users')->insert([
+            'id' => $userId,
             'email' => $email,
             'password' => Hash::make($password),
             'full_name' => $fullName,
@@ -47,38 +53,62 @@ Route::prefix('v1/auth')->group(function () {
             'videos_generated_this_month' => 0,
             'avatar_minutes_quota' => 60,
             'avatar_minutes_used' => 0,
-            'auto_mode_enabled' => false,
+            'auto_mode_enabled' => 0,
             'sheet_auto_mode' => 'copilot',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         $brandName = ($fullName ?: 'Mi') . ' Marca';
-        Brand::create([
-            'user_id' => $user->id,
+        DB::table('brands')->insert([
+            'id' => $brandId,
+            'user_id' => $userId,
             'name' => $brandName,
+            'primary_color' => '#16345F',
+            'accent_color' => '#7DD3FC',
+            'bg_color' => '#0B1E38',
+            'font_style_title' => 'serif-editorial',
+            'font_style_body' => 'sans-modern',
+            'layout_preset' => 'editorial-top',
+            'logo_position' => 'top-left',
+            'logo_width_px' => 180,
             'created_at' => now(),
         ]);
 
-        CreditLedger::create([
-            'user_id' => $user->id,
+        DB::table('credit_ledger')->insert([
+            'id' => $ledgerId,
+            'user_id' => $userId,
             'amount' => $credits,
             'action_type' => 'initial_signup',
             'description' => 'Créditos iniciales Plan ' . ucfirst($plan),
             'created_at' => now(),
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $tokenStr = \Illuminate\Support\Str::random(60);
+        DB::table('personal_access_tokens')->insert([
+            'tokenable_type' => User::class,
+            'tokenable_id' => $userId,
+            'name' => 'auth_token',
+            'token' => hash('sha256', $tokenStr),
+            'abilities' => json_encode(['*']),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $tokenId = DB::getPdo()->lastInsertId();
+        $plainToken = "{$tokenId}|{$tokenStr}";
 
         return response()->json([
-            'access_token' => $token,
-            'refresh_token' => $token,
+            'access_token' => $plainToken,
+            'refresh_token' => $plainToken,
             'token_type' => 'bearer',
             'user' => [
-                'id' => $user->id,
-                'email' => $user->email,
-                'full_name' => $user->full_name,
-                'role' => $user->role,
-                'plan_tier' => $user->plan_tier,
-                'credits_balance' => $user->credits_balance,
+                'id' => $userId,
+                'email' => $email,
+                'full_name' => $fullName,
+                'role' => 'client',
+                'plan_tier' => $plan,
+                'credits_balance' => $credits,
             ],
         ], 201);
     });
@@ -91,7 +121,7 @@ Route::prefix('v1/auth')->group(function () {
             return response()->json(['detail' => 'Email y contraseña requeridos'], 400);
         }
 
-        $user = User::where('email', $email)->first();
+        $user = DB::table('users')->where('email', $email)->first();
         if (!$user) {
             return response()->json(['detail' => 'Credenciales incorrectas'], 401);
         }
@@ -101,11 +131,23 @@ Route::prefix('v1/auth')->group(function () {
             return response()->json(['detail' => 'Credenciales incorrectas'], 401);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $tokenStr = \Illuminate\Support\Str::random(60);
+        DB::table('personal_access_tokens')->insert([
+            'tokenable_type' => User::class,
+            'tokenable_id' => $user->id,
+            'name' => 'auth_token',
+            'token' => hash('sha256', $tokenStr),
+            'abilities' => json_encode(['*']),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $tokenId = DB::getPdo()->lastInsertId();
+        $plainToken = "{$tokenId}|{$tokenStr}";
 
         return response()->json([
-            'access_token' => $token,
-            'refresh_token' => $token,
+            'access_token' => $plainToken,
+            'refresh_token' => $plainToken,
             'token_type' => 'bearer',
             'user' => [
                 'id' => $user->id,
