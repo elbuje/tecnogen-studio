@@ -19,8 +19,8 @@ if (file_exists(__DIR__.'/../laravel-app/vendor/autoload.php')) {
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-// Si la ruta inicia con /api o /sanctum, la procesa Laravel directamente y envía la respuesta HTTP
-if (strpos($uri, '/api') === 0 || strpos($uri, '/sanctum') === 0) {
+// Si la ruta inicia con /api o /sanctum o /debug, la procesa Laravel directamente
+if (strpos($uri, '/api') === 0 || strpos($uri, '/sanctum') === 0 || strpos($uri, '/debug') === 0) {
     if (isset($app)) {
         $request = Request::capture();
         $response = $app->handleRequest($request);
@@ -29,9 +29,9 @@ if (strpos($uri, '/api') === 0 || strpos($uri, '/sanctum') === 0) {
     }
 }
 
-// Para rutas de la SPA React: si existe archivo estático en public, servirlo
+// Para rutas de la SPA React: si existe archivo estático en public (que no sea index.html ni php), servirlo
 $file = __DIR__ . $uri;
-if ($uri !== '/' && file_exists($file) && !is_dir($file)) {
+if ($uri !== '/' && file_exists($file) && !is_dir($file) && !str_ends_with($file, '.html') && !str_ends_with($file, '.php')) {
     $mime = mime_content_type($file);
     if (str_ends_with($file, '.css')) $mime = 'text/css';
     if (str_ends_with($file, '.js')) $mime = 'application/javascript';
@@ -42,7 +42,7 @@ if ($uri !== '/' && file_exists($file) && !is_dir($file)) {
     exit;
 }
 
-// Fallback a React SPA index.html
+// Fallback a React SPA index.html para todas las rutas de cliente (/app/*, /login, etc.)
 if (file_exists(__DIR__ . '/index.html')) {
     header("Content-Type: text/html");
     readfile(__DIR__ . '/index.html');
