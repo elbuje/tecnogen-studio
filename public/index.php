@@ -9,15 +9,6 @@ if (file_exists($maintenance = __DIR__.'/../laravel-app/storage/framework/mainte
     require $maintenance;
 }
 
-// Bootstrap Laravel
-if (file_exists(__DIR__.'/../laravel-app/vendor/autoload.php')) {
-    require __DIR__.'/../laravel-app/vendor/autoload.php';
-    $app = require_once __DIR__.'/../laravel-app/bootstrap/app.php';
-} elseif (file_exists(__DIR__.'/../vendor/autoload.php')) {
-    require __DIR__.'/../vendor/autoload.php';
-    $app = require_once __DIR__.'/../bootstrap/app.php';
-}
-
 // Servir archivos estáticos reales (imágenes, css, js) si existen físicamente
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $file = __DIR__ . $uri;
@@ -36,10 +27,9 @@ if ($uri !== '/' && file_exists($file) && !is_dir($file) && !str_ends_with($file
     exit;
 }
 
-// Todas las peticiones son procesadas por Laravel 11 (Blade + Rutas Web y API)
-if (isset($app)) {
-    $request = Request::capture();
-    $response = $app->handleRequest($request);
-    $response->send();
-    exit;
-}
+// Register the Composer autoloader
+require __DIR__.'/../laravel-app/vendor/autoload.php';
+
+// Bootstrap Laravel 11 and handle the request
+(require_once __DIR__.'/../laravel-app/bootstrap/app.php')
+    ->handleRequest(Request::capture());
