@@ -19,10 +19,12 @@ if (file_exists(__DIR__.'/../laravel-app/vendor/autoload.php')) {
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-// Si la ruta inicia con /api, la procesa Laravel directamente
+// Si la ruta inicia con /api o /sanctum, la procesa Laravel directamente y envía la respuesta HTTP
 if (strpos($uri, '/api') === 0 || strpos($uri, '/sanctum') === 0) {
     if (isset($app)) {
-        $app->handleRequest(Request::capture());
+        $request = Request::capture();
+        $response = $app->handleRequest($request);
+        $response->send();
         exit;
     }
 }
@@ -49,5 +51,7 @@ if (file_exists(__DIR__ . '/index.html')) {
 
 // Fallback por defecto si no hay index.html compilado
 if (isset($app)) {
-    $app->handleRequest(Request::capture());
+    $request = Request::capture();
+    $response = $app->handleRequest($request);
+    $response->send();
 }
