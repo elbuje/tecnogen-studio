@@ -15,11 +15,11 @@ Route::prefix('v1/auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
-// Public Content Viewer (para compartir links sin auth si es necesario)
+// Public Content Viewer
 Route::get('v1/contents/public/{id}', [ContentController::class, 'publicShow']);
 
-// Diagnostics
-Route::post('v1/diagnostic', fn() => response()->json(['status' => 'ok']));
+// Diagnostics (Accept GET & POST)
+Route::match(['get', 'post'], 'v1/diagnostic', fn() => response()->json(['status' => 'ok', 'framework' => 'Laravel 11', 'db' => 'MySQL (tecnogen_studio)']));
 Route::post('v1/diagnostic-text', fn() => response()->json(['saved' => true]));
 
 // Protected API Routes
