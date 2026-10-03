@@ -17,69 +17,80 @@ use Illuminate\Support\Facades\Route;
 // Public Auth Endpoints
 Route::prefix('v1/auth')->group(function () {
     Route::post('/register', function (Request $request) {
-        $plan = $request->input('plan_tier', 'growth');
-        $credits = 220;
-        if ($plan === 'starter') $credits = 75;
-        if ($plan === 'agency') $credits = 750;
+        try {
+            $plan = $request->input('plan_tier', 'growth');
+            $credits = 220;
+            if ($plan === 'starter') $credits = 75;
+            if ($plan === 'agency') $credits = 750;
 
-        $user = User::create([
-            'email' => $request->input('email'),
-            'password' => Hash::make($request->input('password')),
-            'full_name' => $request->input('full_name'),
-            'role' => 'client',
-            'plan_tier' => $plan,
-            'credits_balance' => $credits,
-            'commercial_status' => 'active',
-            'monthly_video_limit' => 30,
-            'videos_generated_this_month' => 0,
-            'avatar_minutes_quota' => 60,
-            'avatar_minutes_used' => 0,
-            'auto_mode_enabled' => false,
-            'sheet_auto_mode' => 'copilot',
-        ]);
+            $user = User::create([
+                'email' => $request->input('email'),
+                'password' => Hash::make($request->input('password')),
+                'full_name' => $request->input('full_name'),
+                'role' => 'client',
+                'plan_tier' => $plan,
+                'credits_balance' => $credits,
+                'commercial_status' => 'active',
+                'monthly_video_limit' => 30,
+                'videos_generated_this_month' => 0,
+                'avatar_minutes_quota' => 60,
+                'avatar_minutes_used' => 0,
+                'auto_mode_enabled' => false,
+                'sheet_auto_mode' => 'copilot',
+            ]);
 
-        $brandName = ($request->input('full_name') ?: 'Mi') . ' Marca';
-        Brand::create([
-            'user_id' => $user->id,
-            'name' => $brandName,
-            'created_at' => now(),
-        ]);
+            $brandName = ($request->input('full_name') ?: 'Mi') . ' Marca';
+            Brand::create([
+                'user_id' => $user->id,
+                'name' => $brandName,
+                'created_at' => now(),
+            ]);
 
-        CreditLedger::create([
-            'user_id' => $user->id,
-            'amount' => $credits,
-            'action_type' => 'initial_signup',
-            'description' => 'Créditos iniciales Plan ' . ucfirst($plan),
-            'created_at' => now(),
-        ]);
+            CreditLedger::create([
+                'user_id' => $user->id,
+                'amount' => $credits,
+                'action_type' => 'initial_signup',
+                'description' => 'Créditos iniciales Plan ' . ucfirst($plan),
+                'created_at' => now(),
+            ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+            $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'access_token' => $token,
-            'refresh_token' => $token,
-            'token_type' => 'bearer',
-            'user' => [
-                'id' => $user->id,
-                'email' => $user->email,
-                'full_name' => $user->full_name,
-                'role' => $user->role,
-                'plan_tier' => $user->plan_tier,
-                'credits_balance' => $user->credits_balance,
-            ],
-        ], 201);
+            return response()->json([
+                'access_token' => $token,
+                'refresh_token' => $token,
+                'token_type' => 'bearer',
+                'user' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'full_name' => $user->full_name,
+                    'role' => $user->role,
+                    'plan_tier' => $user->plan_tier,
+                    'credits_balance' => $user->credits_balance,
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
     });
 
     Route::post('/login', function (Request $request) {
         try {
-            $user = User::where('email', $request->input('email'))->first();
+            $email = $request->input('email');
+            $password = $request->input('password');
+
+            $user = User::where('email', $email)->first();
             if (!$user) {
-                return response()->json(['detail' => 'Credenciales incorrectas'], 401);
+                return response()->json(['detail' => 'Usuario no encontrado: ' . $email], 401);
             }
 
-            $isValid = Hash::check($request->input('password'), $user->password) || password_verify($request->input('password'), $user->password);
+            $isValid = Hash::check($password, $user->password) || password_verify($password, $user->password);
             if (!$isValid) {
-                return response()->json(['detail' => 'Credenciales incorrectas'], 401);
+                return response()->json(['detail' => 'Contraseña incorrecta'], 401);
             }
 
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -98,7 +109,11 @@ Route::prefix('v1/auth')->group(function () {
                 ],
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()], 500);
+            return response()->json([
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
         }
     });
 });
