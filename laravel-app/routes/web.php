@@ -342,11 +342,14 @@ Route::prefix('app')->group(function () {
     });
 
     Route::post('/brand/set-cover-logo', function (Request $request) {
-        if (!session('user')) return redirect('/login');
+        if (!session('user')) {
+            if ($request->ajax() || $request->wantsJson()) return response()->json(['error' => 'Unauthorized'], 401);
+            return redirect('/login');
+        }
 
         $user = session('user');
         $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
-        $logoId = $request->input('logo_id');
+        $logoId = $request->input('logo_id') ?: $request->json('logo_id');
 
         if ($brand && $logoId) {
             $rules = $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
@@ -356,7 +359,19 @@ Route::prefix('app')->group(function () {
                 'brand_rules' => $rules,
             ]);
 
+            if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->isJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Logo predeterminado actualizado.',
+                    'default_logo_id' => $logoId
+                ]);
+            }
+
             return back()->with('success', 'Logo predeterminado actualizado.');
+        }
+
+        if ($request->ajax() || $request->wantsJson() || $request->isJson()) {
+            return response()->json(['success' => false, 'error' => 'No se pudo actualizar el logotipo.'], 400);
         }
 
         return back()->with('error', 'No se pudo actualizar el logotipo.');
