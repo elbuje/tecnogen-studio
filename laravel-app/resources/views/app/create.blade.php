@@ -56,11 +56,16 @@
 
                 <!-- Personaje -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Personaje / Especialista</label>
-                    <select name="character_id" id="characterSelect" onchange="updatePromptPreview()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all cursor-pointer">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-semibold text-slate-700">Personaje / Especialista</label>
+                        <a id="charDriveLink" href="#" target="_blank" class="text-[11px] text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1 hidden">
+                            📁 <span>Ver Drive</span>
+                        </a>
+                    </div>
+                    <select name="character_id" id="characterSelect" onchange="handleCharacterChange()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all cursor-pointer">
                         <option value="">👤 Sin personaje específico</option>
                         @foreach($characters as $char)
-                            <option value="{{ $char['id'] }}" data-name="{{ $char['name'] }}" data-role="{{ $char['role'] }}" {{ $loop->first ? 'selected' : '' }}>
+                            <option value="{{ $char['id'] }}" data-name="{{ $char['name'] }}" data-role="{{ $char['role'] }}" data-gdrive="{{ $char['gdrive_folder_url'] ?? '' }}" {{ $loop->first ? 'selected' : '' }}>
                                 {{ $char['name'] }} ({{ $char['role'] ?? 'Especialista' }})
                             </option>
                         @endforeach
@@ -92,10 +97,13 @@
                 </div>
             </div>
 
-            <!-- Previsualización de Marca Activa -->
+            <!-- Previsualización de Marca Activa y Carpetas Drive -->
             <div class="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 text-xs">
-                <div class="flex items-center gap-4">
-                    <span class="font-semibold text-slate-600">Paleta Oficial:</span>
+                <div class="flex items-center gap-4 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-900">{{ $brand->name ?? 'JM Odontología Integral' }}</span>
+                        <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-[11px]">Marca Activa</span>
+                    </div>
                     <div class="flex items-center gap-1.5">
                         <span class="w-4 h-4 rounded-full border border-slate-200" style="background-color: {{ $brand->primary_color ?? '#16345F' }}" title="Primario"></span>
                         <span class="font-mono text-slate-700">{{ $brand->primary_color ?? '#16345F' }}</span>
@@ -110,18 +118,32 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <span class="font-semibold text-slate-600">Logo:</span>
-                    @if(!empty($brandLogos))
-                        <select name="logo_id" id="logoSelect" class="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 cursor-pointer">
-                            @foreach($brandLogos as $logo)
-                                <option value="{{ $logo['id'] }}" {{ ($defaultLogoId ?? '') == $logo['id'] ? 'selected' : '' }}>
-                                    {{ $logo['variant_label'] }}
-                                </option>
-                            @endforeach
-                        </select>
-                    @else
-                        <span class="text-slate-400 italic">Logo Predeterminado</span>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <span class="font-semibold text-slate-600">Logo:</span>
+                        @if(!empty($brandLogos))
+                            <select name="logo_id" id="logoSelect" onchange="updatePromptPreview()" class="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 cursor-pointer">
+                                @foreach($brandLogos as $logo)
+                                    <option value="{{ $logo['id'] }}" {{ ($defaultLogoId ?? '') == $logo['id'] ? 'selected' : '' }}>
+                                        {{ $logo['variant_label'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        @else
+                            <span class="text-slate-400 italic">Logo Predeterminado</span>
+                        @endif
+                    </div>
+
+                    @if(!empty($brand->logos_folder_url))
+                        <a href="{{ $brand->logos_folder_url }}" target="_blank" class="px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold text-[11px] flex items-center gap-1 border border-sky-200 transition-colors">
+                            📁 <span>Drive Logos</span>
+                        </a>
+                    @endif
+
+                    @if(!empty($brand->creations_folder_url))
+                        <a href="{{ $brand->creations_folder_url }}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-[11px] flex items-center gap-1 border border-emerald-200 transition-colors">
+                            📂 <span>Drive Creaciones</span>
+                        </a>
                     @endif
                 </div>
             </div>
@@ -323,11 +345,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="md:col-span-2">
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Texto del Post / Pie de Foto</label>
-                        <textarea name="caption_copy" id="captionText" rows="4" placeholder="Redacta el texto que acompañará la publicación en el feed..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">¿Sabías que un implante dental bien planificado puede acompañarte toda la vida? ✨ En TecnoGen combinamos diagnóstico digital 3D y materiales de vanguardia para que recuperes tu sonrisa con total seguridad y confort.
+                        <textarea name="caption_copy" id="captionText" rows="4" placeholder="Redacta el texto que acompañará la publicación en el feed..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">¿Sabías que un implante dental bien planificado puede acompañarte toda la vida? ✨ En {{ $brand->name ?? 'JM Odontología Integral' }} combinamos diagnóstico digital 3D y materiales de vanguardia para que recuperes tu sonrisa con total seguridad y confort.
 
 Deslizá para conocer las 3 claves de la durabilidad en odontología moderna. 👉
 
-¿Tenés dudas sobre tu tratamiento? Dejanos tu comentario o envianos un mensaje directo.</textarea>
+¿Tenés dudas sobre tu tratamiento? Dejanos tu comentario o envianos un mensaje directo a {{ $brand->name ?? 'JM Odontología Integral' }}.</textarea>
                     </div>
 
                     <div>
@@ -337,7 +359,7 @@ Deslizá para conocer las 3 claves de la durabilidad en odontología moderna. �
                                 ✨ IA
                             </button>
                         </div>
-                        <textarea name="hashtags" id="hashtagsText" rows="4" placeholder="#TecnoGen #Implantes..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-700 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">#TecnoGen #ImplantesDentales #OdontologiaDigital #CirugiaGuiada #SonrisaSaludable #EsteticaDental</textarea>
+                        <textarea name="hashtags" id="hashtagsText" rows="4" placeholder="#{{ preg_replace('/[^A-Za-z0-9]/', '', $brand->name ?? 'JMOdontologia') }} #Implantes..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-700 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">#{{ preg_replace('/[^A-Za-z0-9]/', '', $brand->name ?? 'JMOdontologia') }} #OdontologiaIntegral #ImplantesDentales #CirugiaGuiada #SonrisaSaludable #EsteticaDental</textarea>
                     </div>
                 </div>
             </div>
@@ -850,22 +872,42 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         slideCount = cards.length + 1;
     }
 
+    function handleCharacterChange() {
+        const sel = document.getElementById('characterSelect');
+        const opt = sel?.selectedOptions[0];
+        const gdriveUrl = opt?.dataset?.gdrive;
+        const driveLink = document.getElementById('charDriveLink');
+        if (driveLink) {
+            if (gdriveUrl && gdriveUrl.startsWith('http')) {
+                driveLink.href = gdriveUrl;
+                driveLink.classList.remove('hidden');
+            } else {
+                driveLink.classList.add('hidden');
+            }
+        }
+        updatePromptPreview();
+    }
+
     function updatePromptPreview() {
         const type = document.getElementById('contentType')?.value || 'carousel';
         const hook = document.getElementById('slide_headline_1')?.value || '';
         const visual = document.getElementById('visualTypeSelect')?.value || '';
         const paginator = document.getElementById('paginatorSelect')?.value || '';
-        const charName = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.name || 'Profesional TecnoGen';
+        const charName = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.name || 'Dra. Karina';
+        const charRole = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.role || 'Especialista';
+        const logoName = document.getElementById('logoSelect')?.selectedOptions[0]?.innerText || 'Logotipo Oficial';
+        const brandName = '{{ addslashes($brand->name ?? "JM Odontología Integral") }}';
         const primaryColor = '{{ $brand->primary_color ?? "#16345F" }}';
         const accentColor = '{{ $brand->accent_color ?? "#7DD3FC" }}';
 
-        const promptText = `PROMPT COMPILADO [gpt-image-2.5-sunburst]:
+        const promptText = `PROMPT COMPILADO [gpt-image-2.5-sunburst via Reference Canvas]:
 Formato: ${type === 'single_post' ? 'Post Único (1080x1080)' : (type === 'reel_script' ? 'Reel Vertical (1080x1920)' : 'Carrusel Instagram (1080x1350)')}
 Estructura Visual: ${visual} ${type === 'carousel' ? '| Paginador: ' + paginator : ''}
-Identidad de Marca: TecnoGen Dental Studio (Primario: ${primaryColor}, Acento: ${accentColor}, Fondo: Limpio Quirúrgico)
-Personaje: ${charName} en atuendo médico contemporáneo
-Titular: "${hook}"
-Acabados fotorrealistas médicos, tipografía limpia en español y composición editorial premium.`;
+Identidad de Marca: ${brandName} (Primario: ${primaryColor}, Acento: ${accentColor}, Fondo: Limpio Quirúrgico)
+Logotipo Seleccionado: ${logoName} [Extraído de Google Drive de ${brandName}]
+Personaje Seleccionado: ${charName} (${charRole}) [Fotografía real extraída de carpeta Google Drive]
+Titular de Portada: "${hook}"
+Directriz Estricta: Preservar rostro, ambo médico y rasgos de ${charName} y el isotipo/logotipo de ${brandName}. Acabados fotorrealistas médicos y tipografía en español.`;
 
         document.getElementById('promptPreviewBox').innerText = promptText;
     }
@@ -873,6 +915,7 @@ Acabados fotorrealistas médicos, tipografía limpia en español y composición 
     // Inicializar formato y prompt preview
     document.addEventListener('DOMContentLoaded', () => {
         handleFormatChange();
+        handleCharacterChange();
         updatePromptPreview();
     });
 </script>

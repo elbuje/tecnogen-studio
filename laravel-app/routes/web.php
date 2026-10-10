@@ -622,6 +622,7 @@ Route::prefix('app')->group(function () {
                 'name' => $c->name,
                 'role' => $c->role,
                 'cover_photo' => $c->cover_photo,
+                'gdrive_folder_url' => $c->gdrive_folder_url ?: ($c->gdrive_folder_id ? "https://drive.google.com/drive/folders/{$c->gdrive_folder_id}" : null),
             ];
         }
 
@@ -691,11 +692,16 @@ Route::prefix('app')->group(function () {
     Route::post('/ai/assist-field', function (Request $request, \App\Services\AIService $ai) {
         if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
 
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brandName = $brand ? $brand->name : 'JM Odontología Integral';
+
         $fieldType = $request->input('field_type', 'body');
         $currentText = $request->input('current_text', '');
         $context = [
+            'brand_name' => $brandName,
             'topic' => $request->input('topic', ''),
-            'character' => $request->input('character', ''),
+            'character' => $request->input('character', 'Dra. Karina'),
             'visual_type' => $request->input('visual_type', ''),
         ];
 
@@ -707,18 +713,26 @@ Route::prefix('app')->group(function () {
     Route::post('/ai/parse-script', function (Request $request, \App\Services\AIService $ai) {
         if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
 
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brandName = $brand ? $brand->name : 'JM Odontología Integral';
+
         $rawText = $request->input('raw_text', '');
         if (empty(trim($rawText))) {
             return response()->json(['success' => false, 'error' => 'Texto vacío'], 422);
         }
 
-        $data = $ai->parseScript($rawText);
+        $data = $ai->parseScript($rawText, $brandName);
         return response()->json(['success' => true, 'data' => $data]);
     });
 
     // Generador de carrusel completo con IA
     Route::post('/ai/generate-full-script', function (Request $request, \App\Services\AIService $ai) {
         if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brandName = $brand ? $brand->name : 'JM Odontología Integral';
 
         $topic = $request->input('topic', '');
         $character = $request->input('character', 'Dra. Karina');
@@ -728,7 +742,7 @@ Route::prefix('app')->group(function () {
             return response()->json(['success' => false, 'error' => 'Tema vacío'], 422);
         }
 
-        $data = $ai->generateFullScript($topic, $character, 'carousel', $slidesCount);
+        $data = $ai->generateFullScript($topic, $character, 'carousel', $slidesCount, $brandName);
         return response()->json(['success' => true, 'data' => $data]);
     });
 
@@ -738,6 +752,7 @@ Route::prefix('app')->group(function () {
 
         $user = session('user');
         $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brandName = $brand ? $brand->name : 'JM Odontología Integral';
 
         $type = $request->input('type', 'carousel');
         $rawSlides = $request->input('slides', []);
@@ -746,7 +761,7 @@ Route::prefix('app')->group(function () {
         if ($type === 'single_post') {
             $slidesData = [ $rawSlides[0] ?? [
                 'slide_number' => 1,
-                'headline' => $request->input('title', 'Post Único TecnoGen'),
+                'headline' => $request->input('title', 'Post Único ' . $brandName),
                 'body_text' => $request->input('caption_copy', ''),
                 'badge' => 'POST DESTACADO',
                 'slide_type' => 'single_post',
@@ -755,7 +770,7 @@ Route::prefix('app')->group(function () {
             $slidesData = $rawSlides;
         }
 
-        $hookText = $slidesData[0]['headline'] ?? 'Publicación TecnoGen';
+        $hookText = $slidesData[0]['headline'] ?? ('Publicación ' . $brandName);
         $title = $hookText;
         $caption = $request->input('caption_copy', '');
         $hashtags = $request->input('hashtags', '');
@@ -880,7 +895,7 @@ Route::prefix('app')->group(function () {
         $res = $ai->generateSlideImage(
             $content->id,
             $slide->slide_number,
-            $slide->headline ?? 'Lámina TecnoGen',
+            $slide->headline ?? ('Lámina ' . ($brand ? $brand->name : 'JM Odontología Integral')),
             $slide->body_text,
             $slide->badge,
             $meta
@@ -940,7 +955,7 @@ Route::prefix('app')->group(function () {
             $res = $ai->generateSlideImage(
                 $content->id,
                 $slide->slide_number,
-                $slide->headline ?? 'Lámina TecnoGen',
+                $slide->headline ?? ('Lámina ' . ($brand ? $brand->name : 'JM Odontología Integral')),
                 $slide->body_text,
                 $slide->badge,
                 $meta

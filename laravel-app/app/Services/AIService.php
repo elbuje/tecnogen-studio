@@ -21,13 +21,14 @@ class AIService
      */
     public function assistField(string $fieldType, ?string $currentText = '', array $context = []): string
     {
+        $brandName = $context['brand_name'] ?? 'JM Odontología Integral';
         $topic = $context['topic'] ?? 'Odontología digital y rehabilitación oral con implantes';
-        $character = $context['character'] ?? 'Especialista Odontológica';
+        $character = $context['character'] ?? 'Dra. Karina';
         $visualType = $context['visual_type'] ?? 'Infografía Clínica';
         $brandTone = $context['tone'] ?? 'Profesional, empático, médico y de alta precisión';
 
-        $systemPrompt = "Eres el director creativo y redactor médico senior de TecnoGen Studio (centro de odontología digital, implantes dentales de alta precisión y estética clínica).
-Tu misión es redactar o pulir textos para publicaciones en redes sociales (Instagram/LinkedIn/TikTok) en español neutro rioplatense o latinoamericano elegante.
+        $systemPrompt = "Eres el director creativo y redactor médico senior de \"{$brandName}\" (centro de odontología digital, implantes dentales de alta precisión y estética clínica).
+Tu misión es redactar o pulir textos para publicaciones en redes sociales (Instagram/LinkedIn/TikTok) en español neutro rioplatense o latinoamericano elegante para la marca {$brandName}.
 Directrices:
 - Claridad, autoridad médica y persuasión.
 - Sin rodeos ni clichés innecesarios.
@@ -35,7 +36,8 @@ Directrices:
 
         $action = empty(trim($currentText ?? '')) ? "Generar desde cero" : "Mejorar y optimizar el borrador actual";
 
-        $prompt = "Contexto del contenido:
+        $prompt = "Contexto de la marca y publicación:
+- Marca: {$brandName}
 - Tema general: {$topic}
 - Profesional que firma: {$character}
 - Estructura visual: {$visualType}
@@ -48,7 +50,7 @@ Directrices:
         if (!empty(trim($currentText ?? '')) ) {
             $prompt .= "Borrador actual del usuario:\n\"" . trim($currentText) . "\"\n\nInstrucción: Reescribe y mejora este texto para que sea más claro, profesional, directo e impactante según el campo '{$fieldType}'.";
         } else {
-            $prompt .= "Instrucción: Genera un texto nuevo y altamente efectivo para el campo '{$fieldType}' que complemente el tema '{$topic}'.";
+            $prompt .= "Instrucción: Genera un texto nuevo y altamente efectivo para el campo '{$fieldType}' que complemente el tema '{$topic}' para la marca {$brandName}.";
         }
 
         if ($fieldType === 'badge') {
@@ -56,7 +58,7 @@ Directrices:
         } elseif ($fieldType === 'hook' || $fieldType === 'title') {
             $prompt .= "\nNota especial: El gancho o título de portada debe atrapar en 1 segundo, despertar curiosidad o resolver una duda frecuente del paciente.";
         } elseif ($fieldType === 'cta') {
-            $prompt .= "\nNota especial: El llamado a la acción debe invitar a guardar el carrusel, agendar un turno o comentar una palabra clave.";
+            $prompt .= "\nNota especial: El llamado a la acción debe invitar a guardar el carrusel, agendar un turno o consultar en {$brandName}.";
         }
 
         return $this->callOpenAIText($systemPrompt, $prompt);
@@ -65,9 +67,9 @@ Directrices:
     /**
      * Parsea un guion pegado en bruto (desde Sheets, ChatGPT, Notion, WhatsApp) a formato estructurado
      */
-    public function parseScript(string $rawText): array
+    public function parseScript(string $rawText, ?string $brandName = 'JM Odontología Integral'): array
     {
-        $systemPrompt = "Eres un asistente de parsing estructurado para publicaciones de redes sociales en TecnoGen Studio.
+        $systemPrompt = "Eres un asistente de parsing estructurado para publicaciones de redes sociales en {$brandName}.
 Tu tarea es leer cualquier texto libre o guion pegado por el usuario y extraerlo en un JSON estructurado válido.
 El JSON DEBE tener esta estructura exacta:
 {
@@ -83,13 +85,13 @@ El JSON DEBE tener esta estructura exacta:
       \"badge\": \"Badge opcional de la lámina\"
     }
   ],
-  \"cta\": \"Texto del llamado a la acción final (ej: Guardá este post o escribinos para agendar tu consulta)\",
+  \"cta\": \"Texto del llamado a la acción final (ej: Guardá este post o escribinos para agendar tu consulta en {$brandName})\",
   \"caption\": \"Copy completo para el pie de foto de Instagram con emojis sutiles\",
-  \"hashtags\": \"#TecnoGen #ImplantesDentales #OdontologiaDigital #SaludDental\"
+  \"hashtags\": \"#JMOdontologia #OdontologiaIntegral #ImplantesDentales #SaludDental #EsteticaDental\"
 }
 Responde EXCLUSIVAMENTE con el bloque JSON válido, sin markdown ```json alrededor si es posible, o asegúrate de que sea JSON parseable.";
 
-        $userPrompt = "A continuación tienes el texto pegado por el usuario. Por favor extráelo y estructúralo en el formato JSON:\n\n" . $rawText;
+        $userPrompt = "A continuación tienes el texto pegado por el usuario. Por favor extráelo y estructúralo en el formato JSON para la marca {$brandName}:\n\n" . $rawText;
 
         $response = $this->callOpenAIText($systemPrompt, $userPrompt, true);
         
@@ -107,7 +109,7 @@ Responde EXCLUSIVAMENTE con el bloque JSON válido, sin markdown ```json alreded
                 'topic' => 'Contenido Odontológico',
                 'badge' => 'GUÍA CLÍNICA',
                 'hook' => 'Todo lo que necesitás saber sobre tu salud dental',
-                'subtitle' => 'Explicado por especialistas de TecnoGen',
+                'subtitle' => "Explicado por especialistas de {$brandName}",
                 'slides' => [
                     [
                         'slide_number' => 1,
@@ -116,9 +118,9 @@ Responde EXCLUSIVAMENTE con el bloque JSON válido, sin markdown ```json alreded
                         'badge' => 'PASO 1'
                     ]
                 ],
-                'cta' => '¿Tenés dudas? Dejanos tu comentario o enviá un mensaje para coordinar tu evaluación.',
+                'cta' => "¿Tenés dudas? Dejanos tu comentario o enviá un mensaje para coordinar tu evaluación en {$brandName}.",
                 'caption' => $rawText,
-                'hashtags' => '#TecnoGen #OdontologiaDigital #Implantes'
+                'hashtags' => '#JMOdontologia #OdontologiaIntegral #Implantes'
             ];
         }
 
@@ -128,9 +130,9 @@ Responde EXCLUSIVAMENTE con el bloque JSON válido, sin markdown ```json alreded
     /**
      * Genera un guion completo de carrusel desde una sola idea temática
      */
-    public function generateFullScript(string $topic, ?string $character = 'Dra. Karina', ?string $format = 'carousel', int $slidesCount = 5): array
+    public function generateFullScript(string $topic, ?string $character = 'Dra. Karina', ?string $format = 'carousel', int $slidesCount = 5, ?string $brandName = 'JM Odontología Integral'): array
     {
-        $systemPrompt = "Eres el estratega de contenidos y director odontológico de TecnoGen Studio.
+        $systemPrompt = "Eres el estratega de contenidos y director odontológico de {$brandName}.
 Genera un guion completo para un carrusel de Instagram de {$slidesCount} láminas sobre el tema especificado.
 Responde ÚNICAMENTE con un JSON válido con esta estructura:
 {
@@ -146,12 +148,12 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
       \"badge\": \"01. PASO / CONCEPTO\"
     }
   ],
-  \"cta\": \"Llamado a la acción claro para guardar o agendar consulta en TecnoGen\",
+  \"cta\": \"Llamado a la acción claro para guardar o agendar consulta en {$brandName}\",
   \"caption\": \"Copy persuasivo y educativo para el feed de Instagram con emojis acordes\",
-  \"hashtags\": \"#TecnoGen #Implantes #OdontologiaAvanzada #EsteticaDental\"
+  \"hashtags\": \"#JMOdontologia #Implantes #OdontologiaAvanzada #EsteticaDental\"
 }";
 
-        $userPrompt = "Tema: {$topic}\nProfesional firmante: {$character}\nFormato: {$format}\nCantidad de láminas: {$slidesCount}";
+        $userPrompt = "Marca: {$brandName}\nTema: {$topic}\nProfesional firmante: {$character}\nFormato: {$format}\nCantidad de láminas: {$slidesCount}";
 
         $response = $this->callOpenAIText($systemPrompt, $userPrompt, true);
         
@@ -274,9 +276,26 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
 
         if (!$char) return null;
 
-        // 1. Intentar desde cover_photo si tiene
+        // 1. Prioridad: Obtener directamente desde la carpeta de Google Drive del personaje
+        $drivePhotos = $char->getDrivePhotos();
+        if (!empty($drivePhotos)) {
+            foreach ($drivePhotos as $photo) {
+                $driveId = $photo['id'] ?? null;
+                if ($driveId && strlen($driveId) > 20) {
+                    try {
+                        $url = "https://lh3.googleusercontent.com/d/{$driveId}=w1200";
+                        $res = Http::timeout(8)->get($url);
+                        if ($res->successful() && strlen($res->body()) > 2000) {
+                            return $res->body();
+                        }
+                    } catch (\Throwable $e) {}
+                }
+            }
+        }
+
+        // 2. Intentar desde cover_photo si tiene ID de Google Drive
         if (!empty($char->cover_photo)) {
-            if (preg_match('/gdrive-proxy\/([a-zA-Z0-9_-]+)/', $char->cover_photo, $m)) {
+            if (preg_match('/(?:gdrive-proxy|d)\/([a-zA-Z0-9_-]+)/', $char->cover_photo, $m)) {
                 $driveId = $m[1];
                 $url = "https://lh3.googleusercontent.com/d/{$driveId}=w1200";
                 try {
@@ -288,7 +307,7 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             }
         }
 
-        // 2. Intentar desde archivos locales de alta resolución si es Karina o similar
+        // 3. Fallback a archivos locales si existen
         $localCandidates = [
             public_path("assets/characters/dra_karina/IMG_4609.HIF.jpg"),
             base_path("../public/assets/characters/dra_karina/IMG_4609.HIF.jpg"),
@@ -298,22 +317,6 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
         foreach ($localCandidates as $path) {
             if (file_exists($path) && filesize($path) > 1000) {
                 return file_get_contents($path);
-            }
-        }
-
-        // 3. Intentar obtener desde Google Drive Photos del personaje
-        $drivePhotos = $char->getDrivePhotos();
-        if (!empty($drivePhotos)) {
-            $firstPhoto = $drivePhotos[0];
-            $driveId = $firstPhoto['id'] ?? null;
-            if ($driveId && strlen($driveId) > 20) {
-                try {
-                    $url = "https://lh3.googleusercontent.com/d/{$driveId}=w1200";
-                    $res = Http::timeout(8)->get($url);
-                    if ($res->successful() && strlen($res->body()) > 2000) {
-                        return $res->body();
-                    }
-                } catch (\Throwable $e) {}
             }
         }
 
