@@ -38,6 +38,14 @@
                 </span>
             @endif
 
+            <form action="/app/brand/sync-from-manual" method="POST" class="inline" onsubmit="return confirm('¿Deseas sincronizar y autocompletar todas las reglas y paleta oficial (#16345F, #7DD3FC, #1D1D1B) desde el Manual de Marca?');">
+                @csrf
+                <button type="submit" class="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span>Sincronizar desde Manual (1-Clic)</span>
+                </button>
+            </form>
+
             <button onclick="openEditBrandModal()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 <span>Editar Identidad & Colores</span>
@@ -313,18 +321,27 @@
             </div>
 
             <!-- Footer -->
-            <div class="p-4 pt-0 flex items-center justify-between border-t border-slate-100 mt-2">
-                <button onclick="openEditBrandModal()"
-                        class="text-xs font-bold text-sky-600 hover:text-sky-700 py-1.5 flex items-center gap-1 cursor-pointer">
-                    <span>Editar Reglas de Marca</span>
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                </button>
+            <div class="p-4 pt-0 flex items-center justify-between border-t border-slate-100 mt-2 gap-2">
+                <form action="/app/brand/sync-from-manual" method="POST" class="inline" onsubmit="return confirm('¿Deseas sincronizar y autocompletar todas las reglas y paleta oficial desde el Manual de Marca?');">
+                    @csrf
+                    <button type="submit" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 py-1.5 flex items-center gap-1 cursor-pointer" title="Sincronizar automáticamente paleta y tipografía desde el Manual">
+                        <span>🔄 Sincronizar Manual</span>
+                    </button>
+                </form>
 
-                <button onclick="openEditBrandModal()"
-                        class="p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
-                        title="Modificar colores y tipografías">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                </button>
+                <div class="flex items-center gap-1">
+                    <button onclick="openEditBrandModal()"
+                            class="text-xs font-bold text-sky-600 hover:text-sky-700 py-1.5 flex items-center gap-1 cursor-pointer">
+                        <span>Editar</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+
+                    <button onclick="openEditBrandModal()"
+                            class="p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                            title="Modificar colores y tipografías">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 

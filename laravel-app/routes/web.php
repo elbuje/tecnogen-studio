@@ -260,6 +260,10 @@ Route::prefix('app')->group(function () {
         return redirect('/app/brand');
     });
 
+    Route::get('/integrations', function () {
+        return redirect('/app/brand');
+    });
+
     Route::post('/brand/save-logos-folder', function (Request $request) {
         if (!session('user')) return redirect('/login');
 
@@ -339,6 +343,32 @@ Route::prefix('app')->group(function () {
         }
 
         return back()->with('success', 'Identidad de marca y configuración visual actualizada.');
+    });
+
+    Route::post('/brand/sync-from-manual', function (Request $request) {
+        if (!session('user')) return redirect('/login');
+
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+
+        if ($brand) {
+            // Sincronización oficial de reglas y paleta extraídas del Manual de Identidad de Marca
+            $brand->update([
+                'primary_color' => '#16345F', // Relax Blue
+                'accent_color' => '#7DD3FC',  // Sky Pulse
+                'bg_color' => '#1D1D1B',      // Core Black
+                'font_style_title' => 'serif-editorial',
+                'font_style_body' => 'sans-modern',
+                'logo_position' => 'top-left',
+                'logo_width_px' => 180,
+            ]);
+
+            $rules = $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
+            $rules['last_manual_sync_at'] = now()->toIso8601String();
+            $brand->update(['brand_rules' => $rules]);
+        }
+
+        return back()->with('success', '¡Paleta oficial (#16345F, #7DD3FC, #1D1D1B) y reglas visuales sincronizadas con éxito desde el Manual de Marca!');
     });
 
     Route::post('/brand/set-cover-logo', function (Request $request) {
