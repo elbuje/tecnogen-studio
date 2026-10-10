@@ -103,19 +103,22 @@ Route::prefix('v1/auth')->group(function () {
                 'updated_at' => now(),
             ]);
 
-            $brandName = ($fullName ?: 'Mi') . ' Marca';
+            $brandName = 'JM Odontologia Integral';
             DB::table('brands')->insert([
                 'id' => $brandId,
                 'user_id' => $userId,
                 'name' => $brandName,
                 'primary_color' => '#16345F',
                 'accent_color' => '#7DD3FC',
-                'bg_color' => '#0B1E38',
+                'bg_color' => '#1D1D1B',
                 'font_style_title' => 'serif-editorial',
                 'font_style_body' => 'sans-modern',
                 'layout_preset' => 'editorial-top',
                 'logo_position' => 'top-left',
                 'logo_width_px' => 180,
+                'gdrive_logos_folder_id' => '1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ',
+                'gdrive_brand_manual_folder_id' => '1RASbKrUu7LoKA79mXQ45KIjZvzOzSbCL',
+                'gdrive_output_folder_id' => '1c-3tgZcJsfgaDmUDEdvh8HFSGb9KgI_K',
                 'created_at' => now(),
             ]);
 

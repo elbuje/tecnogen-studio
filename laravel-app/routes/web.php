@@ -280,7 +280,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $driveUrl = trim($request->input('gdrive_logos_folder_url', ''));
 
         if (empty($driveUrl)) {
@@ -312,7 +312,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $manualUrl = trim($request->input('gdrive_brand_manual_url', ''));
 
         if (empty($manualUrl)) {
@@ -339,7 +339,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
 
         if ($brand) {
             $brand->update([
@@ -361,7 +361,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
 
         if ($brand) {
             // Sincronización oficial de reglas y paleta extraídas del Manual de Identidad de Marca
@@ -390,7 +390,7 @@ Route::prefix('app')->group(function () {
         }
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $logoId = $request->input('logo_id') ?: $request->json('logo_id');
 
         if ($brand && $logoId) {
@@ -423,7 +423,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
 
         if ($brand) {
             $folderId = $brand->gdrive_logos_folder_id ?: \App\Models\Brand::extractDriveFolderId($brand->logos_folder_url);
@@ -611,7 +611,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $brandRules = $brand && $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
 
         $rawCharacters = \App\Models\Character::orderBy('name', 'asc')->get();
@@ -693,7 +693,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $brandName = $brand ? $brand->name : 'JM Odontología Integral';
 
         $fieldType = $request->input('field_type', 'body');
@@ -714,7 +714,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $brandName = $brand ? $brand->name : 'JM Odontología Integral';
 
         $rawText = $request->input('raw_text', '');
@@ -731,7 +731,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $brandName = $brand ? $brand->name : 'JM Odontología Integral';
 
         $topic = $request->input('topic', '');
@@ -751,7 +751,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $brandName = $brand ? $brand->name : 'JM Odontología Integral';
 
         $type = $request->input('type', 'carousel');
@@ -847,7 +847,10 @@ Route::prefix('app')->group(function () {
                 'paginator' => $paginatorStyle,
                 'primary_color' => $brand ? $brand->primary_color : '#16345F',
                 'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
-                'type' => $type
+                'type' => $type,
+                'carousel_title' => $title,
+                'all_slides' => $slidesData,
+                'total_slides' => count($slidesData),
             ];
 
             // Renderizamos la portada o lámina 1
@@ -879,6 +882,15 @@ Route::prefix('app')->group(function () {
         $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first();
         $char = $content->character_id ? \App\Models\Character::find($content->character_id) : (\App\Models\Character::where('name', 'like', '%Karina%')->first() ?? \App\Models\Character::first());
 
+        $slidesList = \App\Models\Slide::where('content_id', $content->id)->orderBy('slide_number')->get()->map(function($s) {
+            return [
+                'slide_number' => $s->slide_number,
+                'headline' => $s->headline,
+                'body_text' => $s->body_text,
+                'badge' => $s->badge,
+            ];
+        })->toArray();
+
         $meta = [
             'brand_id' => $brand ? $brand->id : null,
             'brand_name' => $brand ? $brand->name : 'JM Odontologia Integral',
@@ -889,7 +901,10 @@ Route::prefix('app')->group(function () {
             'paginator' => '01. Numeración simple',
             'primary_color' => $brand ? $brand->primary_color : '#16345F',
             'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
-            'type' => $content->type
+            'type' => $content->type,
+            'carousel_title' => $content->title,
+            'all_slides' => $slidesList,
+            'total_slides' => count($slidesList),
         ];
 
         $res = $ai->generateSlideImage(
@@ -935,6 +950,15 @@ Route::prefix('app')->group(function () {
         $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first();
         $char = $content->character_id ? \App\Models\Character::find($content->character_id) : (\App\Models\Character::where('name', 'like', '%Karina%')->first() ?? \App\Models\Character::first());
 
+        $slidesList = $content->slides->map(function($s) {
+            return [
+                'slide_number' => $s->slide_number,
+                'headline' => $s->headline,
+                'body_text' => $s->body_text,
+                'badge' => $s->badge,
+            ];
+        })->toArray();
+
         $meta = [
             'brand_id' => $brand ? $brand->id : null,
             'brand_name' => $brand ? $brand->name : 'JM Odontologia Integral',
@@ -945,7 +969,10 @@ Route::prefix('app')->group(function () {
             'paginator' => '01. Numeración simple',
             'primary_color' => $brand ? $brand->primary_color : '#16345F',
             'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
-            'type' => $content->type
+            'type' => $content->type,
+            'carousel_title' => $content->title,
+            'all_slides' => $slidesList,
+            'total_slides' => count($slidesList),
         ];
 
         $rendered = [];
@@ -997,7 +1024,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $creationsFolderUrl = $brand ? $brand->creations_folder_url : null;
 
         $contents = \App\Models\Content::with(['slides' => function ($q) {
@@ -1012,7 +1039,7 @@ Route::prefix('app')->group(function () {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
-        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
         $folderUrl = trim($request->input('gdrive_output_folder_url', ''));
 
         if (empty($folderUrl)) {

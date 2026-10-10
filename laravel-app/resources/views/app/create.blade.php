@@ -890,24 +890,44 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
 
     function updatePromptPreview() {
         const type = document.getElementById('contentType')?.value || 'carousel';
-        const hook = document.getElementById('slide_headline_1')?.value || '';
         const visual = document.getElementById('visualTypeSelect')?.value || '';
         const paginator = document.getElementById('paginatorSelect')?.value || '';
         const charName = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.name || 'Dra. Karina';
         const charRole = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.role || 'Especialista';
         const logoName = document.getElementById('logoSelect')?.selectedOptions[0]?.innerText || 'Logotipo Oficial';
-        const brandName = '{{ addslashes($brand->name ?? "JM Odontología Integral") }}';
+        const brandName = '{{ addslashes($brand && !str_contains($brand->name, "Marcelo") && !str_contains($brand->name, "TecnoGen") ? $brand->name : "JM Odontología Integral") }}';
         const primaryColor = '{{ $brand->primary_color ?? "#16345F" }}';
         const accentColor = '{{ $brand->accent_color ?? "#7DD3FC" }}';
 
-        const promptText = `PROMPT COMPILADO [gpt-image-2.5-sunburst via Reference Canvas]:
-Formato: ${type === 'single_post' ? 'Post Único (1080x1080)' : (type === 'reel_script' ? 'Reel Vertical (1080x1920)' : 'Carrusel Instagram (1080x1350)')}
+        // Recolectar todas las láminas del formulario para el contexto narrativo completo
+        let slidesNarrative = '';
+        const slideCards = document.querySelectorAll('.slide-card');
+        const s1Headline = document.getElementById('slide_headline_1')?.value || '';
+        const s1Badge = document.getElementById('slide_badge_1')?.value || '';
+        const totalCount = 1 + slideCards.length;
+
+        slidesNarrative += `• Lámina 1 (Portada/Hook): [${s1Badge}] "${s1Headline}"\n`;
+        slideCards.forEach((card, idx) => {
+            const num = idx + 2;
+            const h = card.querySelector(`[name="slides[${idx+1}][headline]"]`)?.value || '';
+            const b = card.querySelector(`[name="slides[${idx+1}][badge]"]`)?.value || '';
+            slidesNarrative += `• Lámina ${num}: [${b}] "${h}"\n`;
+        });
+
+        const promptText = `PROMPT MAESTRO COMPILADO [gpt-image-2.5-sunburst via Reference Canvas]:
+Formato: ${type === 'single_post' ? 'Post Cuadrado para Feed (1080x1080 px)' : 'Carrusel Instagram (1080x1350 px, ' + totalCount + ' Láminas)'}
 Estructura Visual: ${visual} ${type === 'carousel' ? '| Paginador: ' + paginator : ''}
-Identidad de Marca: ${brandName} (Primario: ${primaryColor}, Acento: ${accentColor}, Fondo: Limpio Quirúrgico)
-Logotipo Seleccionado: ${logoName} [Extraído de Google Drive de ${brandName}]
-Personaje Seleccionado: ${charName} (${charRole}) [Fotografía real extraída de carpeta Google Drive]
-Titular de Portada: "${hook}"
-Directriz Estricta: Preservar rostro, ambo médico y rasgos de ${charName} y el isotipo/logotipo de ${brandName}. Acabados fotorrealistas médicos y tipografía en español.`;
+Identidad de Marca: ${brandName} (Primario: ${primaryColor}, Acento: ${accentColor}, Fondo: Limpio Quirúrgico Grafito)
+Logotipo: ${logoName} [Extraído de Google Drive de ${brandName}]
+
+NARRATIVA Y GUION DEL CARRUSEL COMPLETO (${totalCount} Láminas):
+${slidesNarrative}
+PRESENCIA Y POSE DEL PROFESIONAL:
+- ${charName} (${charRole}) [Foto real extraída de carpeta Google Drive].
+- Pose & Sonrisa: Debe lucir sumamente atractiva, con sonrisa cálida, radiante y empática. Postura corporal abierta, dinámica y profesional con ambo médico impecable de tono institucional, mirando al paciente.
+
+DIRECCIÓN DE ARTE Y CREATIVIDAD:
+- Composición fotográfica de estudio clínico de alta gama, iluminación suave difusa, modelos anatómicos 3D de precisión dental y acabados de revista médica internacional. Tipografía limpia en español.`;
 
         document.getElementById('promptPreviewBox').innerText = promptText;
     }

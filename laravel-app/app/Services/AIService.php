@@ -214,8 +214,16 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
     {
         $canvas = imagecreatetruecolor($width, $height);
         
-        // Fondo blanco/gris clínico con sutil degradé o tono de marca
-        $bg = imagecolorallocate($canvas, 246, 249, 252);
+        // Fondo con el color primario de la marca (ej: Azul Marino #16345F de JM Odontología Integral)
+        $hex = ltrim($brandColor, '#');
+        if (strlen($hex) === 6) {
+            $r = hexdec(substr($hex, 0, 2));
+            $g = hexdec(substr($hex, 2, 2));
+            $b = hexdec(substr($hex, 4, 2));
+        } else {
+            $r = 22; $g = 52; $b = 95; // #16345F
+        }
+        $bg = imagecolorallocate($canvas, $r, $g, $b);
         imagefill($canvas, 0, 0, $bg);
 
         // 1. Pegar fotografía real del profesional a la derecha
@@ -224,10 +232,10 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             if ($charImg) {
                 $cw = imagesx($charImg);
                 $ch = imagesy($charImg);
-                $targetH = (int) ($height * 0.88);
+                $targetH = (int) ($height * 0.90);
                 $targetW = (int) ($cw * ($targetH / $ch));
-                if ($targetW > (int) ($width * 0.58)) {
-                    $targetW = (int) ($width * 0.58);
+                if ($targetW > (int) ($width * 0.55)) {
+                    $targetW = (int) ($width * 0.55);
                 }
                 $posX = $width - $targetW;
                 $posY = $height - $targetH;
@@ -236,16 +244,18 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             }
         }
 
-        // 2. Pegar logotipo oficial transparente de la marca en la esquina superior izquierda
+        // 2. Pegar logotipo oficial transparente de la marca
         if (!empty($logoBytes)) {
             $logoImg = @imagecreatefromstring($logoBytes);
             if ($logoImg) {
                 $lw = imagesx($logoImg);
                 $lh = imagesy($logoImg);
-                $targetLw = (int) ($width * 0.28);
+                $targetLw = (int) ($width * 0.30);
                 $targetLh = (int) ($lh * ($targetLw / $lw));
-                if ($targetLh > 130) $targetLh = 130;
-                imagecopyresampled($canvas, $logoImg, 40, 40, 0, 0, $targetLw, $targetLh, $lw, $lh);
+                if ($targetLh > 140) $targetLh = 140;
+                // Ubicar en esquina inferior izquierda como en la composición oficial
+                $posY = $height - $targetLh - 35;
+                imagecopyresampled($canvas, $logoImg, 35, $posY, 0, 0, $targetLw, $targetLh, $lw, $lh);
                 imagedestroy($logoImg);
             }
         }
@@ -389,20 +399,54 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
         // 2. Construir Canvas de Referencia compuesto
         $referenceCanvasPng = $this->buildReferenceCanvas($charBytes, $logoBytes, $primaryColor);
 
-        // 3. Prompt estructurado con fidelidad estricta de marca y persona
-        $prompt = "Diseño gráfico profesional y fotorrealista para publicación odontológica de alta gama de la marca \"{$brandName}\".\n";
-        $prompt .= "REGLA CRÍTICA DE IDENTIDAD: Mantén con máxima fidelidad el rostro, vestimenta médica y rasgos de la profesional ({$charName}) y el logotipo oficial de la marca ({$brandName}) que aparecen en la imagen de referencia provista. No alteres el rostro de la profesional ni inventes logotipos falsos.\n";
-        $prompt .= "Formato: " . ($isSinglePost ? "Post Cuadrado (1080x1080)" : "Lámina #{$slideNumber} de Carrusel Instagram (1080x1350)") . ".\n";
-        $prompt .= "Estructura Visual: {$visualType}. Estilo Paginador: {$paginator}.\n";
-        $prompt .= "Paleta de Marca: Primario {$primaryColor}, Acento {$accentColor}, Fondo Limpio de Consultorio Odontológico de Alta Tecnología.\n";
+        // 3. Contexto narrativo del carrusel completo
+        $allSlides = $meta['all_slides'] ?? [];
+        $totalSlides = $meta['total_slides'] ?? (count($allSlides) ?: 1);
+        $carouselTitle = $meta['carousel_title'] ?? $headline;
+
+        $carouselNarrative = "";
+        if (!empty($allSlides) && count($allSlides) > 1) {
+            $carouselNarrative = "GUION SECUENCIAL Y NARRATIVA DEL CARRUSEL COMPLETO ({$totalSlides} Láminas):\n";
+            $carouselNarrative .= "Tema Principal: \"{$carouselTitle}\"\n";
+            foreach ($allSlides as $idx => $s) {
+                $num = $s['slide_number'] ?? ($idx + 1);
+                $h = $s['headline'] ?? '';
+                $b = $s['badge'] ?? '';
+                $t = $s['body_text'] ?? '';
+                $carouselNarrative .= "  - Lámina {$num}: [{$b}] \"{$h}\" - {$t}\n";
+            }
+            $carouselNarrative .= "\nOBJETIVO CRÍTICO: Esta pieza es la LÁMINA #{$slideNumber} DE {$totalSlides}. Debe mantener coherencia cromática absoluta, mismo estilo visual, iluminación armónica y la misma identidad de marca a lo largo de todo el carrusel.\n\n";
+        }
+
+        // 4. Prompt maestro estructurado para OpenAI Sunburst
+        $prompt = "DIRECCIÓN DE ARTE Y DISEÑO PUBLICITARIO ODONTOLÓGICO DE ALTA GAMA:\n";
+        $prompt .= "Marca: \"{$brandName}\" (Odontología Especializada e Implantes de Vanguardia).\n";
+        $prompt .= "Formato: " . ($isSinglePost ? "Post Cuadrado para Feed (1080x1080 px)" : "Lámina #{$slideNumber} de {$totalSlides} para Carrusel de Instagram (1080x1350 px, proporción 4:5)") . ".\n";
+        $prompt .= "Estructura Visual: {$visualType}. Paginador: {$paginator}.\n\n";
+
+        if (!empty($carouselNarrative)) {
+            $prompt .= $carouselNarrative;
+        }
+
+        $prompt .= "PRESENCIA Y EXPRESIÓN DE LA PROFESIONAL ({$charName}):\n";
+        $prompt .= "- EXPRESIÓN OBLIGATORIA: La doctora ({$charName}) debe lucir sumamente atractiva, con una sonrisa radiante, cálida y natural que transmita simpatía, empatía clínica, entusiasmo y máxima confianza.\n";
+        $prompt .= "- POSE Y LENGUAJE CORPORAL: Postura elegante, enérgica y cercana, mirando hacia la cámara con expresión alegre y acogedora. Ambo médico impecable de tono azul marino institucional (#16345F) o blanco clínico de alta gama.\n";
+        $prompt .= "- FIDELIDAD ESTRICTA: Mantén fielmente el rostro y rasgos reales de {$charName} según la fotografía de referencia provista, con acabado fotorrealista de revista médica de alto nivel (piel natural, mirada nítida y sin deformaciones).\n\n";
+
+        $prompt .= "IDENTIDAD CORPORATIVA Y LOGOTIPO:\n";
+        $prompt .= "- Logotipo Oficial: Integra el logotipo oficial de \"{$brandName}\" en la composición con acabado limpio, respetando su isotipo y tipografía original.\n";
+        $prompt .= "- Paleta Cromática: Azul Marino Profundo ({$primaryColor}), Celeste Tecnológico Luminoso ({$accentColor}) y Fondo Grafito Quirúrgico (#1D1D1B o azul profundo de consultorio de vanguardia).\n\n";
+
+        $prompt .= "CONTENIDO TEXTUAL ESPECÍFICO DE ESTA LÁMINA ({$slideNumber}/{$totalSlides}):\n";
         if (!empty($badge)) {
-            $prompt .= "Pastilla Temática / Badge: \"{$badge}\".\n";
+            $prompt .= "- Pastilla / Badge Superior: \"{$badge}\".\n";
         }
-        $prompt .= "Título Principal en Español: \"{$headline}\".\n";
+        $prompt .= "- Titular Principal en Español: \"{$headline}\".\n";
         if (!empty($bodyText)) {
-            $prompt .= "Texto de Apoyo en Español: \"{$bodyText}\".\n";
+            $prompt .= "- Texto de Apoyo en Español: \"{$bodyText}\".\n";
         }
-        $prompt .= "Acabado de estudio clínico de prestigio, iluminación suave difusa, tipografía limpia y nítida en español sin errores ortográficos.";
+        $prompt .= "\nCREATIVIDAD Y ACABADO EDITORIAL:\n";
+        $prompt .= "Composición fotográfica de estudio clínico internacional de prestigio. Fondo suave con bokeh cinematográfico mostrando un consultorio odontológico moderno (iluminación suave difusa, pantallas de diagnóstico digital 3D y tecnología médica de precisión). Tipografía en español limpia, moderna, elegante y de fácil lectura sin errores ortográficos.";
 
         // Directorios de almacenamiento
         $storageDir = public_path("storage/creations/{$contentId}");
