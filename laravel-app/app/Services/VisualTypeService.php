@@ -5,6 +5,14 @@ namespace App\Services;
 class VisualTypeService
 {
     /**
+     * Alias para compatibilidad
+     */
+    public static function getAllTypes(): array
+    {
+        return self::getVisualTypesList();
+    }
+
+    /**
      * Catálogo maestro de Definiciones de Tipos Visuales para Carruseles Odontológicos y Médicos
      */
     public static function getVisualTypesList(): array
