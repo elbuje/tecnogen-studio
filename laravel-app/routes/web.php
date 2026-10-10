@@ -30,13 +30,24 @@ Route::post('/login', function (Request $request) {
     }
 
     session(['user' => $user]);
-    return redirect('/app');
+
+    $intended = session()->pull('url.intended', '/app');
+    return redirect($intended);
 });
 
 Route::get('/logout', function () {
     session()->forget('user');
     return redirect('/login');
 });
+
+// Alias directos a nivel raíz
+Route::get('/create', fn() => redirect('/app/create'));
+Route::get('/creations', fn() => redirect('/app/creations'));
+Route::get('/brand', fn() => redirect('/app/brand'));
+Route::get('/characters', fn() => redirect('/app/characters'));
+Route::get('/visual-types', fn() => redirect('/app/visual-types'));
+Route::get('/paginators', fn() => redirect('/app/paginators'));
+Route::get('/database', fn() => redirect('/app/database'));
 
 // Raíz redirige a login o a dashboard
 Route::get('/', function () {
