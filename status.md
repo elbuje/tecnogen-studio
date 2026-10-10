@@ -1,7 +1,7 @@
 # 📊 Estado Operativo — TecnoGen Studio
 
-> **Última actualización:** 2026-09-26  
-> **Fase Actual:** Fase 3 — Producción Activa en Ploi `errante` & GitHub Oficial  
+> **Última actualización:** 2026-10-04  
+> **Fase Actual:** Fase 3 — Producción Activa & Catálogo Completo de Tipos Visuales  
 > **URL Producción:** `https://studio.tecnogen.ar`  
 > **Servidor Destino:** Ploi `errante` (`72.61.34.92`) | Dominio: `studio.tecnogen.ar`  
 > **Dev Local:** Hostinger VPS (`72.62.107.109`) — Backend: `:8018` / Frontend: `:5192`
@@ -10,7 +10,7 @@
 
 ## 🎯 Resumen Ejecutivo
 
-TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y posts visuales con IA generativa (`gpt-image-2.5-sunburst`), transmisión de assets reales mediante `client.images.edit` (fotos de profesionales en `.HIF` / `.PNG` decodificadas con `pillow-heif` y logotipos vectoriales/PNG transparentes), almacenamiento Zero-Storage en Google Drive, sincronización bidireccional con Google Sheets y visor interactivo de diseño tipo Figma/Canva.
+TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y posts visuales con IA generativa (`gpt-image-2.5-sunburst`), transmisión de assets reales mediante `client.images.edit` (fotos de profesionales en `.HIF` / `.PNG` decodificadas con `pillow-heif` y logotipos vectoriales/PNG transparentes), almacenamiento Zero-Storage en Google Drive, sincronización bidireccional con Google Sheets, catálogo completo de 28 estructuras de tipos visuales y visor interactivo de diseño tipo Figma/Canva.
 
 ---
 
@@ -20,6 +20,7 @@ TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y 
 |:---|:---|:---|
 | **Sitio en Producción** | 🟢 100% Online | **`https://studio.tecnogen.ar`** con SSL Let's Encrypt y HTTP/2 activo. |
 | **Repositorio Oficial** | 🟢 Sincronizado | `https://github.com/elbuje/tecnogen-studio` (Ramas `main` y `dev`). |
+| **Catálogo de 28 Tipos Visuales** | 🟢 100% Generado | 28 demos visuales en español generadas con `gpt-image-2.5-sunburst` y modal slider activo. |
 | **Backend en Producción** | 🟢 Activo (:8028) | FastAPI + MySQL gestionado como Daemon supervisado en Ploi (`id: 226698`). |
 | **Frontend en Producción** | 🟢 Compilado | SPA React 18 + Vite + Tailwind CSS servido directamente por Nginx en `/public`. |
 | **Pipeline IA con Assets Reales** | 🟢 Operativo | `client.images.edit(model="gpt-image-2.5-sunburst", image=buf, prompt=prompt)` enviando la foto real y logo transparente oficial. |

@@ -11,15 +11,10 @@ git reset --hard origin/main
 mkdir -p laravel-app/storage/framework/{sessions,views,cache} laravel-app/storage/logs
 chmod -R 775 laravel-app/storage laravel-app/bootstrap/cache public
 
-# 3. Frontend React/Vite
-echo "⚙️ Compilando Frontend React/Vite..."
-cd frontend
-export NODE_OPTIONS="--max-old-space-size=1024"
-npm install --legacy-peer-deps
-npm run build
-mkdir -p ../public
-cp -r dist/* ../public/
-cd ..
+# 3. Permisos y carpetas de almacenamiento
+echo "⚙️ Configurando directorios de almacenamiento..."
+mkdir -p laravel-app/storage/app/gdrive_cache laravel-app/storage/framework/{sessions,views,cache} laravel-app/storage/logs
+chmod -R 775 laravel-app/storage laravel-app/bootstrap/cache public
 
 # 4. Backend Laravel 11
 echo "⚙️ Configurando Backend Laravel 11..."

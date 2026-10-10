@@ -15,7 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/*',
             'diagnostic',
-            'diagnostic-text'
+            'diagnostic-text',
+            'app/characters/set-cover',
+            'app/characters/save',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

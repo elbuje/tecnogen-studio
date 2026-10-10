@@ -30,6 +30,7 @@ Plataforma SaaS multi-tenant que permite a dueños de negocio, clínicas y agenc
 * [[nodes/servicios_ia_composer]] — Motor de generación de imágenes OpenAI, templates de prompts dinámicos y motor de composición alfa Pillow.
 * [[nodes/zero_storage_gdrive]] — Estrategia de almacenamiento efímero, integración con Google Drive v3 y Google Sheets.
 * [[nodes/frontend_vite_react]] — Arquitectura de Frontend (Vite + React 18 + Tailwind + Shadcn UI), visor interactivo 1024x1536 y Brand Kit.
+* [[nodes/catalogo_tipos_visuales]] — Catálogo taxonómico y especificación de las 28 estructuras visuales con Sunburst (100% en español).
 * [[nodes/despliegue_produccion_errante]] — Estrategia de despliegue en servidor producción Ploi `errante` (`72.61.34.92`), Nginx, SSL y dominios (`studio.tecnogen.ar`).
 
 ---
@@ -51,6 +52,8 @@ Plataforma SaaS multi-tenant que permite a dueños de negocio, clínicas y agenc
 
 ## 📜 Sesiones de Trabajo
 
+* [[sessions/2026-10-10-definicion-marca-logos-gdrive-y-manual]] — Implementación del módulo Definición de Marca, catálogo e indexación de logos desde Google Drive, integración de Manual de Marca y configuración del selector estético de logos para IA.
+* [[sessions/2026-10-04-catalogo-tipos-visuales-28-estructuras-sunburst]] — Generación completa de las 28 demos visuales en español con OpenAI `gpt-image-2.5-sunburst`, creación del comando artisan `visual-types:sunburst` e integración en el visor y selector de marca.
 * [[sessions/2026-09-26-openai-sunburst-real-assets-pipeline]] — Integración del pipeline oficial con assets reales en OpenAI `gpt-image-2.5-sunburst` (`images.edit`), transmisión de fotos reales (`.HIF` / `.PNG`) y logo corporativo, sincronización masiva y despliegue del Carrusel #2 en producción.
 * [[sessions/2026-09-25-brand-manual-and-ai-pipeline]] — Extracción de identidad de marca oficial (JM Odontología Integral), soporte para fotos HIF de Google Drive, resolución dinámica de modelos de IA en base de datos (`gpt-image-2.5-sunburst`) y rediseño del visor y botones de carpeta.
 * [[sessions/2026-09-24-automatizacion-google-sheets-sync-y-prompts-ia]] — Automatización de Google Sheets, sincronización asíncrona, visor de prompts de IA y resolución de errores de producción.

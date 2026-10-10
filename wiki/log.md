@@ -4,6 +4,17 @@ Historial cronológico de cambios, decisiones técnicas e hitos del proyecto.
 
 ---
 
+## 2026-10-10
+* `FEAT`: **Módulo Definición de Marca & Catálogo de Logos en Google Drive (`/app/brand`)**: creación de la vista y rutas para administración de identidad visual, conexión de carpeta de Google Drive de logotipos con escaneo paralelo y caché inteligente, visor de variantes con alternador de fondo claro/oscuro (🌓), lightbox en alta resolución y asignación de logotipo principal.
+* `FEAT`: **Integración de Manual de Marca en Google Drive**: modal interactivo de vinculación y tarjeta de acceso directo al PDF de identidad oficial.
+* `ARCH`: **Pipeline de Selección de Logos para IA**: especificación y confirmación de la lógica del agente para seleccionar automáticamente la variante de logo idónea (blanco/luz en fondos oscuros, institucional en fondos claros, isotipo en láminas complejas) montándolo en el canvas de referencia para `gpt-image-2.5-sunburst` (`images.edit`).
+* `FEAT`: Actualización de la barra de navegación lateral y script de despliegue `deploy_laravel_ploi.sh`.
+
+## 2026-10-04
+* `FEAT`: **Catálogo de Tipos Visuales — Generación Completa de 28 Estructuras con Sunburst**: creación del comando artisan `php artisan visual-types:sunburst` y generación de las 28 imágenes demostrativas de alta resolución (1024x1024) exclusivamente con `gpt-image-2.5-sunburst`, garantizando textos 100% en español, estética SaaS médica (#16345F / #0284C7) y sincronización con el visor de catálogo en `/visual-types`.
+* `FEAT`: **Persistencia de Tipo Visual Predeterminado**: configuración y persistencia de `tipo_visual` en la columna JSON `brand_rules` de la tabla `brands` al seleccionar un estilo desde la interfaz web.
+* `DOC`: Creación del nodo taxonómico `wiki/nodes/catalogo_tipos_visuales.md` y registro de sesión.
+
 ## 2026-09-26
 * `FEAT`: **Pipeline Oficial OpenAI Sunburst con Assets Reales (`images.edit`)**: integración de `client.images.edit(model="gpt-image-2.5-sunburst", image=buf, prompt=prompt)` pasando el buffer binario con la fotografía real de la profesional (`Karina1.HIF`) y el logotipo oficial transparente (`JM_blanco_negro.png`).
 * `FEAT`: **Sincronización Bidireccional de Producción (`/contents/sync-import`)**: creación de endpoints de importación masiva y visualizador público (`/contents/public/{id}`) para previsualización inmediata de carruseles en producción sin fricción de login.

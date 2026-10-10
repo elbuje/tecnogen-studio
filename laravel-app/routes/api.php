@@ -35,6 +35,29 @@ Route::any('/v1/test-err', function () {
 Route::match(['get', 'post'], 'v1/diagnostic', fn() => response()->json(['status' => 'ok', 'framework' => 'Laravel 11', 'db' => 'MySQL (tecnogen_studio)']));
 Route::match(['get', 'post'], 'diagnostic', fn() => response()->json(['status' => 'ok', 'framework' => 'Laravel 11', 'db' => 'MySQL (tecnogen_studio)']));
 
+Route::get('v1/debug-app', function () {
+    return response()->json([
+        'app_env' => config('app.env'),
+        'app_debug' => config('app.debug'),
+        'app_key_set' => !empty(config('app.key')),
+        'session_driver' => config('session.driver'),
+        'cache_driver' => config('cache.default'),
+        'views_path' => resource_path('views'),
+        'login_view_exists' => view()->exists('auth.login'),
+        'app_view_exists' => view()->exists('app.dashboard'),
+    ]);
+});
+
+Route::get('v1/debug-log', function () {
+    $logPath = storage_path('logs/laravel.log');
+    if (!file_exists($logPath)) {
+        return response()->json(['log' => 'no log file found', 'path' => $logPath]);
+    }
+    $lines = file($logPath);
+    $lastLines = array_slice($lines, -100);
+    return response()->json(['log' => implode("", $lastLines)]);
+});
+
 // Public Auth Endpoints
 Route::prefix('v1/auth')->group(function () {
     Route::post('/register', function (Request $request) {
