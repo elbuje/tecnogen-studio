@@ -1,16 +1,20 @@
 # 📊 Estado Operativo — TecnoGen Studio
 
-> **Última actualización:** 2026-10-04  
-> **Fase Actual:** Fase 3 — Producción Activa & Catálogo Completo de Tipos Visuales  
+> **Última actualización:** 2026-10-10  
+> **Fase Actual:** Fase 4 — Generador con Micro-IA por Campo, Autoparser de Guiones y Creaciones en Google Drive  
 > **URL Producción:** `https://studio.tecnogen.ar`  
 > **Servidor Destino:** Ploi `errante` (`72.61.34.92`) | Dominio: `studio.tecnogen.ar`  
-> **Dev Local:** Hostinger VPS (`72.62.107.109`) — Backend: `:8018` / Frontend: `:5192`
+> **Dev Local:** `http://localhost:8018/` (Laravel SaaS)
 
 ---
 
 ## 🎯 Resumen Ejecutivo
 
-TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y posts visuales con IA generativa (`gpt-image-2.5-sunburst`), transmisión de assets reales mediante `client.images.edit` (fotos de profesionales en `.HIF` / `.PNG` decodificadas con `pillow-heif` y logotipos vectoriales/PNG transparentes), almacenamiento Zero-Storage en Google Drive, sincronización bidireccional con Google Sheets, catálogo completo de 28 estructuras de tipos visuales y visor interactivo de diseño tipo Figma/Canva.
+TecnoGen Studio es una plataforma SaaS multi-tenant que genera carruseles y posts visuales odontológicos con IA (`gpt-image-2.5-sunburst` y `gpt-4o-mini`). Cuenta con:
+1. **Generador de Contenido Unificado (`/app/create`):** Autoparseo de guiones externos (ChatGPT, Sheets, Notion, WhatsApp) y micro-asistente interactivo `✨ IA` en cada campo de texto individual (título, gancho, láminas, badges, CTA y caption).
+2. **Biblioteca de Creaciones (`/app/creations`):** Gestión de publicaciones y enlace directo con la carpeta de Google Drive del usuario.
+3. **Definición de Marca (`/app/brand`):** Integración con el Manual de Identidad y scraping inteligente de logotipos desde Google Drive.
+4. **Catálogo de Personajes (`/app/characters`):** Conectado a carpetas de fotos en Google Drive con selector de carátula interactivo.
 
 ---
 
@@ -18,7 +22,9 @@ TecnoGen Studio es una plataforma SaaS B2B multi-tenant que genera carruseles y 
 
 | Componente | Estado | Descripción |
 |:---|:---|:---|
-| **Sitio en Producción** | 🟢 100% Online | **`https://studio.tecnogen.ar`** con SSL Let's Encrypt y HTTP/2 activo. |
+| **Generador de Contenido** | 🟢 100% Operativo | `/app/create` con asistencia de IA por campo y parser de guiones. |
+| **Biblioteca de Creaciones** | 🟢 100% Operativo | `/app/creations` conectado a la carpeta de Google Drive del usuario. |
+| **Sitio en Producción** | 🟢 100% Online | **`https://studio.tecnogen.ar`** en Ploi con SSL Let's Encrypt. |
 | **Repositorio Oficial** | 🟢 Sincronizado | `https://github.com/elbuje/tecnogen-studio` (Ramas `main` y `dev`). |
 | **Catálogo de 28 Tipos Visuales** | 🟢 100% Generado | 28 demos visuales en español generadas con `gpt-image-2.5-sunburst` y modal slider activo. |
 | **Backend en Producción** | 🟢 Activo (:8028) | FastAPI + MySQL gestionado como Daemon supervisado en Ploi (`id: 226698`). |
