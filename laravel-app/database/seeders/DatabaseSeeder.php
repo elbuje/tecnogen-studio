@@ -123,27 +123,11 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // 4. Marca Admin
-        $adminBrand = DB::table('brands')->where('user_id', $adminId)->first();
-        if (!$adminBrand) {
-            DB::table('brands')->insert([
-                'id' => '3f265e72-8680-42dc-9727-a2510cf78867',
-                'user_id' => $adminId,
-                'name' => 'TecnoGen Admin Brand',
-                'primary_color' => '#7C3AED',
-                'accent_color' => '#A78BFA',
-                'bg_color' => '#030712',
-                'font_style_title' => 'sans-modern',
-                'font_style_body' => 'sans-modern',
-                'layout_preset' => 'editorial-top',
-                'logo_position' => 'top-left',
-                'logo_width_px' => 180,
-                'gdrive_logos_folder_id' => '1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ',
-                'gdrive_brand_manual_folder_id' => '1RASbKrUu7LoKA79mXQ45KIjZvzOzSbCL',
-                'brand_rules' => json_encode($brandRules),
-                'created_at' => now(),
-            ]);
-        }
+        // 4. Asegurar que el usuario Admin también tenga la marca JM Odontologia Integral vinculada
+        DB::table('brands')->where('name', 'like', '%TecnoGen%')->delete();
+        DB::table('brands')->where('id', 'ef9ec23e-822f-4308-a027-7436371bc87c')->update([
+            'user_id' => $adminId,
+        ]);
 
         // 5. Personajes de la Marca
         $charactersData = [
