@@ -773,6 +773,8 @@ Route::prefix('app')->group(function () {
         DB::table('contents')->insert([
             'id' => $contentId,
             'brand_id' => $brand ? $brand->id : null,
+            'character_id' => $characterId,
+            'logo_id' => $request->input('logo_id'),
             'type' => $type,
             'title' => $title,
             'hook_text' => $hookText,
@@ -821,7 +823,11 @@ Route::prefix('app')->group(function () {
         // 3. Si se solicitó renderizado inmediato, generar la primera lámina o todas si es single post
         if ($renderNow || $type === 'single_post') {
             $meta = [
+                'brand_id' => $brand ? $brand->id : null,
+                'brand_name' => $brand ? $brand->name : 'JM Odontologia Integral',
+                'character_id' => $characterId,
                 'character_name' => $charName,
+                'logo_id' => $request->input('logo_id'),
                 'visual_type' => $visualType,
                 'paginator' => $paginatorStyle,
                 'primary_color' => $brand ? $brand->primary_color : '#16345F',
@@ -855,9 +861,15 @@ Route::prefix('app')->group(function () {
         $slide = \App\Models\Slide::where('id', $slideId)->where('content_id', $id)->first();
         if (!$slide) return response()->json(['success' => false, 'error' => 'Lámina no encontrada'], 404);
 
-        $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first();
+        $char = $content->character_id ? \App\Models\Character::find($content->character_id) : (\App\Models\Character::where('name', 'like', '%Karina%')->first() ?? \App\Models\Character::first());
+
         $meta = [
-            'character_name' => 'Especialista Odontológica',
+            'brand_id' => $brand ? $brand->id : null,
+            'brand_name' => $brand ? $brand->name : 'JM Odontologia Integral',
+            'character_id' => $char ? $char->id : null,
+            'character_name' => $char ? $char->name : 'Dra. Karina',
+            'logo_id' => $content->logo_id,
             'visual_type' => 'Infografía Clínica',
             'paginator' => '01. Numeración simple',
             'primary_color' => $brand ? $brand->primary_color : '#16345F',
@@ -905,9 +917,15 @@ Route::prefix('app')->group(function () {
             return response()->json(['success' => false, 'error' => 'Creación no encontrada'], 404);
         }
 
-        $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::first();
+        $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first();
+        $char = $content->character_id ? \App\Models\Character::find($content->character_id) : (\App\Models\Character::where('name', 'like', '%Karina%')->first() ?? \App\Models\Character::first());
+
         $meta = [
-            'character_name' => 'Especialista Odontológica',
+            'brand_id' => $brand ? $brand->id : null,
+            'brand_name' => $brand ? $brand->name : 'JM Odontologia Integral',
+            'character_id' => $char ? $char->id : null,
+            'character_name' => $char ? $char->name : 'Dra. Karina',
+            'logo_id' => $content->logo_id,
             'visual_type' => 'Infografía Clínica',
             'paginator' => '01. Numeración simple',
             'primary_color' => $brand ? $brand->primary_color : '#16345F',
@@ -916,6 +934,7 @@ Route::prefix('app')->group(function () {
         ];
 
         $rendered = [];
+
         $errors = [];
         foreach ($content->slides as $slide) {
             $res = $ai->generateSlideImage(

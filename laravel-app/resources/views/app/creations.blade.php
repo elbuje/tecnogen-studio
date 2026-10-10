@@ -246,10 +246,25 @@
         <button onclick="closeLightbox()" class="absolute -top-12 right-0 text-white/80 hover:text-white text-2xl font-bold cursor-pointer">
             ✕
         </button>
-        <img id="lightboxImg" src="" alt="Vista previa" class="max-h-[80vh] w-auto rounded-2xl shadow-2xl border border-white/10">
+        <img id="lightboxImg" src="" alt="Vista previa" class="max-h-[75vh] w-auto rounded-2xl shadow-2xl border border-white/10">
         <p id="lightboxCaption" class="text-white text-sm font-semibold mt-3 text-center"></p>
+        
+        <div class="flex items-center gap-3 mt-4">
+            <a id="lightboxDownloadBtn" href="#" download="Pieza_TecnoGen_HD.png" class="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg transition-transform hover:scale-105">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Descargar Imagen HD</span>
+            </a>
+
+            @if(!empty($creationsFolderUrl))
+                <a href="{{ $creationsFolderUrl }}" target="_blank" rel="noopener noreferrer" class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg transition-transform hover:scale-105">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+                    <span>Abrir Carpeta Drive</span>
+                </a>
+            @endif
+        </div>
     </div>
 </div>
+
 
 <!-- MODAL: CONFIGURAR CARPETA DE GOOGLE DRIVE -->
 <div id="driveConfigModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
@@ -305,10 +320,13 @@
         const modal = document.getElementById('lightboxModal');
         const img = document.getElementById('lightboxImg');
         const cap = document.getElementById('lightboxCaption');
+        const dlBtn = document.getElementById('lightboxDownloadBtn');
         img.src = url;
         cap.innerText = caption || '';
+        if (dlBtn) dlBtn.href = url;
         modal.classList.remove('hidden');
     }
+
 
     function closeLightbox() {
         document.getElementById('lightboxModal').classList.add('hidden');

@@ -206,7 +206,160 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
     }
 
     /**
-     * Genera la imagen real de un slide usando OpenAI (gpt-image-2.5-sunburst o fallback)
+     * Construye el canvas de referencia en memoria con la foto real del profesional y el logo oficial
+     */
+    public function buildReferenceCanvas(?string $charPhotoBytes, ?string $logoBytes, string $brandColor = '#16345F', int $width = 1024, int $height = 1024): string
+    {
+        $canvas = imagecreatetruecolor($width, $height);
+        
+        // Fondo blanco/gris clínico con sutil degradé o tono de marca
+        $bg = imagecolorallocate($canvas, 246, 249, 252);
+        imagefill($canvas, 0, 0, $bg);
+
+        // 1. Pegar fotografía real del profesional a la derecha
+        if (!empty($charPhotoBytes)) {
+            $charImg = @imagecreatefromstring($charPhotoBytes);
+            if ($charImg) {
+                $cw = imagesx($charImg);
+                $ch = imagesy($charImg);
+                $targetH = (int) ($height * 0.88);
+                $targetW = (int) ($cw * ($targetH / $ch));
+                if ($targetW > (int) ($width * 0.58)) {
+                    $targetW = (int) ($width * 0.58);
+                }
+                $posX = $width - $targetW;
+                $posY = $height - $targetH;
+                imagecopyresampled($canvas, $charImg, $posX, $posY, 0, 0, $targetW, $targetH, $cw, $ch);
+                imagedestroy($charImg);
+            }
+        }
+
+        // 2. Pegar logotipo oficial transparente de la marca en la esquina superior izquierda
+        if (!empty($logoBytes)) {
+            $logoImg = @imagecreatefromstring($logoBytes);
+            if ($logoImg) {
+                $lw = imagesx($logoImg);
+                $lh = imagesy($logoImg);
+                $targetLw = (int) ($width * 0.28);
+                $targetLh = (int) ($lh * ($targetLw / $lw));
+                if ($targetLh > 130) $targetLh = 130;
+                imagecopyresampled($canvas, $logoImg, 40, 40, 0, 0, $targetLw, $targetLh, $lw, $lh);
+                imagedestroy($logoImg);
+            }
+        }
+
+        ob_start();
+        imagepng($canvas);
+        $pngData = ob_get_clean();
+        imagedestroy($canvas);
+
+        return $pngData;
+    }
+
+    /**
+     * Obtiene los bytes de la fotografía real del personaje seleccionado
+     */
+    public function getCharacterPhotoBytes(?string $characterId, ?string $charName = null): ?string
+    {
+        $char = null;
+        if ($characterId) {
+            $char = \App\Models\Character::find($characterId);
+        }
+        if (!$char && $charName) {
+            $char = \App\Models\Character::where('name', 'like', "%{$charName}%")->first();
+        }
+        if (!$char) {
+            $char = \App\Models\Character::first();
+        }
+
+        if (!$char) return null;
+
+        // 1. Intentar desde cover_photo si tiene
+        if (!empty($char->cover_photo)) {
+            if (preg_match('/gdrive-proxy\/([a-zA-Z0-9_-]+)/', $char->cover_photo, $m)) {
+                $driveId = $m[1];
+                $url = "https://lh3.googleusercontent.com/d/{$driveId}=w1200";
+                try {
+                    $res = Http::timeout(8)->get($url);
+                    if ($res->successful() && strlen($res->body()) > 2000) {
+                        return $res->body();
+                    }
+                } catch (\Throwable $e) {}
+            }
+        }
+
+        // 2. Intentar desde archivos locales de alta resolución si es Karina o similar
+        $localCandidates = [
+            public_path("assets/characters/dra_karina/IMG_4609.HIF.jpg"),
+            base_path("../public/assets/characters/dra_karina/IMG_4609.HIF.jpg"),
+            public_path("assets/characters/dra_karina/IMG_4615.HIF.jpg"),
+            base_path("../public/assets/characters/dra_karina/IMG_4615.HIF.jpg"),
+        ];
+        foreach ($localCandidates as $path) {
+            if (file_exists($path) && filesize($path) > 1000) {
+                return file_get_contents($path);
+            }
+        }
+
+        // 3. Intentar obtener desde Google Drive Photos del personaje
+        $drivePhotos = $char->getDrivePhotos();
+        if (!empty($drivePhotos)) {
+            $firstPhoto = $drivePhotos[0];
+            $driveId = $firstPhoto['id'] ?? null;
+            if ($driveId && strlen($driveId) > 20) {
+                try {
+                    $url = "https://lh3.googleusercontent.com/d/{$driveId}=w1200";
+                    $res = Http::timeout(8)->get($url);
+                    if ($res->successful() && strlen($res->body()) > 2000) {
+                        return $res->body();
+                    }
+                } catch (\Throwable $e) {}
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Obtiene los bytes del logotipo oficial de la marca
+     */
+    public function getBrandLogoBytes(?string $brandId, ?string $logoId = null): ?string
+    {
+        $brand = $brandId ? \App\Models\Brand::find($brandId) : (\App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first());
+        if (!$brand) return null;
+
+        $logos = $brand->getLogosList();
+        if (empty($logos)) return null;
+
+        $selectedLogo = null;
+        if ($logoId) {
+            foreach ($logos as $l) {
+                if (($l['id'] ?? '') === $logoId) {
+                    $selectedLogo = $l;
+                    break;
+                }
+            }
+        }
+        if (!$selectedLogo) {
+            $selectedLogo = $logos[0];
+        }
+
+        $logoDriveId = $selectedLogo['id'] ?? null;
+        if ($logoDriveId && strlen($logoDriveId) > 20) {
+            try {
+                $url = "https://lh3.googleusercontent.com/d/{$logoDriveId}=w800";
+                $res = Http::timeout(8)->get($url);
+                if ($res->successful() && strlen($res->body()) > 1000) {
+                    return $res->body();
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        return null;
+    }
+
+    /**
+     * Genera la imagen real de un slide usando OpenAI (gpt-image-2.5-sunburst con assets reales via images.edit)
      */
     public function generateSlideImage(string $contentId, int $slideNumber, string $headline, ?string $bodyText, ?string $badge, array $meta = []): array
     {
@@ -215,28 +368,40 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
         }
 
         $imageModel = env('OPENAI_IMAGE_MODEL', 'gpt-image-2.5-sunburst');
-        $charName = $meta['character_name'] ?? 'Especialista Odontológica';
-        $visualType = $meta['visual_type'] ?? 'Infografía Médica';
+        $brandId = $meta['brand_id'] ?? null;
+        $brandName = $meta['brand_name'] ?? 'JM Odontologia Integral';
+        $charId = $meta['character_id'] ?? null;
+        $charName = $meta['character_name'] ?? 'Dra. Karina';
+        $logoId = $meta['logo_id'] ?? null;
+        $visualType = $meta['visual_type'] ?? 'Infografía Clínica';
         $paginator = $meta['paginator'] ?? 'Numeración simple';
         $primaryColor = $meta['primary_color'] ?? '#16345F';
         $accentColor = $meta['accent_color'] ?? '#7DD3FC';
         $isSinglePost = ($meta['type'] ?? 'carousel') === 'single_post';
 
-        $prompt = "Diseño gráfico profesional y fotorrealista para publicación odontológica de alta gama de TecnoGen Dental Studio.\n";
-        $prompt .= "Formato: " . ($isSinglePost ? "Post Cuadrado 1080x1080" : "Lámina #{$slideNumber} de Carrusel Instagram (1080x1350)") . ".\n";
+        // 1. Obtener bytes reales de la profesional y del logo oficial
+        $charBytes = $this->getCharacterPhotoBytes($charId, $charName);
+        $logoBytes = $this->getBrandLogoBytes($brandId, $logoId);
+
+        // 2. Construir Canvas de Referencia compuesto
+        $referenceCanvasPng = $this->buildReferenceCanvas($charBytes, $logoBytes, $primaryColor);
+
+        // 3. Prompt estructurado con fidelidad estricta de marca y persona
+        $prompt = "Diseño gráfico profesional y fotorrealista para publicación odontológica de alta gama de la marca \"{$brandName}\".\n";
+        $prompt .= "REGLA CRÍTICA DE IDENTIDAD: Mantén con máxima fidelidad el rostro, vestimenta médica y rasgos de la profesional ({$charName}) y el logotipo oficial de la marca ({$brandName}) que aparecen en la imagen de referencia provista. No alteres el rostro de la profesional ni inventes logotipos falsos.\n";
+        $prompt .= "Formato: " . ($isSinglePost ? "Post Cuadrado (1080x1080)" : "Lámina #{$slideNumber} de Carrusel Instagram (1080x1350)") . ".\n";
         $prompt .= "Estructura Visual: {$visualType}. Estilo Paginador: {$paginator}.\n";
-        $prompt .= "Paleta de Marca: Color Primario {$primaryColor} (Azul Médico Profundo), Acento {$accentColor} (Cyan Pulso Tecnológico), Fondo Blanco/Gris Claro Quirúrgico.\n";
-        $prompt .= "Personaje o Especialista: {$charName} con ambo médico contemporáneo, sonrisa cálida y profesional.\n";
+        $prompt .= "Paleta de Marca: Primario {$primaryColor}, Acento {$accentColor}, Fondo Limpio de Consultorio Odontológico de Alta Tecnología.\n";
         if (!empty($badge)) {
             $prompt .= "Pastilla Temática / Badge: \"{$badge}\".\n";
         }
         $prompt .= "Título Principal en Español: \"{$headline}\".\n";
         if (!empty($bodyText)) {
-            $prompt .= "Texto de Apoyo: \"{$bodyText}\".\n";
+            $prompt .= "Texto de Apoyo en Español: \"{$bodyText}\".\n";
         }
-        $prompt .= "Acabado de estudio clínico, iluminación difusa suave, tipografía limpia y sin errores ortográficos en español, diseño editorial de prestigio internacional.";
+        $prompt .= "Acabado de estudio clínico de prestigio, iluminación suave difusa, tipografía limpia y nítida en español sin errores ortográficos.";
 
-        // Directorio de salida
+        // Directorios de almacenamiento
         $storageDir = public_path("storage/creations/{$contentId}");
         if (!file_exists($storageDir)) {
             @mkdir($storageDir, 0777, true);
@@ -246,10 +411,18 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
         $filePath = "{$storageDir}/{$fileName}";
         $publicUrl = "/storage/creations/{$contentId}/{$fileName}";
 
+        // Asegurar copia también en el public raíz si está estructurado en subcarpetas
+        $rootPublicDir = base_path("../public/storage/creations/{$contentId}");
+        if (is_dir(base_path('../public/storage')) && !file_exists($rootPublicDir)) {
+            @mkdir($rootPublicDir, 0777, true);
+        }
+
         try {
+            // Transmisión directa a OpenAI images.edit (gpt-image-2.5-sunburst)
             $response = Http::withToken($this->apiKey)
                 ->timeout(90)
-                ->post('https://api.openai.com/v1/images/generations', [
+                ->attach('image', $referenceCanvasPng, 'reference_input.png')
+                ->post('https://api.openai.com/v1/images/edits', [
                     'model' => $imageModel,
                     'prompt' => $prompt,
                     'n' => 1,
@@ -257,11 +430,12 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
                 ]);
 
             if (!$response->successful()) {
-                // Fallback a dall-e-3 si gpt-image-2.5-sunburst diera error puntual
+                // Fallback a generations puro si edits no estuviera disponible temporalmente
+                Log::warning("OpenAI images/edits warning: " . $response->body() . ". Trying fallback.");
                 $response = Http::withToken($this->apiKey)
                     ->timeout(90)
                     ->post('https://api.openai.com/v1/images/generations', [
-                        'model' => 'dall-e-3',
+                        'model' => $imageModel,
                         'prompt' => $prompt,
                         'n' => 1,
                         'size' => '1024x1024',
@@ -271,7 +445,11 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             if ($response->successful()) {
                 $b64 = $response->json()['data'][0]['b64_json'] ?? null;
                 if ($b64) {
-                    file_put_contents($filePath, base64_decode($b64));
+                    $imgBinary = base64_decode($b64);
+                    file_put_contents($filePath, $imgBinary);
+                    if (is_dir($rootPublicDir)) {
+                        @file_put_contents("{$rootPublicDir}/{$fileName}", $imgBinary);
+                    }
                     return [
                         'success' => true,
                         'url' => $publicUrl,
@@ -284,6 +462,9 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
                 if ($rawUrl) {
                     $imgData = Http::timeout(30)->get($rawUrl)->body();
                     file_put_contents($filePath, $imgData);
+                    if (is_dir($rootPublicDir)) {
+                        @file_put_contents("{$rootPublicDir}/{$fileName}", $imgData);
+                    }
                     return [
                         'success' => true,
                         'url' => $publicUrl,
@@ -293,9 +474,11 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
                 }
             }
 
-            return ['success' => false, 'error' => $response->json()['error']['message'] ?? 'Error desconocido al generar imagen'];
+            return ['success' => false, 'error' => $response->json()['error']['message'] ?? 'Error al procesar con OpenAI'];
         } catch (\Throwable $e) {
+            Log::error("AIService generateSlideImage exception: " . $e->getMessage());
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 }
+
