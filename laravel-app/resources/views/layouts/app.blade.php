@@ -100,7 +100,27 @@
             <div class="space-y-6">
                 <div>
                     <div class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                        Plataforma
+                        Creación & Studio
+                    </div>
+                    <nav class="space-y-1">
+                        <a href="/app/create" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 shadow-sm transition-all">
+                            <div class="flex items-center gap-2.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span>Generador</span>
+                            </div>
+                            <span class="text-[10px] uppercase font-black px-1.5 py-0.5 rounded bg-white/20 text-white tracking-wider">IA Pro</span>
+                        </a>
+
+                        <a href="/app/creations" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                            <span class="font-semibold text-slate-900">Creaciones & Drive</span>
+                        </a>
+                    </nav>
+                </div>
+
+                <div>
+                    <div class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Configuración de Marca
                     </div>
                     <nav class="space-y-1">
                         <a href="/app" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors">
@@ -110,7 +130,7 @@
 
                         <a href="/app/brand" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors">
                             <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-                            <span class="font-semibold text-slate-900">Definición de Marca</span>
+                            <span>Definición de Marca</span>
                         </a>
 
                         <a href="/app/characters" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors">

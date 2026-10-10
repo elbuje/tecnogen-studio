@@ -252,8 +252,9 @@ Route::prefix('app')->group(function () {
         $logosFolderUrl = $brand ? $brand->logos_folder_url : null;
         $brandManualUrl = $brand ? $brand->brand_manual_url : null;
         $brandRules = $brand && $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
+        $creationsFolderUrl = $brand ? $brand->creations_folder_url : null;
 
-        return view('app.brand_definition', compact('user', 'brand', 'logos', 'logosFolderUrl', 'brandManualUrl', 'brandRules'));
+        return view('app.brand_definition', compact('user', 'brand', 'logos', 'logosFolderUrl', 'brandManualUrl', 'brandRules', 'creationsFolderUrl'));
     });
 
     Route::get('/brands', function () {
@@ -591,5 +592,250 @@ Route::prefix('app')->group(function () {
 
         return response()->json(['success' => false, 'error' => 'Datos incompletos'], 400);
     });
+
+    // ==========================================
+    // GENERADOR DE CONTENIDO & ASISTENTE IA
+    // ==========================================
+    Route::get('/create', function () {
+        if (!session('user')) return redirect('/login');
+
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brandRules = $brand && $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
+
+        $rawCharacters = \App\Models\Character::orderBy('name', 'asc')->get();
+        $characters = [];
+        foreach ($rawCharacters as $c) {
+            $characters[] = [
+                'id' => $c->id,
+                'name' => $c->name,
+                'role' => $c->role,
+                'cover_photo' => $c->cover_photo,
+            ];
+        }
+
+        $visualTypes = \App\Services\VisualTypeService::getAllTypes();
+
+        $paginators = [
+            ['id' => 'random', 'number' => 0, 'name' => '🎲 Modo Aleatorio (Random Selector)', 'sheetLabel' => 'Aleatorio'],
+            ['id' => 'num-simple', 'number' => 1, 'name' => '01. Numeración Simple', 'sheetLabel' => '01. Numeración simple (01 / 07)'],
+            ['id' => 'num-individual', 'number' => 2, 'name' => '02. Número Individual', 'sheetLabel' => '02. Número individual (02)'],
+            ['id' => 'num-etiqueta', 'number' => 3, 'name' => '03. Número + Etiqueta', 'sheetLabel' => '03. Número + etiqueta (02 · Problema)'],
+            ['id' => 'puntos-dots', 'number' => 4, 'name' => '04. Puntos / Dots Clásicos', 'sheetLabel' => '04. Puntos / dots (● ○ ○ ○ ○)'],
+            ['id' => 'puntos-destacado', 'number' => 5, 'name' => '05. Puntos con Activo Destacado', 'sheetLabel' => '05. Puntos con activo destacado (● • • • •)'],
+            ['id' => 'barra-progreso', 'number' => 6, 'name' => '06. Barra de Progreso Continua', 'sheetLabel' => '06. Barra de progreso (━━━━━━────────)'],
+            ['id' => 'barra-segmentada', 'number' => 7, 'name' => '07. Barra Segmentada (Stories)', 'sheetLabel' => '07. Barra segmentada (━━ ━━ ━━ ── ──)'],
+            ['id' => 'barra-numeracion', 'number' => 8, 'name' => '08. Barra + Numeración', 'sheetLabel' => '08. Barra + numeración (03 / 08 ━━━━━────)'],
+            ['id' => 'pildoras-capsulas', 'number' => 9, 'name' => '09. Píldoras o Cápsulas', 'sheetLabel' => '09. Píldoras o cápsulas ([01] [02] [03])'],
+            ['id' => 'circulo-numero', 'number' => 10, 'name' => '10. Círculo con Número', 'sheetLabel' => '10. Círculo con número (➊ ➋ ➌)'],
+            ['id' => 'numero-cuadrado', 'number' => 11, 'name' => '11. Número Dentro de Cuadrado', 'sheetLabel' => '11. Número dentro de cuadrado ( [1] [2] )'],
+            ['id' => 'numero-gigante-watermark', 'number' => 12, 'name' => '12. Número Gigante Watermark', 'sheetLabel' => '12. Número gigante translúcido (Watermark)'],
+            ['id' => 'timeline-horizontal', 'number' => 13, 'name' => '13. Timeline Horizontal', 'sheetLabel' => '13. Timeline horizontal con nodos (─●─●─○─)'],
+            ['id' => 'stepper-pasos', 'number' => 14, 'name' => '14. Stepper de Pasos', 'sheetLabel' => '14. Stepper de pasos (Paso 1 → Paso 2)'],
+            ['id' => 'tabs-pestanas', 'number' => 15, 'name' => '15. Tabs o Pestañas Superiores', 'sheetLabel' => '15. Tabs o pestañas superiores'],
+            ['id' => 'categorias-semanticas', 'number' => 16, 'name' => '16. Categorías Semánticas', 'sheetLabel' => '16. Categorías semánticas por color'],
+            ['id' => 'breadcrumb-migas', 'number' => 17, 'name' => '17. Breadcrumb / Migas de Pan', 'sheetLabel' => '17. Breadcrumb o migas de pan (Tema > Subtema)'],
+            ['id' => 'miniaturas-preview', 'number' => 18, 'name' => '18. Miniaturas de Slides', 'sheetLabel' => '18. Miniaturas preview (Slides en miniatura)'],
+            ['id' => 'icono-progreso', 'number' => 19, 'name' => '19. Icono Dinámico por Slide', 'sheetLabel' => '19. Icono temático dinámico'],
+            ['id' => 'porcentaje-avance', 'number' => 20, 'name' => '20. Porcentaje Numérico', 'sheetLabel' => '20. Porcentaje de avance (45%)'],
+            ['id' => 'fraccion-romana', 'number' => 21, 'name' => '21. Fracción con Números Romanos', 'sheetLabel' => '21. Fracción con números romanos (III / VII)'],
+            ['id' => 'puntos-conectados', 'number' => 22, 'name' => '22. Puntos Conectados con Línea', 'sheetLabel' => '22. Puntos conectados con línea fina (●──●──○)'],
+            ['id' => 'anillo-circular', 'number' => 23, 'name' => '23. Anillo Circular de Progreso', 'sheetLabel' => '23. Indicador circular radial (Ring de progreso)'],
+            ['id' => 'borde-perimetral', 'number' => 24, 'name' => '24. Borde Perimetral Dinámico', 'sheetLabel' => '24. Borde perimetral dinámico (Frame progresivo)'],
+            ['id' => 'barra-degrade', 'number' => 25, 'name' => '25. Barra con Degradé de Marca', 'sheetLabel' => '25. Barra con gradiente dinámico'],
+            ['id' => 'rombo-diamante', 'number' => 26, 'name' => '26. Rombos o Diamantes', 'sheetLabel' => '26. Rombos o diamantes (◆ ◆ ◇ ◇)'],
+            ['id' => 'chevron-flechas', 'number' => 27, 'name' => '27. Flechas / Chevrons Conectados', 'sheetLabel' => '27. Chevrons direccionales (► ► ▻ ▻)'],
+            ['id' => 'estrellas-rating', 'number' => 28, 'name' => '28. Estrellas de Puntuación', 'sheetLabel' => '28. Estrellas de avance (★ ★ ★ ☆)'],
+            ['id' => 'codigo-binario', 'number' => 29, 'name' => '29. Código Binario / Matriz Tech', 'sheetLabel' => '29. Matriz binaria / Dots tecnológicos'],
+            ['id' => 'barra-ondas', 'number' => 30, 'name' => '30. Barra Ondulada de Frecuencia', 'sheetLabel' => '30. Barra ondulada (Forma de onda)'],
+            ['id' => 'linea-metro', 'number' => 31, 'name' => '31. Estaciones de Metro / Subte', 'sheetLabel' => '31. Línea de metro con estaciones señaladas'],
+            ['id' => 'fases-lunares', 'number' => 32, 'name' => '32. Fases Lunares / Círculos de Llenado', 'sheetLabel' => '32. Fases lunares (Llenado orbital)'],
+            ['id' => 'reloj-arena', 'number' => 33, 'name' => '33. Reloj de Arena / Cronómetro', 'sheetLabel' => '33. Cronómetro / Tiempo restante estimado'],
+            ['id' => 'capitulos-editorial', 'number' => 34, 'name' => '34. Capítulos Tipo Libro', 'sheetLabel' => '34. Capítulos editoriales (Cap. II de VI)'],
+            ['id' => 'tarjeta-apilada', 'number' => 35, 'name' => '35. Tarjetas Apiladas (Deck)', 'sheetLabel' => '35. Simulación de baraja o tarjetas apiladas'],
+            ['id' => 'brujula-radar', 'number' => 36, 'name' => '36. Brújula / Coordenadas de Radar', 'sheetLabel' => '36. Coordenadas de radar o brújula clínica'],
+            ['id' => 'bloques-tetris', 'number' => 37, 'name' => '37. Bloques Modulares / Grilla', 'sheetLabel' => '37. Bloques modulares encajados'],
+            ['id' => 'adn-helice', 'number' => 38, 'name' => '38. Hélice de ADN / Eslabones', 'sheetLabel' => '38. Cadena de eslabones biomédicos'],
+            ['id' => 'burbujas-flotantes', 'number' => 39, 'name' => '39. Burbujas Flotantes de Escala', 'sheetLabel' => '39. Burbujas de tamaño variable según relevancia'],
+            ['id' => 'pulso-cardiaco', 'number' => 40, 'name' => '40. Pulso Cardíaco (ECG)', 'sheetLabel' => '40. Electrocardiograma con pico en slide activo'],
+            ['id' => 'guion-puntos', 'number' => 41, 'name' => '41. Guiones + Puntos (Código Morse)', 'sheetLabel' => '41. Código Morse estilizado (— • — ••)'],
+            ['id' => 'cintas-adhesivas', 'number' => 42, 'name' => '42. Cinta Washi / Sticker Tape', 'sheetLabel' => '42. Cinta adhesiva rotulada en esquina'],
+            ['id' => 'etiqueta-precio', 'number' => 43, 'name' => '43. Tag de Equipaje / Etiqueta Colgante', 'sheetLabel' => '43. Tag colgante con perforación circular'],
+            ['id' => 'semáforo-alertas', 'number' => 44, 'name' => '44. Semáforo Tricolor de Riesgo', 'sheetLabel' => '44. Semáforo clínico (Verde/Amarillo/Rojo)'],
+            ['id' => 'escala-ph', 'number' => 45, 'name' => '45. Barra Graduada de Laboratorio', 'sheetLabel' => '45. Escala graduada de probeta o laboratorio'],
+            ['id' => 'perfil-topografico', 'number' => 46, 'name' => '46. Líneas de Nivel / Topografía', 'sheetLabel' => '46. Curvas de nivel topográficas en el borde'],
+            ['id' => 'engranajes-mecanicos', 'number' => 47, 'name' => '47. Dientes de Engranaje / Piñón', 'sheetLabel' => '47. Segmentos dentados mecánicos'],
+            ['id' => 'constelacion-estelar', 'number' => 48, 'name' => '48. Red de Nodos Neuronales', 'sheetLabel' => '48. Sinapsis neuronal / Red de puntos enlazados'],
+            ['id' => 'firma-autor', 'number' => 49, 'name' => '49. Firma y Rúbrica Médica', 'sheetLabel' => '49. Sello y firma con conteo manuscrito'],
+        ];
+
+        $currentPaginator = $brandRules['default_paginator'] ?? '01. Numeración simple (01 / 07)';
+        $brandLogos = $brand ? $brand->getLogosList() : [];
+        $defaultLogoId = $brandRules['default_logo_id'] ?? ($brandLogos[0]['id'] ?? null);
+
+        return view('app.create', compact('brand', 'brandRules', 'characters', 'visualTypes', 'paginators', 'currentPaginator', 'brandLogos', 'defaultLogoId'));
+    });
+
+    // Micro-asistente IA para campo individual
+    Route::post('/ai/assist-field', function (Request $request, \App\Services\AIService $ai) {
+        if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+
+        $fieldType = $request->input('field_type', 'body');
+        $currentText = $request->input('current_text', '');
+        $context = [
+            'topic' => $request->input('topic', ''),
+            'character' => $request->input('character', ''),
+            'visual_type' => $request->input('visual_type', ''),
+        ];
+
+        $result = $ai->assistField($fieldType, $currentText, $context);
+        return response()->json(['success' => true, 'result' => $result]);
+    });
+
+    // Autoparser de guion pegado
+    Route::post('/ai/parse-script', function (Request $request, \App\Services\AIService $ai) {
+        if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+
+        $rawText = $request->input('raw_text', '');
+        if (empty(trim($rawText))) {
+            return response()->json(['success' => false, 'error' => 'Texto vacío'], 422);
+        }
+
+        $data = $ai->parseScript($rawText);
+        return response()->json(['success' => true, 'data' => $data]);
+    });
+
+    // Generador de carrusel completo con IA
+    Route::post('/ai/generate-full-script', function (Request $request, \App\Services\AIService $ai) {
+        if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+
+        $topic = $request->input('topic', '');
+        $character = $request->input('character', 'Dra. Karina');
+        $slidesCount = (int) $request->input('slides_count', 5);
+
+        if (empty(trim($topic))) {
+            return response()->json(['success' => false, 'error' => 'Tema vacío'], 422);
+        }
+
+        $data = $ai->generateFullScript($topic, $character, 'carousel', $slidesCount);
+        return response()->json(['success' => true, 'data' => $data]);
+    });
+
+    // Persistir contenido y láminas generadas
+    Route::post('/contents/create', function (Request $request) {
+        if (!session('user')) return redirect('/login');
+
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+
+        $type = $request->input('type', 'carousel');
+        $slidesData = $request->input('slides', []);
+        $hookText = $slidesData[0]['headline'] ?? 'Publicación TecnoGen';
+        $title = $hookText;
+        $ctaText = $request->input('cta_text', '');
+        $caption = $request->input('caption_copy', '');
+        $hashtags = $request->input('hashtags', '');
+
+        $contentId = (string) Str::uuid();
+
+        // 1. Guardar Content
+        DB::table('contents')->insert([
+            'id' => $contentId,
+            'brand_id' => $brand ? $brand->id : null,
+            'type' => $type,
+            'title' => $title,
+            'hook_text' => $hookText,
+            'caption_copy' => $caption,
+            'hashtags' => $hashtags,
+            'status' => 'draft',
+            'source' => 'studio_generator',
+            'total_slides' => count($slidesData),
+            'version' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // 2. Guardar Slides
+        foreach ($slidesData as $idx => $s) {
+            $slideId = (string) Str::uuid();
+            $sNum = (int) ($s['slide_number'] ?? ($idx + 1));
+            $sHeadline = $s['headline'] ?? '';
+            $sBody = $s['body_text'] ?? '';
+            $sBadge = $s['badge'] ?? '';
+            $sType = $s['slide_type'] ?? ($idx === 0 ? 'cover' : 'content');
+
+            DB::table('slides')->insert([
+                'id' => $slideId,
+                'content_id' => $contentId,
+                'slide_number' => $sNum,
+                'slide_type' => $sType,
+                'headline' => $sHeadline,
+                'body_text' => $sBody,
+                'badge' => $sBadge,
+                'status' => 'pending',
+                'version' => 1,
+                'created_at' => now(),
+            ]);
+        }
+
+        return redirect('/app/creations')->with('success', "¡Creación '{$title}' guardada exitosamente con " . count($slidesData) . " láminas!");
+    });
+
+    // ==========================================
+    // VISOR DE CREACIONES Y GOOGLE DRIVE
+    // ==========================================
+    Route::get('/creations', function () {
+        if (!session('user')) return redirect('/login');
+
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $creationsFolderUrl = $brand ? $brand->creations_folder_url : null;
+
+        $contents = \App\Models\Content::with(['slides' => function ($q) {
+            $q->orderBy('slide_number', 'asc');
+        }])->orderBy('created_at', 'desc')->get();
+
+        return view('app.creations', compact('contents', 'brand', 'creationsFolderUrl'));
+    });
+
+    // Guardar carpeta de destino en Google Drive
+    Route::post('/brand/save-output-folder', function (Request $request) {
+        if (!session('user')) return redirect('/login');
+
+        $user = session('user');
+        $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $folderUrl = trim($request->input('gdrive_output_folder_url', ''));
+
+        if (empty($folderUrl)) {
+            return back()->with('error', 'El enlace de Google Drive es obligatorio.');
+        }
+
+        $folderId = \App\Models\Brand::extractDriveFolderId($folderUrl);
+        $fullFolderUrl = str_starts_with($folderUrl, 'http') ? $folderUrl : ($folderId ? "https://drive.google.com/drive/folders/{$folderId}" : $folderUrl);
+
+        if ($brand) {
+            $rules = $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
+            $rules['gdrive_output_folder_url'] = $fullFolderUrl;
+            $rules['gdrive_creations_folder_url'] = $fullFolderUrl;
+
+            $brand->update([
+                'gdrive_output_folder_id' => $folderId,
+                'brand_rules' => $rules,
+            ]);
+        }
+
+        return back()->with('success', 'Carpeta de Creaciones en Google Drive guardada y vinculada exitosamente.');
+    });
+
+    // Eliminar creación
+    Route::post('/contents/{id}/delete', function ($id) {
+        if (!session('user')) return redirect('/login');
+
+        DB::table('slides')->where('content_id', $id)->delete();
+        DB::table('contents')->where('id', $id)->delete();
+
+        return back()->with('success', 'Creación eliminada exitosamente.');
+    });
 });
+
 

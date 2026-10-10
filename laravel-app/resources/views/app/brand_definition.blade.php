@@ -345,6 +345,96 @@
             </div>
         </div>
 
+        <!-- 4. Tarjeta: Carpeta de Creaciones en Google Drive (Destino) -->
+        <div class="saas-card overflow-hidden flex flex-col justify-between group transition-all hover:border-amber-300">
+            <div>
+                <!-- Carátula Clickeable para abrir la carpeta en Drive -->
+                <div class="h-64 bg-slate-900 overflow-hidden relative cursor-pointer group flex items-center justify-center p-6"
+                     onclick="{{ !empty($creationsFolderUrl) ? "window.open('{$creationsFolderUrl}', '_blank')" : "openOutputFolderModal()" }}">
+                    
+                    <div class="text-center space-y-2">
+                        <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/></svg>
+                        </div>
+                        <div class="text-white font-heading font-bold text-sm">
+                            Carpeta de Creaciones
+                        </div>
+                        <div class="text-amber-400/90 text-xs font-mono">
+                            {{ !empty($creationsFolderUrl) ? 'Destino Conectado' : 'Pendiente de Configurar' }}
+                        </div>
+                    </div>
+
+                    <!-- Badge de Estado -->
+                    <div class="absolute bottom-3 right-3 bg-slate-900/85 backdrop-blur-xs text-white px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1.5 shadow-sm z-10">
+                        <span class="w-2 h-2 rounded-full {{ !empty($creationsFolderUrl) ? 'bg-amber-400' : 'bg-slate-400' }}"></span>
+                        <span>{{ !empty($creationsFolderUrl) ? 'Conectado' : 'Sin Carpeta' }}</span>
+                    </div>
+
+                    <!-- Hover Overlay -->
+                    <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+                        <span class="px-3.5 py-2 bg-white text-slate-900 text-xs font-bold rounded-lg shadow-xl flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            Abrir Carpeta en Drive
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="p-4 space-y-2.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <h3 class="font-heading font-bold text-base text-slate-900 line-clamp-1">
+                                Salida & Almacenamiento
+                            </h3>
+                            <p class="text-xs text-slate-500 font-medium">
+                                Exportación automática de carruseles
+                            </p>
+                        </div>
+                    </div>
+
+                    <p class="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        Carpeta de Google Drive donde se guardan los archivos generados y sus láminas en alta resolución.
+                    </p>
+
+                    @if(!empty($creationsFolderUrl))
+                        <div class="pt-1">
+                            <a href="{{ $creationsFolderUrl }}" target="_blank" rel="noopener noreferrer"
+                               class="text-[11px] font-semibold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100/70 px-2.5 py-1.5 rounded-lg border border-amber-200 flex items-center justify-between transition-colors">
+                                <span class="flex items-center gap-1.5 truncate">
+                                    <span>📁</span>
+                                    <span class="truncate">Ver Carpeta en Google Drive</span>
+                                </span>
+                                <span class="text-amber-600 font-bold shrink-0">↗</span>
+                            </a>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 pt-0 flex items-center justify-between border-t border-slate-100 mt-2">
+                @if(!empty($creationsFolderUrl))
+                    <a href="{{ $creationsFolderUrl }}" target="_blank" rel="noopener noreferrer"
+                       class="text-xs font-bold text-amber-600 hover:text-amber-700 py-1.5 flex items-center gap-1 cursor-pointer">
+                        <span>Ver en Drive</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>
+                @else
+                    <button onclick="openOutputFolderModal()"
+                            class="text-xs font-bold text-amber-600 hover:text-amber-700 py-1.5 flex items-center gap-1 cursor-pointer">
+                        <span>Vincular Carpeta</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </button>
+                @endif
+
+                <button onclick="openOutputFolderModal()"
+                        class="p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                        title="Editar enlace de la carpeta de creaciones">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -495,6 +585,49 @@
                 </button>
                 <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-xs">
                     Guardar Enlace del Manual
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: VINCULAR CARPETA DE CREACIONES EN GOOGLE DRIVE                     -->
+<!-- ========================================================================= -->
+<div id="outputFolderModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden" onclick="closeOutputFolderModal()">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in duration-150" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                    📁
+                </div>
+                <h3 class="font-heading font-bold text-base text-slate-900">
+                    Carpeta de Creaciones (Drive)
+                </h3>
+            </div>
+            <button onclick="closeOutputFolderModal()" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form action="/app/brand/save-output-folder" method="POST" class="space-y-4">
+            @csrf
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-700">Enlace de la Carpeta de Google Drive</label>
+                <input type="text" name="gdrive_output_folder_url"
+                       placeholder="https://drive.google.com/drive/folders/1ABCxyz..."
+                       value="{{ $creationsFolderUrl ?? '' }}"
+                       required
+                       class="w-full text-xs px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-sky-500 font-mono">
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                    Pega el enlace de la carpeta de Google Drive donde se alojarán y respaldarán tus piezas y carruseles generados.
+                </p>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeOutputFolderModal()" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs cursor-pointer">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer shadow-xs">
+                    Guardar Carpeta de Destino
                 </button>
             </div>
         </form>
@@ -823,6 +956,13 @@
     }
     function closeManualModal() {
         document.getElementById('manualModal').classList.add('hidden');
+    }
+
+    function openOutputFolderModal() {
+        document.getElementById('outputFolderModal').classList.remove('hidden');
+    }
+    function closeOutputFolderModal() {
+        document.getElementById('outputFolderModal').classList.add('hidden');
     }
 
     function openEditBrandModal() {

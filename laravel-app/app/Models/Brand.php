@@ -125,6 +125,27 @@ class Brand extends Model
     }
 
     /**
+     * Obtiene la URL de la carpeta de Creaciones / Output en Google Drive del usuario
+     */
+    public function getCreationsFolderUrlAttribute(): ?string
+    {
+        $rules = $this->brand_rules ?? [];
+        if (!empty($rules['gdrive_creations_folder_url'])) {
+            return $rules['gdrive_creations_folder_url'];
+        }
+        if (!empty($rules['gdrive_output_folder_url'])) {
+            return $rules['gdrive_output_folder_url'];
+        }
+        if (!empty($this->gdrive_output_folder_id)) {
+            if (str_starts_with($this->gdrive_output_folder_id, 'http')) {
+                return $this->gdrive_output_folder_id;
+            }
+            return "https://drive.google.com/drive/folders/{$this->gdrive_output_folder_id}";
+        }
+        return null;
+    }
+
+    /**
      * Escanea y obtiene los logos desde Google Drive de forma paralela y con caché
      */
     public function getDriveLogos(): array
