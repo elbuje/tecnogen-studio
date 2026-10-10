@@ -145,11 +145,22 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // 5. Personaje por defecto (Dra. Karina)
-        $karinaChar = DB::table('characters')->where('name', 'like', '%Karina%')->first();
-        if (!$karinaChar) {
-            DB::table('characters')->insert([
-                'id' => (string) Str::uuid(),
+        // 5. Personajes de la Marca
+        $charactersData = [
+            [
+                'id' => '132f9d70-7add-4da7-b2a8-c901f2b724a8',
+                'user_id' => $clientId,
+                'brand_id' => 'ef9ec23e-822f-4308-a027-7436371bc87c',
+                'name' => 'Dra. Luciana Galbiati',
+                'role' => 'Odontología General',
+                'gdrive_folder_url' => 'https://drive.google.com/drive/folders/1Qc8t4ZAQEao4spaQjdL07WjppBu1ThZo?usp=sharing',
+                'gdrive_folder_id' => '1Qc8t4ZAQEao4spaQjdL07WjppBu1ThZo',
+                'folder_path' => 'https://drive.google.com/drive/folders/1Qc8t4ZAQEao4spaQjdL07WjppBu1ThZo?usp=sharing',
+                'cover_photo' => '/app/gdrive-proxy/1jiP4uMjQYthZ1LcvDLye0cyv2O_O2RCD?sz=w1200',
+                'notes' => 'Especialista en odontología integral y estética dental.',
+            ],
+            [
+                'id' => '14c9d30a-4172-4226-9ca8-b9334b197ce5',
                 'user_id' => $clientId,
                 'brand_id' => 'ef9ec23e-822f-4308-a027-7436371bc87c',
                 'name' => 'Dra. Karina',
@@ -157,10 +168,40 @@ class DatabaseSeeder extends Seeder
                 'gdrive_folder_url' => 'https://drive.google.com/drive/folders/1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ',
                 'gdrive_folder_id' => '1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ',
                 'folder_path' => 'https://drive.google.com/drive/folders/1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ',
+                'cover_photo' => null,
                 'notes' => 'Profesional principal para carruseles y posts clínicos.',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            ],
+            [
+                'id' => 'b2862fc2-9447-4cb5-a371-9e0ca2eec202',
+                'user_id' => $clientId,
+                'brand_id' => 'ef9ec23e-822f-4308-a027-7436371bc87c',
+                'name' => 'Dra. Jessica',
+                'role' => 'Odontología General',
+                'gdrive_folder_url' => 'https://drive.google.com/drive/folders/1PNC5gKeTv6OgHyXlgbZmHuAeNw8IH4ps',
+                'gdrive_folder_id' => '1PNC5gKeTv6OgHyXlgbZmHuAeNw8IH4ps',
+                'folder_path' => 'https://drive.google.com/drive/folders/1PNC5gKeTv6OgHyXlgbZmHuAeNw8IH4ps',
+                'cover_photo' => '/app/gdrive-proxy/10bbN0T8WpUdXeOhoKFz1lUw9fNGcThai?sz=w1200',
+                'notes' => 'Fotos oficiales de sesión clínica con ambo azul marino institucional JM.',
+            ],
+        ];
+
+        foreach ($charactersData as $c) {
+            $exists = DB::table('characters')->where('id', $c['id'])->orWhere('name', $c['name'])->first();
+            if (!$exists) {
+                $c['created_at'] = now();
+                $c['updated_at'] = now();
+                DB::table('characters')->insert($c);
+            } else {
+                DB::table('characters')->where('id', $exists->id)->update([
+                    'gdrive_folder_url' => $c['gdrive_folder_url'],
+                    'gdrive_folder_id' => $c['gdrive_folder_id'],
+                    'folder_path' => $c['folder_path'],
+                    'role' => $c['role'],
+                    'notes' => $c['notes'],
+                    'cover_photo' => $c['cover_photo'] ?? $exists->cover_photo,
+                    'updated_at' => now(),
+                ]);
+            }
         }
     }
 }
