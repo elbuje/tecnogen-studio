@@ -844,9 +844,61 @@ Route::prefix('app')->group(function () {
         return redirect('/app/creations')->with('success', "¡Creación '{$title}' guardada exitosamente con " . count($slidesData) . " lámina(s)!");
     });
 
+    // Endpoint para renderizar una lámina individual con IA
+    Route::post('/contents/{id}/slides/{slideId}/generate-image', function ($id, $slideId, Request $request, \App\Services\AIService $ai) {
+        if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+        @set_time_limit(120);
+
+        $content = \App\Models\Content::find($id);
+        if (!$content) return response()->json(['success' => false, 'error' => 'Creación no encontrada'], 404);
+
+        $slide = \App\Models\Slide::where('id', $slideId)->where('content_id', $id)->first();
+        if (!$slide) return response()->json(['success' => false, 'error' => 'Lámina no encontrada'], 404);
+
+        $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::first();
+        $meta = [
+            'character_name' => 'Especialista Odontológica',
+            'visual_type' => 'Infografía Clínica',
+            'paginator' => '01. Numeración simple',
+            'primary_color' => $brand ? $brand->primary_color : '#16345F',
+            'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
+            'type' => $content->type
+        ];
+
+        $res = $ai->generateSlideImage(
+            $content->id,
+            $slide->slide_number,
+            $slide->headline ?? 'Lámina TecnoGen',
+            $slide->body_text,
+            $slide->badge,
+            $meta
+        );
+
+        if ($res['success'] ?? false) {
+            $slide->update([
+                'image_url' => $res['url'],
+                'prompt_used' => $res['prompt'] ?? null,
+                'status' => 'ready'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'slide_id' => $slide->id,
+                'slide_number' => $slide->slide_number,
+                'image_url' => $res['url']
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'error' => $res['error'] ?? 'Error al generar imagen con OpenAI'
+        ], 500);
+    });
+
     // Endpoint para renderizar todas las láminas pendientes de una creación con IA
     Route::post('/contents/{id}/generate-images', function ($id, Request $request, \App\Services\AIService $ai) {
         if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+        @set_time_limit(300);
 
         $content = \App\Models\Content::with('slides')->find($id);
         if (!$content) {
@@ -864,6 +916,7 @@ Route::prefix('app')->group(function () {
         ];
 
         $rendered = [];
+        $errors = [];
         foreach ($content->slides as $slide) {
             $res = $ai->generateSlideImage(
                 $content->id,
@@ -885,17 +938,23 @@ Route::prefix('app')->group(function () {
                     'slide_number' => $slide->slide_number,
                     'image_url' => $res['url']
                 ];
+            } else {
+                $errors[] = "Lámina #{$slide->slide_number}: " . ($res['error'] ?? 'Error');
             }
         }
 
-        $content->update(['status' => 'ready', 'updated_at' => now()]);
+        if (count($rendered) > 0) {
+            $content->update(['status' => 'ready', 'updated_at' => now()]);
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Láminas renderizadas exitosamente con IA.',
-            'rendered' => $rendered
+            'success' => count($rendered) > 0,
+            'message' => count($rendered) > 0 ? 'Láminas renderizadas exitosamente con IA.' : 'No se pudieron renderizar las imágenes.',
+            'rendered' => $rendered,
+            'errors' => $errors
         ]);
     });
+
 
     // ==========================================
     // VISOR DE CREACIONES Y GOOGLE DRIVE

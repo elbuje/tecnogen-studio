@@ -162,12 +162,15 @@
                                             </div>
                                         @else
                                             <!-- Lámina en Estado Borrador de Texto -->
-                                            <div class="aspect-4/5 bg-slate-100 hover:bg-slate-200/80 rounded-lg flex flex-col justify-between p-1.5 border border-slate-200 text-[9px] font-semibold text-slate-700 overflow-hidden transition-colors" title="{{ $slide->headline }}">
+                                            <div class="aspect-4/5 bg-slate-100 hover:bg-slate-200/80 rounded-lg flex flex-col justify-between p-1.5 border border-slate-200 text-[9px] font-semibold text-slate-700 overflow-hidden transition-colors relative group" title="{{ $slide->headline }}">
                                                 <div class="flex items-center justify-between">
                                                     <span class="text-slate-400 font-mono">#{{ $slide->slide_number }}</span>
                                                     <span class="text-[8px] text-amber-600 font-bold">Borrador</span>
                                                 </div>
                                                 <span class="line-clamp-2 leading-tight text-[8px] text-slate-800">{{ $slide->headline ?: $slide->badge ?: 'Slide' }}</span>
+                                                <button type="button" onclick="renderSingleSlide('{{ $item->id }}', '{{ $slide->id }}', this)" class="w-full py-0.5 px-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-[8px] font-bold flex items-center justify-center gap-0.5 shadow-2xs transition-all cursor-pointer" title="Renderizar con IA esta lámina">
+                                                    <span>🎨 Renderizar</span>
+                                                </button>
                                             </div>
                                         @endif
                                     @endforeach
@@ -319,11 +322,44 @@
         });
     }
 
+    // Renderizar una lámina individual con IA
+    async function renderSingleSlide(contentId, slideId, btnEl) {
+        const originalHtml = btnEl.innerHTML;
+        btnEl.disabled = true;
+        btnEl.innerHTML = `<span>⏳ Generando...</span>`;
+        btnEl.classList.add('animate-pulse');
+
+        try {
+            const res = await fetch(`/app/contents/${contentId}/slides/${slideId}/generate-image`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+
+            const data = await res.json();
+            if (data.success && data.image_url) {
+                window.location.reload();
+            } else {
+                alert('Error al generar lámina: ' + (data.error || 'Respuesta inválida'));
+                btnEl.disabled = false;
+                btnEl.innerHTML = originalHtml;
+                btnEl.classList.remove('animate-pulse');
+            }
+        } catch (e) {
+            alert('Error de conexión al generar lámina.');
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalHtml;
+            btnEl.classList.remove('animate-pulse');
+        }
+    }
+
     // Renderizar todas las láminas con IA mediante AJAX
     async function renderAllImages(contentId, btnEl) {
         const originalText = btnEl.innerHTML;
         btnEl.disabled = true;
-        btnEl.innerHTML = `<span>⏳ Generando imágenes con OpenAI...</span>`;
+        btnEl.innerHTML = `<span>⏳ Generando imágenes con OpenAI (esto puede tomar 20-40s)...</span>`;
         btnEl.classList.add('animate-pulse');
 
         try {
@@ -337,10 +373,14 @@
 
             const data = await res.json();
             if (data.success) {
-                alert('¡Láminas generadas exitosamente!');
+                alert('¡Láminas generadas exitosamente con IA!');
                 window.location.reload();
             } else {
-                alert('Error al generar imágenes: ' + (data.error || 'Respuesta inválida'));
+                let msg = data.message || 'Error al generar imágenes.';
+                if (data.errors && data.errors.length) {
+                    msg += '\n' + data.errors.join('\n');
+                }
+                alert(msg);
                 btnEl.disabled = false;
                 btnEl.innerHTML = originalText;
                 btnEl.classList.remove('animate-pulse');
@@ -352,5 +392,6 @@
             btnEl.classList.remove('animate-pulse');
         }
     }
+
 </script>
 @endsection

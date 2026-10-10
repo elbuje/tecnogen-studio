@@ -35,8 +35,9 @@
         </div>
     @endif
 
-    <form id="contentForm" action="/app/contents/create" method="POST" class="space-y-6">
+    <form id="contentForm" action="/app/contents/create" method="POST" onsubmit="handleFormSubmit(event)" class="space-y-6">
         @csrf
+
 
         <!-- 1. BARRA DE CONFIGURACIÓN MODULAR -->
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
@@ -467,8 +468,36 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
     </div>
 </div>
 
+<!-- MODAL: SPINNER DE GENERACIÓN Y GUARDADO -->
+<div id="submitLoadingModal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-sky-500/25 animate-pulse">
+            🎨
+        </div>
+        <div>
+            <h3 id="submitLoadingTitle" class="text-lg font-bold text-slate-900 font-heading">Renderizando y Guardando...</h3>
+            <p id="submitLoadingMsg" class="text-xs text-slate-500 mt-1">Conectando con OpenAI (gpt-image-2.5-sunburst) para generar la pieza clínica y sincronizarla en el estudio. Por favor aguarda unos segundos.</p>
+        </div>
+        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+            <div class="bg-gradient-to-r from-sky-500 to-indigo-600 h-full w-2/3 animate-pulse rounded-full"></div>
+        </div>
+        <div class="text-[11px] font-mono text-slate-400">
+            ⏳ Procesando solicitud con TecnoGen AI Core
+        </div>
+    </div>
+</div>
+
 <script>
     let slideCount = 3;
+
+    function handleFormSubmit(event) {
+        const modal = document.getElementById('submitLoadingModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+        return true;
+    }
+
 
     // Maneja el cambio de formato entre Carrusel, Post Único y Reel
     function handleFormatChange() {
