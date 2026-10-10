@@ -1,7 +1,7 @@
 # 📊 Estado Operativo — TecnoGen Studio
 
 > **Última actualización:** 2026-10-10  
-> **Fase Actual:** Fase 4 — Generador con Micro-IA por Campo, Autoparser de Guiones y Creaciones en Google Drive  
+> **Fase Actual:** Fase 4 — Generador con Micro-IA por Campo, Autoparser de Guiones, Renderizado IA y Creaciones en Google Drive  
 > **URL Producción:** `https://studio.tecnogen.ar`  
 > **Servidor Destino:** Ploi `errante` (`72.61.34.92`) | Dominio: `studio.tecnogen.ar`  
 > **Dev Local:** `http://localhost:8018/` (Laravel SaaS)
@@ -11,10 +11,11 @@
 ## 🎯 Resumen Ejecutivo
 
 TecnoGen Studio es una plataforma SaaS multi-tenant que genera carruseles y posts visuales odontológicos con IA (`gpt-image-2.5-sunburst` y `gpt-4o-mini`). Cuenta con:
-1. **Generador de Contenido Unificado (`/app/create`):** Autoparseo de guiones externos (ChatGPT, Sheets, Notion, WhatsApp) y micro-asistente interactivo `✨ IA` en cada campo de texto individual (título, gancho, láminas, badges, CTA y caption).
-2. **Biblioteca de Creaciones (`/app/creations`):** Gestión de publicaciones y enlace directo con la carpeta de Google Drive del usuario.
-3. **Definición de Marca (`/app/brand`):** Integración con el Manual de Identidad y scraping inteligente de logotipos desde Google Drive.
-4. **Catálogo de Personajes (`/app/characters`):** Conectado a carpetas de fotos en Google Drive con selector de carátula interactivo.
+1. **Generador de Contenido Unificado (`/app/create`):** Selector dinámico de formato (Carrusel, Post Único 1080x1080, Reel 1080x1920), autoparseo de guiones externos y micro-asistente interactivo `✨ IA` en cada campo individual.
+2. **Renderizado de Imágenes con IA:** Motor OpenAI (`gpt-image-2.5-sunburst` y `dall-e-3`) integrado tanto al guardar como bajo demanda lámina por lámina desde la biblioteca.
+3. **Biblioteca de Creaciones (`/app/creations`):** Gestión visual de piezas, visor Lightbox full-size, renderizado individual/batch y enlace directo con la carpeta de Google Drive del usuario.
+4. **Definición de Marca (`/app/brand`):** Integración con Manual de Identidad y scraping inteligente de logotipos desde Google Drive.
+5. **Catálogo de Personajes (`/app/characters`):** Conectado a carpetas de fotos en Google Drive con selector de carátula interactivo.
 
 ---
 
@@ -22,20 +23,17 @@ TecnoGen Studio es una plataforma SaaS multi-tenant que genera carruseles y post
 
 | Componente | Estado | Descripción |
 |:---|:---|:---|
-| **Generador de Contenido** | 🟢 100% Operativo | `/app/create` con asistencia de IA por campo y parser de guiones. |
-| **Biblioteca de Creaciones** | 🟢 100% Operativo | `/app/creations` conectado a la carpeta de Google Drive del usuario. |
-| **Sitio en Producción** | 🟢 100% Online | **`https://studio.tecnogen.ar`** en Ploi con SSL Let's Encrypt. |
+| **Generador de Contenido** | 🟢 100% Operativo | `/app/create` con modos Carrusel, Post Único y Reel, micro-asistente IA y parser. |
+| **Renderizado de Imágenes IA** | 🟢 100% Operativo | Generación de piezas 1024x1024 y almacenamiento en `storage/creations/`. |
+| **Biblioteca de Creaciones** | 🟢 100% Operativo | `/app/creations` con renderizado individual por lámina y conexión a Google Drive. |
+| **Sitio en Producción** | 🟢 100% Online | **`https://studio.tecnogen.ar`** desplegado en Ploi con SSL y almacenamiento symlinkeado. |
 | **Repositorio Oficial** | 🟢 Sincronizado | `https://github.com/elbuje/tecnogen-studio` (Ramas `main` y `dev`). |
-| **Catálogo de 28 Tipos Visuales** | 🟢 100% Generado | 28 demos visuales en español generadas con `gpt-image-2.5-sunburst` y modal slider activo. |
-| **Backend en Producción** | 🟢 Activo (:8028) | FastAPI + MySQL gestionado como Daemon supervisado en Ploi (`id: 226698`). |
-| **Frontend en Producción** | 🟢 Compilado | SPA React 18 + Vite + Tailwind CSS servido directamente por Nginx en `/public`. |
-| **Pipeline IA con Assets Reales** | 🟢 Operativo | `client.images.edit(model="gpt-image-2.5-sunburst", image=buf, prompt=prompt)` enviando la foto real y logo transparente oficial. |
-| **Generación Carrusel #2** | 🟢 Completado | Carrusel "3 frases sobre sacarte una muela. ¿Mito o verdad? 🦷" (Dra. Karina) generado con 8 láminas en producción. |
-| **Visor & Preview Público** | 🟢 Operativo | Acceso directo a previews vía `/app/viewer/:id` y endpoint `/api/v1/contents/public/:id`. |
-| **Sincronización Google Sheets** | 🟢 Operativo | Lectura de columnas `PRESENCIA DOCTORA`, `ESTILO PAGINADOR`, `BADGE ESTILO`, `IDIOMA PROMPTS` y actualización de estado a `Ya realizado`. |
+| **Catálogo de 28 Tipos Visuales** | 🟢 100% Generado | 28 demos visuales en español generadas con `gpt-image-2.5-sunburst`. |
+| **Catálogo de 49 Paginadores** | 🟢 100% Generado | 49 estilos de paginadores y deslizadores interactivos. |
 
 ---
 
 ## 🔑 Credenciales de Acceso en Producción (`studio.tecnogen.ar`)
 1. **Administrador:** `mfmujic@gmail.com` / `AdminTecnoGen2026!` (Plan Agency, 9999 créditos).
 2. **Cliente Preconfigurado:** `mmujica@tecnobrain.com.ar` / `JMOdonto2026!` (Marca: JM Odontología Integral, 250 créditos).
+
