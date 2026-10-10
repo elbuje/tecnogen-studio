@@ -254,7 +254,6 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
                     'prompt' => $prompt,
                     'n' => 1,
                     'size' => '1024x1024',
-                    'response_format' => 'b64_json',
                 ]);
 
             if (!$response->successful()) {
@@ -266,7 +265,6 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
                         'prompt' => $prompt,
                         'n' => 1,
                         'size' => '1024x1024',
-                        'response_format' => 'b64_json',
                     ]);
             }
 
