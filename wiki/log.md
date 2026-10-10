@@ -5,6 +5,11 @@ Historial cronológico de cambios, decisiones técnicas e hitos del proyecto.
 ---
 
 ## 2026-10-10
+* `FEAT`: **Dinamismo Total de Marca (JM Odontología Integral)**: vinculación unificada de la marca oficial en la base de datos, purga de marcas genéricas anteriores y actualización de `DatabaseSeeder.php` para que todas las cuentas operen bajo JM Odontología Integral (#16345F, #7DD3FC, #1D1D1B).
+* `FEAT`: **Extracción de Fotografías de Personajes desde Google Drive**: actualización de `AIService.php` y `Character.php` para priorizar y descargar directamente los assets fotográficos reales desde las carpetas de Google Drive de cada profesional (`1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ`, `1Qc8t4ZAQEao4spaQjdL07WjppBu1ThZo`, `1PNC5gKeTv6OgHyXlgbZmHuAeNw8IH4ps`) y alimentar el canvas de referencia en `images.edit`.
+* `FEAT`: **Micro-Asistentes IA y Compilador de Prompts Contextualizados**: adaptación de `assistField`, `parseScript` y `generateFullScript` para inyectar automáticamente el contexto médico de JM Odontología Integral, generando copies, ganchos, CTAs y hashtags coherentes.
+* `FEAT`: **Generador de Contenido & Creaciones con Enlaces a Drive**: inclusión de botones de auditoría `📁 Ver Drive` para personajes, logos y creaciones en `/app/create` y `/app/creations`.
+* `DEPLOY`: Despliegue en producción verificado en Ploi (`studio.tecnogen.ar`).
 * `FEAT`: **Módulo Definición de Marca & Catálogo de Logos en Google Drive (`/app/brand`)**: creación de la vista y rutas para administración de identidad visual, conexión de carpeta de Google Drive de logotipos con escaneo paralelo y caché inteligente, visor de variantes con alternador de fondo claro/oscuro (🌓), lightbox en alta resolución y asignación de logotipo principal.
 * `FEAT`: **Integración de Manual de Marca en Google Drive**: modal interactivo de vinculación y tarjeta de acceso directo al PDF de identidad oficial.
 * `ARCH`: **Pipeline de Selección de Logos para IA**: especificación y confirmación de la lógica del agente para seleccionar automáticamente la variante de logo idónea (blanco/luz en fondos oscuros, institucional en fondos claros, isotipo en láminas complejas) montándolo en el canvas de referencia para `gpt-image-2.5-sunburst` (`images.edit`).

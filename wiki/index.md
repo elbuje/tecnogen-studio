@@ -50,8 +50,8 @@ Plataforma SaaS multi-tenant que permite a dueños de negocio, clínicas y agenc
 
 ---
 
-## 📜 Sesiones de Trabajo
-
+* [[sessions/2026-10-10-fidelidad-marca-drive-ia]] — Dinamismo total de marca (JM Odontología Integral), purga de referencias residuales, micro-asistentes contextualizados y extracción de fotografías de personajes directamente desde carpetas de Google Drive.
+* [[sessions/2026-10-10-generador-ia-creaciones-drive]] — Implementación del Generador de Contenido (/app/create), renderizado IA y biblioteca de creaciones con conexión a Google Drive.
 * [[sessions/2026-10-10-definicion-marca-logos-gdrive-y-manual]] — Implementación del módulo Definición de Marca, catálogo e indexación de logos desde Google Drive, integración de Manual de Marca y configuración del selector estético de logos para IA.
 * [[sessions/2026-10-04-catalogo-tipos-visuales-28-estructuras-sunburst]] — Generación completa de las 28 demos visuales en español con OpenAI `gpt-image-2.5-sunburst`, creación del comando artisan `visual-types:sunburst` e integración en el visor y selector de marca.
 * [[sessions/2026-09-26-openai-sunburst-real-assets-pipeline]] — Integración del pipeline oficial con assets reales en OpenAI `gpt-image-2.5-sunburst` (`images.edit`), transmisión de fotos reales (`.HIF` / `.PNG`) y logo corporativo, sincronización masiva y despliegue del Carrusel #2 en producción.
