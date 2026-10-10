@@ -20,16 +20,15 @@ chmod -R 775 laravel-app/storage laravel-app/bootstrap/cache public
 echo "⚙️ Configurando Backend Laravel 11..."
 cd laravel-app
 composer install --no-dev --optimize-autoloader --no-interaction
+php artisan migrate --force
+php artisan db:seed --force
 php artisan config:clear
 php artisan route:clear
-php artisan migrate --force
+php artisan view:clear
 
 cd ..
 
-# 5. Detener cualquier vestigio residual de Uvicorn/FastAPI
-pkill -f "uvicorn" 2>/dev/null || true
-
-# 6. Permisos finales
-chmod -R 775 laravel-app/storage public
+# 5. Detener cualquier proceso residual y configurar permisos
+chmod -R 777 laravel-app/storage laravel-app/bootstrap/cache public
 
 echo "🚀 TecnoGen Studio (Laravel 11 + MySQL) desplegado exitosamente!"
