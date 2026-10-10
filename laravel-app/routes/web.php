@@ -733,19 +733,39 @@ Route::prefix('app')->group(function () {
     });
 
     // Persistir contenido y láminas generadas
-    Route::post('/contents/create', function (Request $request) {
+    Route::post('/contents/create', function (Request $request, \App\Services\AIService $ai) {
         if (!session('user')) return redirect('/login');
 
         $user = session('user');
         $brand = \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
 
         $type = $request->input('type', 'carousel');
-        $slidesData = $request->input('slides', []);
+        $rawSlides = $request->input('slides', []);
+
+        // Si es Post Único o Reel, nos aseguramos de procesar exactamente 1 lámina
+        if ($type === 'single_post') {
+            $slidesData = [ $rawSlides[0] ?? [
+                'slide_number' => 1,
+                'headline' => $request->input('title', 'Post Único TecnoGen'),
+                'body_text' => $request->input('caption_copy', ''),
+                'badge' => 'POST DESTACADO',
+                'slide_type' => 'single_post',
+            ]];
+        } else {
+            $slidesData = $rawSlides;
+        }
+
         $hookText = $slidesData[0]['headline'] ?? 'Publicación TecnoGen';
         $title = $hookText;
-        $ctaText = $request->input('cta_text', '');
         $caption = $request->input('caption_copy', '');
         $hashtags = $request->input('hashtags', '');
+        $characterId = $request->input('character_id');
+        $visualType = $request->input('visual_type', 'Infografía');
+        $paginatorStyle = $request->input('paginator_style', '01. Numeración simple');
+        $renderNow = (bool) $request->input('render_now', false);
+
+        $charModel = $characterId ? \App\Models\Character::find($characterId) : null;
+        $charName = $charModel ? $charModel->name : 'Especialista Odontológica';
 
         $contentId = (string) Str::uuid();
 
@@ -767,6 +787,7 @@ Route::prefix('app')->group(function () {
         ]);
 
         // 2. Guardar Slides
+        $savedSlideIds = [];
         foreach ($slidesData as $idx => $s) {
             $slideId = (string) Str::uuid();
             $sNum = (int) ($s['slide_number'] ?? ($idx + 1));
@@ -787,9 +808,93 @@ Route::prefix('app')->group(function () {
                 'version' => 1,
                 'created_at' => now(),
             ]);
+
+            $savedSlideIds[] = [
+                'id' => $slideId,
+                'number' => $sNum,
+                'headline' => $sHeadline,
+                'body_text' => $sBody,
+                'badge' => $sBadge
+            ];
         }
 
-        return redirect('/app/creations')->with('success', "¡Creación '{$title}' guardada exitosamente con " . count($slidesData) . " láminas!");
+        // 3. Si se solicitó renderizado inmediato, generar la primera lámina o todas si es single post
+        if ($renderNow || $type === 'single_post') {
+            $meta = [
+                'character_name' => $charName,
+                'visual_type' => $visualType,
+                'paginator' => $paginatorStyle,
+                'primary_color' => $brand ? $brand->primary_color : '#16345F',
+                'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
+                'type' => $type
+            ];
+
+            // Renderizamos la portada o lámina 1
+            $s1 = $savedSlideIds[0];
+            $res = $ai->generateSlideImage($contentId, $s1['number'], $s1['headline'], $s1['body_text'], $s1['badge'], $meta);
+            if ($res['success'] ?? false) {
+                DB::table('slides')->where('id', $s1['id'])->update([
+                    'image_url' => $res['url'],
+                    'prompt_used' => $res['prompt'] ?? null,
+                    'status' => 'ready'
+                ]);
+            }
+        }
+
+        return redirect('/app/creations')->with('success', "¡Creación '{$title}' guardada exitosamente con " . count($slidesData) . " lámina(s)!");
+    });
+
+    // Endpoint para renderizar todas las láminas pendientes de una creación con IA
+    Route::post('/contents/{id}/generate-images', function ($id, Request $request, \App\Services\AIService $ai) {
+        if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+
+        $content = \App\Models\Content::with('slides')->find($id);
+        if (!$content) {
+            return response()->json(['success' => false, 'error' => 'Creación no encontrada'], 404);
+        }
+
+        $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::first();
+        $meta = [
+            'character_name' => 'Especialista Odontológica',
+            'visual_type' => 'Infografía Clínica',
+            'paginator' => '01. Numeración simple',
+            'primary_color' => $brand ? $brand->primary_color : '#16345F',
+            'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
+            'type' => $content->type
+        ];
+
+        $rendered = [];
+        foreach ($content->slides as $slide) {
+            $res = $ai->generateSlideImage(
+                $content->id,
+                $slide->slide_number,
+                $slide->headline ?? 'Lámina TecnoGen',
+                $slide->body_text,
+                $slide->badge,
+                $meta
+            );
+
+            if ($res['success'] ?? false) {
+                $slide->update([
+                    'image_url' => $res['url'],
+                    'prompt_used' => $res['prompt'] ?? null,
+                    'status' => 'ready'
+                ]);
+                $rendered[] = [
+                    'slide_id' => $slide->id,
+                    'slide_number' => $slide->slide_number,
+                    'image_url' => $res['url']
+                ];
+            }
+        }
+
+        $content->update(['status' => 'ready', 'updated_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Láminas renderizadas exitosamente con IA.',
+            'rendered' => $rendered
+        ]);
     });
 
     // ==========================================

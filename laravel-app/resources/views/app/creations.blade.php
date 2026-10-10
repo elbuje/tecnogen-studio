@@ -12,7 +12,7 @@
                 <span class="text-xs text-slate-500 font-medium">Contenidos Generados & Almacenamiento en Google Drive</span>
             </div>
             <h1 class="text-2xl font-bold font-heading text-slate-900">Mis Creaciones</h1>
-            <p class="text-sm text-slate-500 mt-1">Historial de carruseles, posts y piezas sincronizadas con tu carpeta de Google Drive.</p>
+            <p class="text-sm text-slate-500 mt-1">Historial de carruseles, posts y piezas renderizadas con IA y sincronizadas con Google Drive.</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -23,7 +23,7 @@
                 </a>
             @endif
 
-            <button type="button" onclick="openDriveConfigModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm flex items-center gap-2 transition-all shadow-xs">
+            <button type="button" onclick="openDriveConfigModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm flex items-center gap-2 transition-all shadow-xs cursor-pointer">
                 <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <span>⚙️ Configurar Carpeta Drive</span>
             </button>
@@ -70,7 +70,7 @@
             </div>
         </div>
 
-        <button type="button" onclick="openDriveConfigModal()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors shrink-0">
+        <button type="button" onclick="openDriveConfigModal()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors shrink-0 cursor-pointer">
             {{ !empty($creationsFolderUrl) ? 'Cambiar Carpeta' : 'Vincular Carpeta de Drive' }}
         </button>
     </div>
@@ -92,7 +92,15 @@
     @else
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach($contents as $item)
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden">
+                @php
+                    $renderedCount = 0;
+                    foreach($item->slides as $s) {
+                        if (!empty($s->image_url)) $renderedCount++;
+                    }
+                    $isAllRendered = count($item->slides) > 0 && $renderedCount === count($item->slides);
+                @endphp
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden" id="card_{{ $item->id }}">
                     <div class="p-5 space-y-4">
                         <!-- Top Badges -->
                         <div class="flex items-center justify-between">
@@ -106,9 +114,20 @@
                                 @endif
                             </span>
 
-                            <span class="text-xs text-slate-400 font-mono">
-                                {{ $item->created_at ? $item->created_at->format('d/m/Y H:i') : 'Reciente' }}
-                            </span>
+                            <div class="flex items-center gap-1.5">
+                                @if($isAllRendered)
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        ✨ Renderizado
+                                    </span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                        📝 Guion Listo
+                                    </span>
+                                @endif
+                                <span class="text-xs text-slate-400 font-mono">
+                                    {{ $item->created_at ? $item->created_at->format('d/m H:i') : '' }}
+                                </span>
+                            </div>
                         </div>
 
                         <!-- Título / Hook -->
@@ -123,22 +142,44 @@
                             @endif
                         </div>
 
-                        <!-- Miniatura de Láminas -->
+                        <!-- Miniatura de Láminas / Imágenes Renderizadas -->
                         @if(!empty($item->slides) && count($item->slides) > 0)
                             <div class="space-y-2">
                                 <div class="text-[11px] font-semibold text-slate-500 flex items-center justify-between">
                                     <span>Láminas ({{ count($item->slides) }})</span>
-                                    <span class="text-sky-600 cursor-pointer hover:underline" onclick="toggleSlidesPreview('slides_{{ $item->id }}')">Ver detalles</span>
+                                    <span class="text-sky-600 cursor-pointer hover:underline" onclick="toggleSlidesPreview('slides_{{ $item->id }}')">Ver texto</span>
                                 </div>
                                 
-                                <div class="grid grid-cols-4 gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                                    @foreach($item->slides->take(4) as $slide)
-                                        <div class="aspect-4/5 bg-slate-200 rounded-lg flex flex-col justify-between p-1.5 border border-slate-300 text-[9px] font-semibold text-slate-700 overflow-hidden" title="{{ $slide->headline }}">
-                                            <span class="text-slate-500 font-mono">#{{ $slide->slide_number }}</span>
-                                            <span class="line-clamp-2 leading-tight text-[8px]">{{ $slide->headline ?: $slide->badge ?: 'Slide' }}</span>
-                                        </div>
+                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                    @foreach($item->slides as $slide)
+                                        @if(!empty($slide->image_url))
+                                            <!-- Lámina con Imagen Real Renderizada -->
+                                            <div class="aspect-4/5 rounded-lg overflow-hidden border border-slate-300 relative group cursor-pointer shadow-2xs" onclick="openLightbox('{{ $slide->image_url }}', '{{ addslashes($slide->headline ?? '') }}')">
+                                                <img src="{{ $slide->image_url }}" alt="Slide #{{ $slide->slide_number }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+                                                <span class="absolute top-1 left-1 bg-slate-900/70 backdrop-blur-xs text-white text-[9px] font-bold px-1 rounded">
+                                                    #{{ $slide->slide_number }}
+                                                </span>
+                                            </div>
+                                        @else
+                                            <!-- Lámina en Estado Borrador de Texto -->
+                                            <div class="aspect-4/5 bg-slate-100 hover:bg-slate-200/80 rounded-lg flex flex-col justify-between p-1.5 border border-slate-200 text-[9px] font-semibold text-slate-700 overflow-hidden transition-colors" title="{{ $slide->headline }}">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-slate-400 font-mono">#{{ $slide->slide_number }}</span>
+                                                    <span class="text-[8px] text-amber-600 font-bold">Borrador</span>
+                                                </div>
+                                                <span class="line-clamp-2 leading-tight text-[8px] text-slate-800">{{ $slide->headline ?: $slide->badge ?: 'Slide' }}</span>
+                                            </div>
+                                        @endif
                                     @endforeach
                                 </div>
+
+                                <!-- Botón de Renderizado Rápido si no están todas generadas -->
+                                @if(!$isAllRendered)
+                                    <button type="button" onclick="renderAllImages('{{ $item->id }}', this)" class="w-full mt-2 py-2 px-3 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                        <span>🎨 Renderizar Imágenes con IA</span>
+                                    </button>
+                                @endif
 
                                 <!-- Acordeón de Láminas Completo -->
                                 <div id="slides_{{ $item->id }}" class="hidden pt-2 space-y-2 text-xs border-t border-slate-100 max-h-48 overflow-y-auto">
@@ -146,6 +187,9 @@
                                         <div class="p-2 bg-slate-50 rounded-lg border border-slate-200">
                                             <div class="flex items-center gap-1.5 font-bold text-slate-800">
                                                 <span class="px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded-md text-[10px]">#{{ $slide->slide_number }}</span>
+                                                @if($slide->badge)
+                                                    <span class="text-[10px] text-sky-600 font-mono">[{{ $slide->badge }}]</span>
+                                                @endif
                                                 <span class="truncate">{{ $slide->headline }}</span>
                                             </div>
                                             @if($slide->body_text)
@@ -168,13 +212,13 @@
 
                     <!-- Footer de Acciones -->
                     <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-1">
-                            <button type="button" onclick="copyCaption(`{{ addslashes($item->caption_copy . "\n\n" . $item->hashtags) }}`)" class="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 shadow-2xs" title="Copiar Copy">
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="copyCaption(`{{ addslashes($item->caption_copy . "\n\n" . $item->hashtags) }}`)" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 shadow-2xs cursor-pointer" title="Copiar Copy">
                                 📋 Copy
                             </button>
 
                             @if(!empty($creationsFolderUrl))
-                                <a href="{{ $creationsFolderUrl }}" target="_blank" class="p-2 rounded-lg bg-white border border-slate-200 hover:bg-amber-50 text-amber-700 text-xs font-semibold flex items-center gap-1 shadow-2xs" title="Ver en Drive">
+                                <a href="{{ $creationsFolderUrl }}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-amber-50 text-amber-700 text-xs font-semibold flex items-center gap-1 shadow-2xs" title="Ver en Drive">
                                     📁 Drive
                                 </a>
                             @endif
@@ -182,7 +226,7 @@
 
                         <form action="/app/contents/{{ $item->id }}/delete" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar esta creación?');">
                             @csrf
-                            <button type="submit" class="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold transition-colors">
+                            <button type="submit" class="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold transition-colors cursor-pointer" title="Eliminar">
                                 🗑️
                             </button>
                         </form>
@@ -191,6 +235,17 @@
             @endforeach
         </div>
     @endif
+</div>
+
+<!-- MODAL LIGHTBOX PARA VER IMAGEN EN ALTA RESOLUCIÓN -->
+<div id="lightboxModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden" onclick="closeLightbox()">
+    <div class="relative max-w-2xl w-full flex flex-col items-center" onclick="event.stopPropagation()">
+        <button onclick="closeLightbox()" class="absolute -top-12 right-0 text-white/80 hover:text-white text-2xl font-bold cursor-pointer">
+            ✕
+        </button>
+        <img id="lightboxImg" src="" alt="Vista previa" class="max-h-[80vh] w-auto rounded-2xl shadow-2xl border border-white/10">
+        <p id="lightboxCaption" class="text-white text-sm font-semibold mt-3 text-center"></p>
+    </div>
 </div>
 
 <!-- MODAL: CONFIGURAR CARPETA DE GOOGLE DRIVE -->
@@ -206,7 +261,7 @@
                     <p class="text-xs text-slate-500">Pega el link de la carpeta de Google Drive donde almacenarás tus piezas.</p>
                 </div>
             </div>
-            <button type="button" onclick="closeDriveConfigModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100">
+            <button type="button" onclick="closeDriveConfigModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
                 ✕
             </button>
         </div>
@@ -220,8 +275,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2">
-                <button type="button" onclick="closeDriveConfigModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                <button type="submit" class="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-xs">
+                <button type="button" onclick="closeDriveConfigModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer">Cancelar</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-xs cursor-pointer">
                     Guardar Carpeta de Destino
                 </button>
             </div>
@@ -243,12 +298,59 @@
         if (el) el.classList.toggle('hidden');
     }
 
+    function openLightbox(url, caption) {
+        const modal = document.getElementById('lightboxModal');
+        const img = document.getElementById('lightboxImg');
+        const cap = document.getElementById('lightboxCaption');
+        img.src = url;
+        cap.innerText = caption || '';
+        modal.classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+        document.getElementById('lightboxModal').classList.add('hidden');
+    }
+
     function copyCaption(text) {
         navigator.clipboard.writeText(text).then(() => {
             alert('¡Copy y hashtags copiados al portapapeles!');
         }).catch(() => {
             alert('No se pudo copiar automáticamente.');
         });
+    }
+
+    // Renderizar todas las láminas con IA mediante AJAX
+    async function renderAllImages(contentId, btnEl) {
+        const originalText = btnEl.innerHTML;
+        btnEl.disabled = true;
+        btnEl.innerHTML = `<span>⏳ Generando imágenes con OpenAI...</span>`;
+        btnEl.classList.add('animate-pulse');
+
+        try {
+            const res = await fetch(`/app/contents/${contentId}/generate-images`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert('¡Láminas generadas exitosamente!');
+                window.location.reload();
+            } else {
+                alert('Error al generar imágenes: ' + (data.error || 'Respuesta inválida'));
+                btnEl.disabled = false;
+                btnEl.innerHTML = originalText;
+                btnEl.classList.remove('animate-pulse');
+            }
+        } catch (e) {
+            alert('Error de conexión con el motor de renderizado.');
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalText;
+            btnEl.classList.remove('animate-pulse');
+        }
     }
 </script>
 @endsection
