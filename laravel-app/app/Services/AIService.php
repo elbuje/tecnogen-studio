@@ -22,43 +22,57 @@ class AIService
     public function assistField(string $fieldType, ?string $currentText = '', array $context = []): string
     {
         $brandName = $context['brand_name'] ?? 'JM Odontología Integral';
-        $topic = $context['topic'] ?? 'Odontología digital y rehabilitación oral con implantes';
-        $character = $context['character'] ?? 'Dra. Karina';
-        $visualType = $context['visual_type'] ?? 'Infografía Clínica';
-        $brandTone = $context['tone'] ?? 'Profesional, empático, médico y de alta precisión';
+        $currentText = trim($currentText ?? '');
+        $contextTopic = trim($context['topic'] ?? '');
 
-        $systemPrompt = "Eres el director creativo y redactor médico senior de \"{$brandName}\" (centro de odontología digital, implantes dentales de alta precisión y estética clínica).
-Tu misión es redactar o pulir textos para publicaciones en redes sociales (Instagram/LinkedIn/TikTok) en español neutro rioplatense o latinoamericano elegante para la marca {$brandName}.
-Directrices:
-- Claridad, autoridad médica y persuasión.
-- Sin rodeos ni clichés innecesarios.
-- Responde ÚNICAMENTE con el texto sugerido sin comillas extras ni explicaciones alrededor.";
+        // Si el usuario escribió un texto o tema específico, esa es la prioridad absoluta
+        if (!empty($currentText) && !empty($contextTopic) && strcasecmp($currentText, $contextTopic) !== 0) {
+            $topic = "{$contextTopic} (Enfoque específico: {$currentText})";
+        } elseif (!empty($currentText)) {
+            $topic = $currentText;
+        } elseif (!empty($contextTopic)) {
+            $topic = $contextTopic;
+        } else {
+            $topic = 'Salud, prevención y bienestar bucodental';
+        }
 
-        $action = empty(trim($currentText ?? '')) ? "Generar desde cero" : "Mejorar y optimizar el borrador actual";
+        $character = $context['character'] ?? 'Especialista';
+        $visualType = $context['visual_type'] ?? 'Conceptual';
+        $brandTone = $context['tone'] ?? 'Profesional, empático, cercano y claro';
 
-        $prompt = "Contexto de la marca y publicación:
+        $systemPrompt = "Eres un director creativo y redactor senior especializado en contenido para redes sociales de la marca \"{$brandName}\".
+Tu tarea es redactar o pulir textos breves y atractivos para publicaciones (Instagram/TikTok/LinkedIn) en español natural, profesional y empático.
+DIRECTRICES ESTRICTAS E INQUEBRANTABLES:
+1. Respeta 100% la intención y la temática exacta propuesta por el usuario: \"{$topic}\".
+2. Queda TERMINANTEMENTE PROHIBIDO desviar el tema hacia implantes dentales, cirugías u otros procedimientos invasivos si el usuario está hablando de miedos, ansiedad en el consultorio, prevención, cepillado, hábitos o cualquier otro tema diferente.
+3. Devuelve ÚNICAMENTE el texto redactado. Sin introducciones, sin explicaciones ni comillas.";
+
+        $action = empty($currentText) ? "Generar texto para el campo" : "Mejorar y optimizar el borrador actual";
+
+        $prompt = "Contexto de la pieza:
 - Marca: {$brandName}
-- Tema general: {$topic}
-- Profesional que firma: {$character}
+- Tema exacto solicitado por el usuario: \"{$topic}\"
+- Profesional: {$character}
 - Estructura visual: {$visualType}
-- Tono de marca: {$brandTone}
-- Campo a trabajar: {$fieldType}
-- Acción: {$action}
+- Campo a redactar: {$fieldType}
+- Acción solicitada: {$action}
 
 ";
 
-        if (!empty(trim($currentText ?? '')) ) {
-            $prompt .= "Borrador actual del usuario:\n\"" . trim($currentText) . "\"\n\nInstrucción: Reescribe y mejora este texto para que sea más claro, profesional, directo e impactante según el campo '{$fieldType}'.";
+        if (!empty($currentText)) {
+            $prompt .= "Borrador o idea escrita por el usuario:\n\"{$currentText}\"\n\nInstrucción: Reescribe, pule y mejora este borrador para que sea más atractivo, claro y persuasivo, MANTENIENDO estrictamente la temática de \"{$topic}\". NO cambies a temas de implantes ni cirugías.";
         } else {
-            $prompt .= "Instrucción: Genera un texto nuevo y altamente efectivo para el campo '{$fieldType}' que complemente el tema '{$topic}' para la marca {$brandName}.";
+            $prompt .= "Instrucción: Genera un texto conciso, impactante y coherente con el tema \"{$topic}\" para el campo '{$fieldType}'.";
         }
 
         if ($fieldType === 'badge') {
-            $prompt .= "\nNota especial: El badge es una pastilla temática corta (máximo 2 a 4 palabras), ej: 'GUÍA CLÍNICA', 'MITO VS REALIDAD', 'CASO CLÍNICO', 'TECNOLOGÍA 3D', 'SALUD ORAL'.";
+            $prompt .= "\nNota de formato: Debe ser una etiqueta o categoría corta de 2 a 4 palabras vinculada al tema (ej: si el tema es 'miedos en el consultorio', redacta 'ADIÓS AL TEMOR', 'EXPERIENCIA CUIDADA' o 'CONFORT CLÍNICO').";
         } elseif ($fieldType === 'hook' || $fieldType === 'title') {
-            $prompt .= "\nNota especial: El gancho o título de portada debe atrapar en 1 segundo, despertar curiosidad o resolver una duda frecuente del paciente.";
+            $prompt .= "\nNota de formato: Titular de impacto que despierte curiosidad o empatía con el paciente.";
+        } elseif ($fieldType === 'subtitle' || $fieldType === 'slide_body') {
+            $prompt .= "\nNota de formato: Explicación clara, empática y tranquilizadora de 1 o 2 oraciones concisas.";
         } elseif ($fieldType === 'cta') {
-            $prompt .= "\nNota especial: El llamado a la acción debe invitar a guardar el carrusel, agendar un turno o consultar en {$brandName}.";
+            $prompt .= "\nNota de formato: Llamado a la acción invitando a comentar, guardar o agendar una consulta en {$brandName}.";
         }
 
         return $this->callOpenAIText($systemPrompt, $prompt);
@@ -439,54 +453,62 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             $carouselNarrative .= "\nOBJETIVO CRÍTICO: Esta pieza es la LÁMINA #{$slideNumber} DE {$totalSlides}. Debe mantener coherencia cromática absoluta, mismo estilo visual, iluminación armónica y la misma identidad de marca a lo largo de todo el carrusel.\n\n";
         }
 
-        // 4. Prompt maestro estructurado para OpenAI Sunburst
-        $prompt = "PROMPT MAESTRO DE PRODUCCIÓN VISUAL [gpt-image-2.5-sunburst via Reference Canvas]:\n";
-        $prompt .= "FORMATO: " . ($isSinglePost ? "Post Cuadrado para Feed (1080x1080 px)" : "Lámina #{$slideNumber} de {$totalSlides} para Carrusel de Instagram (1080x1350 px, proporción 4:5)") . ".\n";
-        $prompt .= "ESTRUCTURA VISUAL SELECCIONADA: {$visualType}\n";
-        if (!empty($visualTypeSpec)) {
-            $prompt .= "- Guía de Estructura: {$visualTypeSpec}\n";
-        }
-        $prompt .= "ESTILO DE PAGINADOR / DESLIZADOR: {$paginator}\n\n";
+        // 4. Si el usuario editó o personalizó el prompt manualmente en la interfaz, respetar su versión exacta
+        if (!empty($meta['custom_prompt']) && is_string($meta['custom_prompt']) && strlen(trim($meta['custom_prompt'])) > 20) {
+            $prompt = trim($meta['custom_prompt']);
+        } else {
+            // Prompt maestro estructurado para OpenAI Sunburst
+            $prompt = "PROMPT MAESTRO DE PRODUCCIÓN VISUAL [gpt-image-2.5-sunburst via Reference Canvas]:\n";
+            $prompt .= "FORMATO: " . ($isSinglePost ? "Post Cuadrado para Feed (1080x1080 px, 1 Pieza Única)" : "Lámina #{$slideNumber} de {$totalSlides} para Carrusel de Instagram (1080x1350 px, proporción 4:5)") . ".\n";
+            $prompt .= "ESTRUCTURA VISUAL SELECCIONADA: {$visualType}\n";
+            if (!empty($visualTypeSpec)) {
+                $prompt .= "- Guía de Estructura: {$visualTypeSpec}\n";
+            }
+            if (!$isSinglePost) {
+                $prompt .= "ESTILO DE PAGINADOR / DESLIZADOR: {$paginator}\n";
+            }
+            $prompt .= "\n";
 
-        $prompt .= "FUENTES OFICIALES Y ACTIVOS EN GOOGLE DRIVE:\n";
-        if ($charGdriveUrl) {
-            $prompt .= "- Carpeta Oficial de Fotos Reales del Personaje ({$charName}): {$charGdriveUrl}\n";
-        }
-        if ($logosGdriveUrl) {
-            $prompt .= "- Carpeta Oficial de Logotipos de Marca: {$logosGdriveUrl}\n";
-        }
-        if ($manualGdriveUrl) {
-            $prompt .= "- Manual de Identidad de Marca: {$manualGdriveUrl}\n";
-        }
-        $prompt .= "\n";
+            $prompt .= "FUENTES OFICIALES Y ACTIVOS EN GOOGLE DRIVE:\n";
+            if ($charGdriveUrl) {
+                $prompt .= "- Carpeta Oficial de Fotos Reales del Personaje ({$charName}): {$charGdriveUrl}\n";
+            }
+            if ($logosGdriveUrl) {
+                $prompt .= "- Carpeta Oficial de Logotipos de Marca: {$logosGdriveUrl}\n";
+            }
+            if ($manualGdriveUrl) {
+                $prompt .= "- Manual de Identidad de Marca: {$manualGdriveUrl}\n";
+            }
+            $prompt .= "\n";
 
-        $prompt .= "IDENTIDAD DE MARCA Y PALETA CROMÁTICA:\n";
-        $prompt .= "- Marca: \"{$brandName}\"\n";
-        $prompt .= "- Color Primario Institucional: {$primaryColor}\n";
-        $prompt .= "- Color Acento: {$accentColor}\n";
-        $prompt .= "- Fondo y Atmósfera Visual Seleccionada: {$backgroundStyle} (Tono base: {$backgroundHex})\n";
-        $prompt .= "- Regla de Color: El fondo debe respetar el estilo seleccionado ({$backgroundStyle}) con acabado fotorrealista luminoso y bokeh difuso. Los títulos y detalles gráficos principales deben aplicar el color primario ({$primaryColor}) y el acento ({$accentColor}).\n\n";
+            $prompt .= "IDENTIDAD DE MARCA Y PALETA CROMÁTICA:\n";
+            $prompt .= "- Marca: \"{$brandName}\"\n";
+            $prompt .= "- Color Primario Institucional: {$primaryColor}\n";
+            $prompt .= "- Color Acento: {$accentColor}\n";
+            $prompt .= "- Fondo y Atmósfera Visual Seleccionada: {$backgroundStyle} (Tono base: {$backgroundHex})\n";
+            $prompt .= "- Regla de Color: El fondo debe respetar el estilo seleccionado ({$backgroundStyle}) con acabado fotorrealista luminoso y bokeh difuso. Los títulos y detalles gráficos principales deben aplicar el color primario ({$primaryColor}) y el acento ({$accentColor}).\n\n";
 
-        $prompt .= "DIRECCIÓN DE ARTE Y PRODUCCIÓN CREATIVA DEL PERSONAJE:\n";
-        $prompt .= "- Personaje: {$charName} ({$charRole})\n";
-        $prompt .= "- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive del personaje ({$charName}), analizar las fotografías reales disponibles y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de esta lámina y la estructura visual seleccionada ({$visualType}).\n";
-        $prompt .= "- FIDELIDAD ESTRICTA: Mantén fielmente el rostro, rasgos faciales y tono real de {$charName} según la fotografía provista. Prohibido sustituir el rostro o generar a otra persona con IA; acabado fotorrealista de alto nivel editorial médico.\n";
-        $prompt .= "- LOGOTIPO OFICIAL: Integra el logotipo oficial de \"{$brandName}\" en la composición sin deformar su proporción ni redibujarlo.\n\n";
+            $prompt .= "DIRECCIÓN DE ARTE Y PRODUCCIÓN CREATIVA DEL PERSONAJE:\n";
+            $prompt .= "- Personaje: {$charName} ({$charRole})\n";
+            $prompt .= "- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive del personaje ({$charName}), analizar las fotografías reales disponibles y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de esta lámina y la estructura visual seleccionada ({$visualType}).\n";
+            $prompt .= "- FIDELIDAD ESTRICTA: Mantén fielmente el rostro, rasgos faciales y tono real de {$charName} según la fotografía provista. Prohibido sustituir el rostro o generar a otra persona con IA; acabado fotorrealista de alto nivel editorial médico.\n";
+            $prompt .= "- LOGOTIPO OFICIAL: Integra el logotipo oficial de \"{$brandName}\" en la composición sin deformar su proporción ni redibujarlo.\n\n";
 
-        if (!empty($carouselNarrative)) {
-            $prompt .= $carouselNarrative;
-        }
+            if (!$isSinglePost && !empty($carouselNarrative)) {
+                $prompt .= $carouselNarrative;
+            }
 
-        $prompt .= "CONTENIDO TEXTUAL ESPECÍFICO DE ESTA LÁMINA ({$slideNumber}/{$totalSlides}):\n";
-        if (!empty($badge)) {
-            $prompt .= "- Pastilla / Badge Superior: \"{$badge}\".\n";
+            $prompt .= "CONTENIDO TEXTUAL ESPECÍFICO DE ESTA PIEZA (" . ($isSinglePost ? "POST ÚNICO 1080x1080" : "LÁMINA {$slideNumber}/{$totalSlides}") . "):\n";
+            if (!empty($badge)) {
+                $prompt .= "- Categoría / Kicker Superior: \"{$badge}\"\n";
+            }
+            $prompt .= "- Titular Principal: \"{$headline}\"\n";
+            if (!empty($bodyText)) {
+                $prompt .= "- Texto / Cuerpo de Apoyo: \"{$bodyText}\"\n";
+            }
+            $prompt .= "\nACABADO EDITORIAL:\n";
+            $prompt .= "Composición fotográfica de estudio clínico internacional de prestigio. Iluminación suave difusa, acabado fotorrealista y tipografía en español limpia, moderna, elegante y de fácil lectura sin errores ortográficos.";
         }
-        $prompt .= "- Titular Principal: \"{$headline}\".\n";
-        if (!empty($bodyText)) {
-            $prompt .= "- Texto de Apoyo: \"{$bodyText}\".\n";
-        }
-        $prompt .= "\nACABADO EDITORIAL:\n";
-        $prompt .= "Composición fotográfica de estudio clínico internacional de prestigio. Iluminación suave difusa, tecnología médica de precisión y acabado fotorrealista. Tipografía en español limpia, moderna, elegante y de fácil lectura sin errores ortográficos.";
 
         // Directorios de almacenamiento
         $storageDir = public_path("storage/creations/{$contentId}");

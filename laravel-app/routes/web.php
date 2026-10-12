@@ -862,6 +862,7 @@ Route::prefix('app')->group(function () {
                 'carousel_title' => $title,
                 'all_slides' => $slidesData,
                 'total_slides' => count($slidesData),
+                'custom_prompt' => $promptCompiled,
             ];
 
             // Renderizamos la portada o lámina 1
@@ -919,6 +920,7 @@ Route::prefix('app')->group(function () {
             'carousel_title' => $content->title,
             'all_slides' => $slidesList,
             'total_slides' => count($slidesList),
+            'custom_prompt' => $content->prompt_compiled,
         ];
 
         $res = $ai->generateSlideImage(
@@ -990,6 +992,7 @@ Route::prefix('app')->group(function () {
             'carousel_title' => $content->title,
             'all_slides' => $slidesList,
             'total_slides' => count($slidesList),
+            'custom_prompt' => $content->prompt_compiled,
         ];
 
         $rendered = [];

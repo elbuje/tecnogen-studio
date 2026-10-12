@@ -97,19 +97,34 @@
                 </div>
 
                 <!-- Fondo y Atmósfera Visual -->
+                <!-- Fondo y Atmósfera Visual -->
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
-                        <label class="block text-xs font-semibold text-slate-700">Fondo / Atmósfera</label>
+                        <label class="block text-xs font-semibold text-slate-700">Fondo / Atmósfera Visual</label>
                         <span id="bgPreviewDot" class="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-xs" style="background-color: {{ $backgroundOptions[0]['hex'] ?? '#FDFBF7' }}" title="Color de fondo activo"></span>
                     </div>
                     <select name="background_style" id="backgroundSelect" onchange="handleBackgroundChange()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all cursor-pointer">
-                        @foreach($backgroundOptions as $bgOpt)
-                            <option value="{{ $bgOpt['name'] }}" data-hex="{{ $bgOpt['hex'] }}" data-directive="{{ $bgOpt['style_directive'] }}" {{ $loop->first ? 'selected' : '' }}>
-                                {{ $bgOpt['name'] }}
-                            </option>
-                        @endforeach
+                        <optgroup label="🎨 Paleta Oficial de {{ $brand->name ?? 'tu Marca' }}">
+                            @foreach($backgroundOptions as $bgOpt)
+                                @if(str_starts_with($bgOpt['id'], 'brand_'))
+                                    <option value="{{ $bgOpt['name'] }}" data-hex="{{ $bgOpt['hex'] }}" data-directive="{{ $bgOpt['style_directive'] }}">
+                                        {{ $bgOpt['name'] }}
+                                    </option>
+                                @endif
+                            @endforeach
+                        </optgroup>
+                        <optgroup label="💡 Atmósferas Editoriales Recomendadas">
+                            @foreach($backgroundOptions as $bgOpt)
+                                @if(!str_starts_with($bgOpt['id'], 'brand_'))
+                                    <option value="{{ $bgOpt['name'] }}" data-hex="{{ $bgOpt['hex'] }}" data-directive="{{ $bgOpt['style_directive'] }}" {{ $loop->first ? 'selected' : '' }}>
+                                        {{ $bgOpt['name'] }}
+                                    </option>
+                                @endif
+                            @endforeach
+                        </optgroup>
                     </select>
                     <input type="hidden" name="background_hex" id="backgroundHexInput" value="{{ $backgroundOptions[0]['hex'] ?? '#FDFBF7' }}">
+                    <p class="text-[10px] text-slate-400 mt-1">Calculado dinámicamente con los colores oficiales de tu marca activa.</p>
                 </div>
             </div>
 
@@ -138,13 +153,19 @@
                     <div class="flex items-center gap-2">
                         <span class="font-semibold text-slate-600">Logo:</span>
                         @if(!empty($brandLogos))
-                            <select name="logo_id" id="logoSelect" onchange="updatePromptPreview()" class="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 cursor-pointer">
-                                @foreach($brandLogos as $logo)
-                                    <option value="{{ $logo['id'] }}" {{ ($defaultLogoId ?? '') == $logo['id'] ? 'selected' : '' }}>
-                                        {{ $logo['variant_label'] }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div class="flex items-center gap-2">
+                                <div class="h-9 min-w-16 px-2 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden shadow-inner cursor-pointer" onclick="openLogosModal()" title="Vista previa del logo seleccionado (Clic para ver variantes)">
+                                    <img id="logoThumbPreview" src="{{ $brandLogos[0]['thumb'] ?? ($brandLogos[0]['url'] ?? '') }}" alt="Logo" class="max-h-7 max-w-[100px] object-contain">
+                                </div>
+                                <select name="logo_id" id="logoSelect" onchange="handleLogoChange()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 cursor-pointer">
+                                    @foreach($brandLogos as $logo)
+                                        <option value="{{ $logo['id'] }}" data-thumb="{{ $logo['thumb'] ?? $logo['url'] }}" {{ ($defaultLogoId ?? '') == $logo['id'] ? 'selected' : '' }}>{{ $logo['variant_label'] }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" onclick="openLogosModal()" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300 transition-colors flex items-center gap-1 cursor-pointer" title="Ver catálogo visual de logos">
+                                    🖼️ <span>Ver Variantes</span>
+                                </button>
+                            </div>
                         @else
                             <span class="text-slate-400 italic">Logo Predeterminado</span>
                         @endif
@@ -170,7 +191,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 id="sectionTitle" class="text-lg font-bold text-slate-900 font-heading">Estructura del Guion y Láminas</h2>
-                    <p id="sectionSubtitle" class="text-xs text-slate-500">Haz clic en el botón <span class="text-sky-600 font-semibold">✨ IA</span> en cualquier cuadro de texto para generarlo o mejorarlo al instante.</p>
+                    <p id="sectionSubtitle" class="text-xs text-slate-500">Haz clic en el botón <span class="text-sky-600 font-semibold">✨ IA</span> en cualquier cuadro de texto para generarlo o mejorarlo según tu tema.</p>
                 </div>
 
                 <button type="button" id="btnAddSlide" onclick="addSlide()" class="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold text-xs border border-sky-200 flex items-center gap-1.5 transition-colors cursor-pointer">
@@ -192,15 +213,15 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Badge / Píldora -->
+                    <!-- Categoría / Kicker Superior -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="text-xs font-semibold text-slate-700">Badge / Pastilla Temática</label>
+                            <label class="text-xs font-semibold text-slate-700">Categoría / Kicker Superior</label>
                             <button type="button" onclick="assistField('slide_badge_1', 'badge')" class="text-[11px] font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer">
                                 <span>✨ IA</span>
                             </button>
                         </div>
-                        <input type="text" name="slides[0][badge]" id="slide_badge_1" value="GUÍA CLÍNICA" placeholder="Ej: GUÍA ESPECIALIZADA" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                        <input type="text" name="slides[0][badge]" id="slide_badge_1" oninput="updatePromptPreview()" value="" placeholder="Ej: PREVENCIÓN, CONSEJOS, EXPERIENCIA..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
                     </div>
 
                     <!-- Título / Hook Portada -->
@@ -211,19 +232,19 @@
                                 <span>✨ Generar / Mejorar con IA</span>
                             </button>
                         </div>
-                        <input type="text" name="slides[0][headline]" id="slide_headline_1" oninput="updatePromptPreview()" value="¿Por qué los implantes dentales modernos duran más de 20 años?" placeholder="Gancho atractivo que despierte curiosidad..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                        <input type="text" name="slides[0][headline]" id="slide_headline_1" oninput="updatePromptPreview()" value="" placeholder="Escribe el titular o pregunta gancho (ej: ¿El sonido del torno te genera ansiedad?)..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
                     </div>
                 </div>
 
                 <!-- Subtítulo o Bajada de Portada -->
                 <div>
                     <div class="flex items-center justify-between mb-1">
-                        <label id="body1Label" class="text-xs font-semibold text-slate-700">Subtítulo / Bajada Explicativa</label>
+                        <label id="body1Label" class="text-xs font-semibold text-slate-700">Texto / Bajada Explicativa del Post</label>
                         <button type="button" onclick="assistField('slide_body_1', 'subtitle')" class="text-[11px] font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer">
                             <span>✨ IA</span>
                         </button>
                     </div>
-                    <textarea name="slides[0][body_text]" id="slide_body_1" rows="2" placeholder="Explicación concisa del valor de la pieza..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">La tecnología de titanio y la planificación digital 3D han transformado el éxito clínico a largo plazo.</textarea>
+                    <textarea name="slides[0][body_text]" id="slide_body_1" oninput="updatePromptPreview()" rows="2" placeholder="Escribe el texto explicativo o cuerpo del post..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden"></textarea>
                     <input type="hidden" name="slides[0][slide_number]" value="1">
                     <input type="hidden" name="slides[0][slide_type]" id="slide1TypeInput" value="cover">
                 </div>
@@ -246,12 +267,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <div class="flex items-center justify-between mb-1">
-                                <label class="text-xs font-semibold text-slate-700">Badge / Etapa</label>
+                                <label class="text-xs font-semibold text-slate-700">Categoría / Etapa</label>
                                 <button type="button" onclick="assistField('slide_badge_2', 'badge')" class="text-[11px] font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer">
                                     <span>✨ IA</span>
                                 </button>
                             </div>
-                            <input type="text" name="slides[1][badge]" id="slide_badge_2" value="01. BIOCOMPATIBILIDAD" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                            <input type="text" name="slides[1][badge]" id="slide_badge_2" oninput="updatePromptPreview()" value="" placeholder="Ej: 01. EL ORIGEN" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
                         </div>
 
                         <div class="md:col-span-2">
@@ -261,7 +282,7 @@
                                     <span>✨ Generar / Mejorar</span>
                                 </button>
                             </div>
-                            <input type="text" name="slides[1][headline]" id="slide_headline_2" value="Osteointegración a Nivel Celular" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                            <input type="text" name="slides[1][headline]" id="slide_headline_2" oninput="updatePromptPreview()" value="" placeholder="Título de la segunda lámina..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
                         </div>
                     </div>
 
@@ -272,7 +293,7 @@
                                 <span>✨ Mejorar Redacción</span>
                             </button>
                         </div>
-                        <textarea name="slides[1][body_text]" id="slide_body_2" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">El titanio grado médico permite que el hueso maxilar se fusione naturalmente con el implante, creando una raíz artificial sólida.</textarea>
+                        <textarea name="slides[1][body_text]" id="slide_body_2" oninput="updatePromptPreview()" rows="2" placeholder="Detalle conciso o explicación de esta lámina..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden"></textarea>
                         <input type="hidden" name="slides[1][slide_number]" value="2">
                         <input type="hidden" name="slides[1][slide_type]" value="content">
                     </div>
@@ -293,12 +314,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <div class="flex items-center justify-between mb-1">
-                                <label class="text-xs font-semibold text-slate-700">Badge / Etapa</label>
+                                <label class="text-xs font-semibold text-slate-700">Categoría / Etapa</label>
                                 <button type="button" onclick="assistField('slide_badge_3', 'badge')" class="text-[11px] font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer">
                                     <span>✨ IA</span>
                                 </button>
                             </div>
-                            <input type="text" name="slides[2][badge]" id="slide_badge_3" value="02. PRECISIÓN 3D" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                            <input type="text" name="slides[2][badge]" id="slide_badge_3" oninput="updatePromptPreview()" value="" placeholder="Ej: 02. LA SOLUCIÓN" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
                         </div>
 
                         <div class="md:col-span-2">
@@ -308,7 +329,7 @@
                                     <span>✨ Generar / Mejorar</span>
                                 </button>
                             </div>
-                            <input type="text" name="slides[2][headline]" id="slide_headline_3" value="Cirugía Guiada por Computadora" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                            <input type="text" name="slides[2][headline]" id="slide_headline_3" oninput="updatePromptPreview()" value="" placeholder="Título de la tercera lámina..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
                         </div>
                     </div>
 
@@ -319,7 +340,7 @@
                                 <span>✨ Mejorar Redacción</span>
                             </button>
                         </div>
-                        <textarea name="slides[2][body_text]" id="slide_body_3" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">Planificamos la posición exacta con tomografía computarizada y férulas impresas en 3D, minimizando molestias y tiempos de cicatrización.</textarea>
+                        <textarea name="slides[2][body_text]" id="slide_body_3" oninput="updatePromptPreview()" rows="2" placeholder="Detalle conciso o recomendación..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden"></textarea>
                         <input type="hidden" name="slides[2][slide_number]" value="3">
                         <input type="hidden" name="slides[2][slide_type]" value="content">
                     </div>
@@ -385,24 +406,24 @@ Deslizá para conocer las 3 claves de la durabilidad en odontología moderna. �
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Compilador de Prompt Maestro (OpenAI Sunburst / DALL-E)</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Prompt Maestro de Producción Visual (Editable)</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="copyPromptToClipboard()" id="copyPromptBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer">
-                            📋 <span>Copiar Prompt</span>
+                        <button type="button" onclick="copyPromptToClipboard()" id="copyPromptBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer" title="Copiar todo el prompt al portapapeles">
+                            📋 <span>Copiar Todo</span>
                         </button>
-                        <button type="button" onclick="togglePromptExpand()" id="expandPromptBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer">
+                        <button type="button" onclick="recompilePromptFromForm()" class="px-2.5 py-1.5 rounded-lg bg-sky-900/80 hover:bg-sky-800 text-sky-200 text-xs font-semibold border border-sky-700 transition-colors flex items-center gap-1 cursor-pointer" title="Recompilar el prompt con los valores actuales del formulario">
+                            🔄 <span>Recompilar</span>
+                        </button>
+                        <button type="button" onclick="togglePromptExpand()" id="expandPromptBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer">
                             ↕️ <span>Expandir</span>
-                        </button>
-                        <button type="button" onclick="updatePromptPreview()" class="text-xs text-sky-400 hover:text-sky-300 font-semibold underline cursor-pointer ml-1">
-                            Refrescar
                         </button>
                     </div>
                 </div>
-                <div id="promptPreviewBox" class="p-4 bg-slate-950 rounded-xl text-xs font-mono text-slate-300 leading-relaxed border border-slate-800 max-h-56 overflow-y-auto whitespace-pre-wrap select-all transition-all duration-200">
-                    Cargando compilador de prompt...
-                </div>
-                <input type="hidden" name="prompt_compiled" id="promptCompiledInput" value="">
+                <p class="text-[11px] text-slate-400">
+                    💡 Puedes seleccionar y copiar cualquier parte de este texto, o <strong class="text-slate-300">escribir y editarlo directamente</strong> para agregar instrucciones personalizadas antes de generar la imagen.
+                </p>
+                <textarea id="promptPreviewBox" name="prompt_compiled" rows="12" oninput="handleManualPromptEdit()" class="w-full p-4 bg-slate-950 rounded-xl text-xs font-mono text-slate-200 leading-relaxed border border-slate-800 focus:border-sky-500 focus:outline-hidden focus:ring-1 focus:ring-sky-500 select-text resize-y" placeholder="Cargando compilador de prompt..."></textarea>
             </div>
 
             <!-- BOTONES DE ACCIÓN FINAL -->
@@ -532,6 +553,44 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
             ⏳ Procesando solicitud con TecnoGen AI Core
         </div>
     </div>
+<!-- MODAL: GALERÍA VISUAL DE LOGOS -->
+<div id="logosModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-2xl p-6 space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <span class="p-2 rounded-lg bg-sky-50 text-sky-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </span>
+                <div>
+                    <h3 class="font-bold text-slate-900 font-heading">Variantes Oficiales del Logotipo</h3>
+                    <p class="text-xs text-slate-500">Selecciona visualmente la versión que deseas aplicar en esta pieza.</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeLogosModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
+                ✕
+            </button>
+        </div>
+
+        <div class="overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 gap-3 p-1">
+            @if(!empty($brandLogos))
+                @foreach($brandLogos as $l)
+                    <div onclick="selectLogoFromModal('{{ $l['id'] }}', '{{ $l['thumb'] ?? $l['url'] }}', '{{ $l['variant_label'] }}')" class="logo-card-option border-2 border-slate-200 hover:border-sky-500 bg-slate-900 rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md group">
+                        <div class="h-20 w-full flex items-center justify-center overflow-hidden">
+                            <img src="{{ $l['thumb'] ?? $l['url'] }}" alt="{{ $l['variant_label'] }}" class="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform">
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-200 text-center">{{ $l['variant_label'] }}</span>
+                    </div>
+                @endforeach
+            @else
+                <p class="col-span-full text-center py-8 text-slate-400 text-sm">No se encontraron logotipos en la carpeta de Drive.</p>
+            @endif
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>💡 El fondo oscuro en las tarjetas te permite ver logotipos blancos o transparentes sin dificultad.</span>
+            <button type="button" onclick="closeLogosModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-semibold text-slate-700 cursor-pointer">Cerrar</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -626,8 +685,24 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         const inputEl = document.getElementById(fieldId);
         if (!inputEl) return;
 
-        const originalVal = inputEl.value;
-        const topic = document.getElementById('slide_headline_1')?.value || 'Odontología digital e implantes';
+        const currentVal = inputEl.value.trim();
+        const headlineVal = document.getElementById('slide_headline_1')?.value.trim() || '';
+        const badgeVal = document.getElementById('slide_badge_1')?.value.trim() || '';
+
+        // El tema se deduce directamente de lo que el usuario está escribiendo o del título
+        let topic = '';
+        if (currentVal) {
+            topic = currentVal;
+        } else if (headlineVal) {
+            topic = headlineVal;
+        } else if (badgeVal) {
+            topic = badgeVal;
+        } else {
+            const userPrompt = prompt('¿Qué tema o enfoque deseas para este campo? (Ej: Miedos en el consultorio, blanqueamiento dental, higiene bucal):');
+            if (!userPrompt || !userPrompt.trim()) return;
+            topic = userPrompt.trim();
+        }
+
         const charName = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.name || 'Especialista';
         const visualType = document.getElementById('visualTypeSelect')?.value || '';
 
@@ -643,7 +718,7 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
                 },
                 body: JSON.stringify({
                     field_type: fieldType,
-                    current_text: originalVal,
+                    current_text: currentVal,
                     topic: topic,
                     character: charName,
                     visual_type: visualType
@@ -929,15 +1004,71 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         updatePromptPreview();
     }
 
+    function handleLogoChange() {
+        const sel = document.getElementById('logoSelect');
+        const opt = sel?.selectedOptions[0];
+        const thumb = opt?.dataset?.thumb;
+        const img = document.getElementById('logoThumbPreview');
+        if (img && thumb) {
+            img.src = thumb;
+        }
+        updatePromptPreview();
+    }
+
+    function openLogosModal() {
+        document.getElementById('logosModal').classList.remove('hidden');
+    }
+
+    function closeLogosModal() {
+        document.getElementById('logosModal').classList.add('hidden');
+    }
+
+    function selectLogoFromModal(id, thumb, label) {
+        const sel = document.getElementById('logoSelect');
+        if (sel) {
+            sel.value = id;
+        }
+        const img = document.getElementById('logoThumbPreview');
+        if (img && thumb) {
+            img.src = thumb;
+        }
+        closeLogosModal();
+        updatePromptPreview();
+    }
+
+    let isPromptManuallyEdited = false;
+
+    function handleManualPromptEdit() {
+        isPromptManuallyEdited = true;
+        const badge = document.getElementById('promptEditedBadge');
+        if (badge) badge.classList.remove('hidden');
+        const recompileBtn = document.getElementById('recompileBtn');
+        if (recompileBtn) {
+            recompileBtn.classList.add('ring-2', 'ring-amber-400', 'bg-amber-900/60', 'text-amber-200');
+        }
+    }
+
+    function recompilePromptFromForm() {
+        isPromptManuallyEdited = false;
+        const badge = document.getElementById('promptEditedBadge');
+        if (badge) badge.classList.add('hidden');
+        const recompileBtn = document.getElementById('recompileBtn');
+        if (recompileBtn) {
+            recompileBtn.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-900/60', 'text-amber-200');
+        }
+        updatePromptPreview(true);
+    }
+
     function copyPromptToClipboard() {
-        const text = document.getElementById('promptPreviewBox')?.innerText || '';
+        const box = document.getElementById('promptPreviewBox');
+        const text = box ? box.value : '';
         if (!text) return;
         navigator.clipboard.writeText(text).then(() => {
             const btn = document.getElementById('copyPromptBtn');
             if (btn) {
                 btn.innerHTML = '✅ <span>¡Copiado!</span>';
                 setTimeout(() => {
-                    btn.innerHTML = '📋 <span>Copiar Prompt</span>';
+                    btn.innerHTML = '📋 <span>Copiar Todo</span>';
                 }, 2000);
             }
         }).catch(() => {
@@ -949,25 +1080,27 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         const box = document.getElementById('promptPreviewBox');
         const btn = document.getElementById('expandPromptBtn');
         if (!box || !btn) return;
-        if (box.classList.contains('max-h-56')) {
-            box.classList.remove('max-h-56');
-            box.classList.add('max-h-[850px]');
+        if (box.rows === 12) {
+            box.rows = 28;
             btn.innerHTML = '↕️ <span>Contraer</span>';
         } else {
-            box.classList.remove('max-h-[850px]');
-            box.classList.add('max-h-56');
+            box.rows = 12;
             btn.innerHTML = '↕️ <span>Expandir</span>';
         }
     }
 
-    function updatePromptPreview() {
+    function updatePromptPreview(force = false) {
+        if (isPromptManuallyEdited && !force) {
+            return; // Respeta las modificaciones manuales que hizo el usuario en el textarea
+        }
+
         const type = document.getElementById('contentType')?.value || 'carousel';
         const visual = document.getElementById('visualTypeSelect')?.value || 'Conceptual';
         const paginator = document.getElementById('paginatorSelect')?.value || '01. Numeración simple (01 / 07)';
         
         const charOpt = document.getElementById('characterSelect')?.selectedOptions[0];
-        const charName = charOpt?.dataset?.name || 'Dra. Karina';
-        const charRole = charOpt?.dataset?.role || 'Especialista';
+        const charName = charOpt?.dataset?.name || 'Especialista';
+        const charRole = charOpt?.dataset?.role || 'Especialista Odontológica';
         const charGdrive = charOpt?.dataset?.gdrive || '';
 
         const bgOpt = document.getElementById('backgroundSelect')?.selectedOptions[0];
@@ -975,7 +1108,8 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         const bgHex = bgOpt?.dataset?.hex || '#FDFBF7';
         const bgDirective = bgOpt?.dataset?.directive || 'Fondo claro luminoso con iluminación cálida difusa de estudio clínico.';
 
-        const logoName = document.getElementById('logoSelect')?.selectedOptions[0]?.innerText || 'Logotipo Oficial Predeterminado';
+        const logoOpt = document.getElementById('logoSelect')?.selectedOptions[0];
+        const logoName = (logoOpt ? logoOpt.innerText : 'Logotipo Oficial Predeterminado').trim();
         const brandName = '{{ addslashes($brand && !str_contains($brand->name, "Marcelo") && !str_contains($brand->name, "TecnoGen") ? $brand->name : "JM Odontología Integral") }}';
         const primaryColor = '{{ $brand->primary_color ?? "#16345F" }}';
         const accentColor = '{{ $brand->accent_color ?? "#7DD3FC" }}';
@@ -984,25 +1118,22 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         const vtItem = visualTypesCatalog.find(item => item.name === visual || item.sheetLabel === visual);
         const vtSpec = vtItem ? (vtItem.description + (vtItem.prompt_spec ? ' | Especificación: ' + vtItem.prompt_spec : '')) : '';
 
-        // Recolectar todas las láminas del formulario para el contexto narrativo completo
-        let slidesNarrative = '';
-        const slideCards = document.querySelectorAll('.slide-card');
-        const s1Headline = document.getElementById('slide_headline_1')?.value || '';
-        const s1Badge = document.getElementById('slide_badge_1')?.value || '';
-        const s1Body = document.getElementById('slide_body_1')?.value || '';
-        const totalCount = 1 + slideCards.length;
-
-        slidesNarrative += `  • Lámina 1 (Portada / Hook Principal): [${s1Badge}] "${s1Headline}"${s1Body ? ' - ' + s1Body : ''}\n`;
-        slideCards.forEach((card, idx) => {
-            const num = idx + 2;
-            const h = card.querySelector(`[name="slides[${idx+1}][headline]"]`)?.value || '';
-            const b = card.querySelector(`[name="slides[${idx+1}][badge]"]`)?.value || '';
-            const t = card.querySelector(`[name="slides[${idx+1}][body_text]"]`)?.value || '';
-            slidesNarrative += `  • Lámina ${num}: [${b}] "${h}"${t ? ' - ' + t : ''}\n`;
-        });
+        const s1Headline = (document.getElementById('slide_headline_1')?.value || '').trim();
+        const s1Badge = (document.getElementById('slide_badge_1')?.value || '').trim();
+        const s1Body = (document.getElementById('slide_body_1')?.value || '').trim();
 
         let promptText = `PROMPT MAESTRO DE PRODUCCIÓN VISUAL [gpt-image-2.5-sunburst via Reference Canvas]:\n`;
-        promptText += `FORMATO: ${type === 'single_post' ? 'Post Cuadrado para Feed (1080x1080 px)' : 'Carrusel Instagram (1080x1350 px, Proporción 4:5, ' + totalCount + ' Láminas)'}\n`;
+
+        if (type === 'single_post') {
+            promptText += `FORMATO: Post Cuadrado para Feed (1080x1080 px, 1 Pieza Única)\n`;
+        } else if (type === 'reel_script') {
+            promptText += `FORMATO: Guion de Video / Reel Vertical (1080x1920 px)\n`;
+        } else {
+            const slideCards = document.querySelectorAll('.slide-card');
+            const totalCount = 1 + slideCards.length;
+            promptText += `FORMATO: Carrusel Instagram (1080x1350 px, Proporción 4:5, ${totalCount} Láminas)\n`;
+        }
+
         promptText += `ESTRUCTURA VISUAL SELECCIONADA: ${visual}\n`;
         if (vtSpec) {
             promptText += `- Guía de Estructura: ${vtSpec}\n`;
@@ -1036,24 +1167,57 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
 
         promptText += `DIRECCIÓN DE ARTE Y PRODUCCIÓN CREATIVA DEL PERSONAJE:\n`;
         promptText += `- Personaje Seleccionado: ${charName} (${charRole})\n`;
-        promptText += `- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive de ${charName}, analizar las fotografías reales y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de cada lámina y la estructura visual seleccionada (${visual}).\n`;
+        promptText += `- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive de ${charName}, analizar las fotografías reales y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de esta pieza y la estructura visual seleccionada (${visual}).\n`;
         promptText += `- FIDELIDAD ESTRICTA: Mantener fielmente el rostro real, rasgos faciales y tono de ${charName} según la fotografía de referencia. Prohibido sustituir el rostro o generar a otra persona con IA; acabado fotorrealista de revista médica de alto nivel.\n`;
         promptText += `- LOGOTIPO OFICIAL: Insertar el archivo oficial de "${brandName}" desde la carpeta de Drive sin redibujarlo ni deformarlo.\n\n`;
 
-        promptText += `GUION SECUENCIAL Y NARRATIVA COMPLETA (${totalCount} Láminas):\n`;
-        promptText += `${slidesNarrative}\n`;
+        if (type === 'single_post') {
+            promptText += `CONTENIDO DEL POST ÚNICO (PIEZA PRINCIPAL 1080x1080):\n`;
+            if (s1Badge) {
+                promptText += `- Categoría / Kicker Superior: "${s1Badge}"\n`;
+            }
+            promptText += `- Titular Principal de Impacto: "${s1Headline || 'Publicación Destacada'}"\n`;
+            if (s1Body) {
+                promptText += `- Texto / Cuerpo Gráfico: "${s1Body}"\n`;
+            }
+            promptText += `\n`;
+        } else if (type === 'carousel') {
+            const slideCards = document.querySelectorAll('.slide-card');
+            const totalCount = 1 + slideCards.length;
+            let slidesNarrative = `  • Lámina 1 (Portada / Hook Principal): [${s1Badge}] "${s1Headline}"${s1Body ? ' - ' + s1Body : ''}\n`;
+            slideCards.forEach((card, idx) => {
+                const num = idx + 2;
+                const h = card.querySelector(`[name="slides[${idx+1}][headline]"]`)?.value || '';
+                const b = card.querySelector(`[name="slides[${idx+1}][badge]"]`)?.value || '';
+                const t = card.querySelector(`[name="slides[${idx+1}][body_text]"]`)?.value || '';
+                slidesNarrative += `  • Lámina ${num}: [${b}] "${h}"${t ? ' - ' + t : ''}\n`;
+            });
 
-        promptText += `LÁMINA EN PROCESO (PORTADA INICIAL 01/${totalCount}):\n`;
-        promptText += `- Pastilla / Categoría Superior: "${s1Badge}"\n`;
-        promptText += `- Titular Principal de Impacto: "${s1Headline}"\n\n`;
+            promptText += `GUION SECUENCIAL Y NARRATIVA COMPLETA (${totalCount} Láminas):\n`;
+            promptText += `${slidesNarrative}\n`;
+
+            promptText += `LÁMINA EN PROCESO (PORTADA INICIAL 01/${totalCount}):\n`;
+            if (s1Badge) {
+                promptText += `- Categoría / Kicker Superior: "${s1Badge}"\n`;
+            }
+            promptText += `- Titular Principal de Impacto: "${s1Headline}"\n\n`;
+        } else {
+            promptText += `ESTRUCTURA DEL GUION DE VIDEO (REEL):\n`;
+            promptText += `- Gancho en Cámara: "${s1Headline}"\n`;
+            promptText += `- Desarrollo: "${s1Body}"\n\n`;
+        }
 
         promptText += `ACABADO EDITORIAL:\n`;
         promptText += `Composición de alto impacto para Instagram, equilibrada, con aire visual, iluminación profesional y tipografía en español sin errores ortográficos.`;
 
         const box = document.getElementById('promptPreviewBox');
-        if (box) box.innerText = promptText;
+        if (box) {
+            box.value = promptText;
+        }
         const input = document.getElementById('promptCompiledInput');
-        if (input) input.value = promptText;
+        if (input) {
+            input.value = promptText;
+        }
     }
 
     // Inicializar formato y prompt preview
@@ -1061,6 +1225,7 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         handleFormatChange();
         handleCharacterChange();
         handleBackgroundChange();
+        handleLogoChange();
         updatePromptPreview();
     });
 </script>
