@@ -210,18 +210,18 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
     /**
      * Construye el canvas de referencia en memoria con la foto real del profesional y el logo oficial
      */
-    public function buildReferenceCanvas(?string $charPhotoBytes, ?string $logoBytes, string $brandColor = '#16345F', int $width = 1024, int $height = 1024): string
+    public function buildReferenceCanvas(?string $charPhotoBytes, ?string $logoBytes, string $bgColor = '#FDFBF7', int $width = 1024, int $height = 1024): string
     {
         $canvas = imagecreatetruecolor($width, $height);
         
-        // Fondo con el color primario de la marca (ej: Azul Marino #16345F de JM Odontología Integral)
-        $hex = ltrim($brandColor, '#');
+        // Fondo dinámico seleccionado por el usuario o basado en la marca (ej: Cálido #FDFBF7, Blanco #FFFFFF, etc.)
+        $hex = ltrim($bgColor, '#');
         if (strlen($hex) === 6) {
             $r = hexdec(substr($hex, 0, 2));
             $g = hexdec(substr($hex, 2, 2));
             $b = hexdec(substr($hex, 4, 2));
         } else {
-            $r = 22; $g = 52; $b = 95; // #16345F
+            $r = 253; $g = 251; $b = 247; // #FDFBF7 Cálido por defecto
         }
         $bg = imagecolorallocate($canvas, $r, $g, $b);
         imagefill($canvas, 0, 0, $bg);
@@ -386,18 +386,39 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
         $charId = $meta['character_id'] ?? null;
         $charName = $meta['character_name'] ?? 'Dra. Karina';
         $logoId = $meta['logo_id'] ?? null;
-        $visualType = $meta['visual_type'] ?? 'Infografía Clínica';
-        $paginator = $meta['paginator'] ?? 'Numeración simple';
+        $visualType = $meta['visual_type'] ?? 'Conceptual';
+        $paginator = $meta['paginator'] ?? '01. Numeración simple (01 / 07)';
         $primaryColor = $meta['primary_color'] ?? '#16345F';
         $accentColor = $meta['accent_color'] ?? '#7DD3FC';
+        $backgroundStyle = $meta['background_style'] ?? 'Cálido / Crema Editorial (Luz natural difusa)';
+        $backgroundHex = $meta['background_hex'] ?? '#FDFBF7';
         $isSinglePost = ($meta['type'] ?? 'carousel') === 'single_post';
+
+        // Obtener modelos y URLs oficiales de Google Drive
+        $charModel = $charId ? \App\Models\Character::find($charId) : (\App\Models\Character::where('name', 'like', "%{$charName}%")->first() ?? \App\Models\Character::first());
+        $charGdriveUrl = $charModel ? ($charModel->gdrive_folder_url ?: ($charModel->gdrive_folder_id ? "https://drive.google.com/drive/folders/{$charModel->gdrive_folder_id}" : null)) : null;
+        $charRole = $charModel ? ($charModel->role ?? 'Especialista') : 'Especialista';
+
+        $brandModel = $brandId ? \App\Models\Brand::find($brandId) : (\App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first());
+        $logosGdriveUrl = $brandModel ? $brandModel->logos_folder_url : null;
+        $manualGdriveUrl = $brandModel ? $brandModel->brand_manual_url : null;
+
+        // Obtener especificación técnica del Tipo Visual seleccionado
+        $visualTypesList = \App\Services\VisualTypeService::getAllTypes();
+        $visualTypeSpec = '';
+        foreach ($visualTypesList as $vt) {
+            if (strcasecmp($vt['name'], $visualType) === 0 || strcasecmp($vt['sheetLabel'], $visualType) === 0) {
+                $visualTypeSpec = $vt['description'] . (!empty($vt['prompt_spec']) ? " Especificación de composición: " . $vt['prompt_spec'] : '');
+                break;
+            }
+        }
 
         // 1. Obtener bytes reales de la profesional y del logo oficial
         $charBytes = $this->getCharacterPhotoBytes($charId, $charName);
         $logoBytes = $this->getBrandLogoBytes($brandId, $logoId);
 
-        // 2. Construir Canvas de Referencia compuesto
-        $referenceCanvasPng = $this->buildReferenceCanvas($charBytes, $logoBytes, $primaryColor);
+        // 2. Construir Canvas de Referencia compuesto usando el color de fondo elegido
+        $referenceCanvasPng = $this->buildReferenceCanvas($charBytes, $logoBytes, $backgroundHex);
 
         // 3. Contexto narrativo del carrusel completo
         $allSlides = $meta['all_slides'] ?? [];
@@ -419,34 +440,53 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
         }
 
         // 4. Prompt maestro estructurado para OpenAI Sunburst
-        $prompt = "DIRECCIÓN DE ARTE Y DISEÑO PUBLICITARIO ODONTOLÓGICO DE ALTA GAMA:\n";
-        $prompt .= "Marca: \"{$brandName}\" (Odontología Especializada e Implantes de Vanguardia).\n";
-        $prompt .= "Formato: " . ($isSinglePost ? "Post Cuadrado para Feed (1080x1080 px)" : "Lámina #{$slideNumber} de {$totalSlides} para Carrusel de Instagram (1080x1350 px, proporción 4:5)") . ".\n";
-        $prompt .= "Estructura Visual: {$visualType}. Paginador: {$paginator}.\n\n";
+        $prompt = "PROMPT MAESTRO DE PRODUCCIÓN VISUAL [gpt-image-2.5-sunburst via Reference Canvas]:\n";
+        $prompt .= "FORMATO: " . ($isSinglePost ? "Post Cuadrado para Feed (1080x1080 px)" : "Lámina #{$slideNumber} de {$totalSlides} para Carrusel de Instagram (1080x1350 px, proporción 4:5)") . ".\n";
+        $prompt .= "ESTRUCTURA VISUAL SELECCIONADA: {$visualType}\n";
+        if (!empty($visualTypeSpec)) {
+            $prompt .= "- Guía de Estructura: {$visualTypeSpec}\n";
+        }
+        $prompt .= "ESTILO DE PAGINADOR / DESLIZADOR: {$paginator}\n\n";
+
+        $prompt .= "FUENTES OFICIALES Y ACTIVOS EN GOOGLE DRIVE:\n";
+        if ($charGdriveUrl) {
+            $prompt .= "- Carpeta Oficial de Fotos Reales del Personaje ({$charName}): {$charGdriveUrl}\n";
+        }
+        if ($logosGdriveUrl) {
+            $prompt .= "- Carpeta Oficial de Logotipos de Marca: {$logosGdriveUrl}\n";
+        }
+        if ($manualGdriveUrl) {
+            $prompt .= "- Manual de Identidad de Marca: {$manualGdriveUrl}\n";
+        }
+        $prompt .= "\n";
+
+        $prompt .= "IDENTIDAD DE MARCA Y PALETA CROMÁTICA:\n";
+        $prompt .= "- Marca: \"{$brandName}\"\n";
+        $prompt .= "- Color Primario Institucional: {$primaryColor}\n";
+        $prompt .= "- Color Acento: {$accentColor}\n";
+        $prompt .= "- Fondo y Atmósfera Visual Seleccionada: {$backgroundStyle} (Tono base: {$backgroundHex})\n";
+        $prompt .= "- Regla de Color: El fondo debe respetar el estilo seleccionado ({$backgroundStyle}) con acabado fotorrealista luminoso y bokeh difuso. Los títulos y detalles gráficos principales deben aplicar el color primario ({$primaryColor}) y el acento ({$accentColor}).\n\n";
+
+        $prompt .= "DIRECCIÓN DE ARTE Y PRODUCCIÓN CREATIVA DEL PERSONAJE:\n";
+        $prompt .= "- Personaje: {$charName} ({$charRole})\n";
+        $prompt .= "- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive del personaje ({$charName}), analizar las fotografías reales disponibles y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de esta lámina y la estructura visual seleccionada ({$visualType}).\n";
+        $prompt .= "- FIDELIDAD ESTRICTA: Mantén fielmente el rostro, rasgos faciales y tono real de {$charName} según la fotografía provista. Prohibido sustituir el rostro o generar a otra persona con IA; acabado fotorrealista de alto nivel editorial médico.\n";
+        $prompt .= "- LOGOTIPO OFICIAL: Integra el logotipo oficial de \"{$brandName}\" en la composición sin deformar su proporción ni redibujarlo.\n\n";
 
         if (!empty($carouselNarrative)) {
             $prompt .= $carouselNarrative;
         }
 
-        $prompt .= "PRESENCIA Y EXPRESIÓN DE LA PROFESIONAL ({$charName}):\n";
-        $prompt .= "- EXPRESIÓN OBLIGATORIA: La doctora ({$charName}) debe lucir sumamente atractiva, con una sonrisa radiante, cálida y natural que transmita simpatía, empatía clínica, entusiasmo y máxima confianza.\n";
-        $prompt .= "- POSE Y LENGUAJE CORPORAL: Postura elegante, enérgica y cercana, mirando hacia la cámara con expresión alegre y acogedora. Ambo médico impecable de tono azul marino institucional (#16345F) o blanco clínico de alta gama.\n";
-        $prompt .= "- FIDELIDAD ESTRICTA: Mantén fielmente el rostro y rasgos reales de {$charName} según la fotografía de referencia provista, con acabado fotorrealista de revista médica de alto nivel (piel natural, mirada nítida y sin deformaciones).\n\n";
-
-        $prompt .= "IDENTIDAD CORPORATIVA Y LOGOTIPO:\n";
-        $prompt .= "- Logotipo Oficial: Integra el logotipo oficial de \"{$brandName}\" en la composición con acabado limpio, respetando su isotipo y tipografía original.\n";
-        $prompt .= "- Paleta Cromática: Azul Marino Profundo ({$primaryColor}), Celeste Tecnológico Luminoso ({$accentColor}) y Fondo Grafito Quirúrgico (#1D1D1B o azul profundo de consultorio de vanguardia).\n\n";
-
         $prompt .= "CONTENIDO TEXTUAL ESPECÍFICO DE ESTA LÁMINA ({$slideNumber}/{$totalSlides}):\n";
         if (!empty($badge)) {
             $prompt .= "- Pastilla / Badge Superior: \"{$badge}\".\n";
         }
-        $prompt .= "- Titular Principal en Español: \"{$headline}\".\n";
+        $prompt .= "- Titular Principal: \"{$headline}\".\n";
         if (!empty($bodyText)) {
-            $prompt .= "- Texto de Apoyo en Español: \"{$bodyText}\".\n";
+            $prompt .= "- Texto de Apoyo: \"{$bodyText}\".\n";
         }
-        $prompt .= "\nCREATIVIDAD Y ACABADO EDITORIAL:\n";
-        $prompt .= "Composición fotográfica de estudio clínico internacional de prestigio. Fondo suave con bokeh cinematográfico mostrando un consultorio odontológico moderno (iluminación suave difusa, pantallas de diagnóstico digital 3D y tecnología médica de precisión). Tipografía en español limpia, moderna, elegante y de fácil lectura sin errores ortográficos.";
+        $prompt .= "\nACABADO EDITORIAL:\n";
+        $prompt .= "Composición fotográfica de estudio clínico internacional de prestigio. Iluminación suave difusa, tecnología médica de precisión y acabado fotorrealista. Tipografía en español limpia, moderna, elegante y de fácil lectura sin errores ortográficos.";
 
         // Directorios de almacenamiento
         $storageDir = public_path("storage/creations/{$contentId}");

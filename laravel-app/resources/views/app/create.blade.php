@@ -43,7 +43,7 @@
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
             <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider">1. Configuración de Identidad y Formato</h2>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <!-- Formato -->
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Formato de Publicación</label>
@@ -94,6 +94,22 @@
                             </option>
                         @endforeach
                     </select>
+                </div>
+
+                <!-- Fondo y Atmósfera Visual -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-semibold text-slate-700">Fondo / Atmósfera</label>
+                        <span id="bgPreviewDot" class="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-xs" style="background-color: {{ $backgroundOptions[0]['hex'] ?? '#FDFBF7' }}" title="Color de fondo activo"></span>
+                    </div>
+                    <select name="background_style" id="backgroundSelect" onchange="handleBackgroundChange()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all cursor-pointer">
+                        @foreach($backgroundOptions as $bgOpt)
+                            <option value="{{ $bgOpt['name'] }}" data-hex="{{ $bgOpt['hex'] }}" data-directive="{{ $bgOpt['style_directive'] }}" {{ $loop->first ? 'selected' : '' }}>
+                                {{ $bgOpt['name'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <input type="hidden" name="background_hex" id="backgroundHexInput" value="{{ $backgroundOptions[0]['hex'] ?? '#FDFBF7' }}">
                 </div>
             </div>
 
@@ -366,18 +382,27 @@ Deslizá para conocer las 3 claves de la durabilidad en odontología moderna. �
 
             <!-- COMPILADOR DE PROMPT PREVIEW -->
             <div class="bg-slate-900 text-slate-200 p-6 rounded-2xl shadow-md space-y-3">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between flex-wrap gap-2">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Compilador de Prompt Visual (OpenAI Sunburst)</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Compilador de Prompt Maestro (OpenAI Sunburst / DALL-E)</span>
                     </div>
-                    <button type="button" onclick="updatePromptPreview()" class="text-xs text-sky-400 hover:text-sky-300 font-semibold underline cursor-pointer">
-                        Actualizar Vista Previa
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="copyPromptToClipboard()" id="copyPromptBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer">
+                            📋 <span>Copiar Prompt</span>
+                        </button>
+                        <button type="button" onclick="togglePromptExpand()" id="expandPromptBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer">
+                            ↕️ <span>Expandir</span>
+                        </button>
+                        <button type="button" onclick="updatePromptPreview()" class="text-xs text-sky-400 hover:text-sky-300 font-semibold underline cursor-pointer ml-1">
+                            Refrescar
+                        </button>
+                    </div>
                 </div>
-                <div id="promptPreviewBox" class="p-3 bg-slate-950 rounded-xl text-xs font-mono text-slate-300 leading-relaxed border border-slate-800 max-h-36 overflow-y-auto">
+                <div id="promptPreviewBox" class="p-4 bg-slate-950 rounded-xl text-xs font-mono text-slate-300 leading-relaxed border border-slate-800 max-h-56 overflow-y-auto whitespace-pre-wrap select-all transition-all duration-200">
                     Cargando compilador de prompt...
                 </div>
+                <input type="hidden" name="prompt_compiled" id="promptCompiledInput" value="">
             </div>
 
             <!-- BOTONES DE ACCIÓN FINAL -->
@@ -872,6 +897,11 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         slideCount = cards.length + 1;
     }
 
+    const visualTypesCatalog = @json($visualTypes);
+    const paginatorsCatalog = @json($paginators);
+    const logosGdriveFolderUrl = '{{ $brand->logos_folder_url ?? "" }}';
+    const brandManualGdriveUrl = '{{ $brand->brand_manual_url ?? "" }}';
+
     function handleCharacterChange() {
         const sel = document.getElementById('characterSelect');
         const opt = sel?.selectedOptions[0];
@@ -888,54 +918,149 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         updatePromptPreview();
     }
 
+    function handleBackgroundChange() {
+        const sel = document.getElementById('backgroundSelect');
+        const opt = sel?.selectedOptions[0];
+        const hex = opt?.dataset?.hex || '#FDFBF7';
+        const dot = document.getElementById('bgPreviewDot');
+        if (dot) dot.style.backgroundColor = hex;
+        const hexInput = document.getElementById('backgroundHexInput');
+        if (hexInput) hexInput.value = hex;
+        updatePromptPreview();
+    }
+
+    function copyPromptToClipboard() {
+        const text = document.getElementById('promptPreviewBox')?.innerText || '';
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById('copyPromptBtn');
+            if (btn) {
+                btn.innerHTML = '✅ <span>¡Copiado!</span>';
+                setTimeout(() => {
+                    btn.innerHTML = '📋 <span>Copiar Prompt</span>';
+                }, 2000);
+            }
+        }).catch(() => {
+            alert('Prompt copiado al portapapeles');
+        });
+    }
+
+    function togglePromptExpand() {
+        const box = document.getElementById('promptPreviewBox');
+        const btn = document.getElementById('expandPromptBtn');
+        if (!box || !btn) return;
+        if (box.classList.contains('max-h-56')) {
+            box.classList.remove('max-h-56');
+            box.classList.add('max-h-[850px]');
+            btn.innerHTML = '↕️ <span>Contraer</span>';
+        } else {
+            box.classList.remove('max-h-[850px]');
+            box.classList.add('max-h-56');
+            btn.innerHTML = '↕️ <span>Expandir</span>';
+        }
+    }
+
     function updatePromptPreview() {
         const type = document.getElementById('contentType')?.value || 'carousel';
-        const visual = document.getElementById('visualTypeSelect')?.value || '';
-        const paginator = document.getElementById('paginatorSelect')?.value || '';
-        const charName = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.name || 'Dra. Karina';
-        const charRole = document.getElementById('characterSelect')?.selectedOptions[0]?.dataset?.role || 'Especialista';
-        const logoName = document.getElementById('logoSelect')?.selectedOptions[0]?.innerText || 'Logotipo Oficial';
+        const visual = document.getElementById('visualTypeSelect')?.value || 'Conceptual';
+        const paginator = document.getElementById('paginatorSelect')?.value || '01. Numeración simple (01 / 07)';
+        
+        const charOpt = document.getElementById('characterSelect')?.selectedOptions[0];
+        const charName = charOpt?.dataset?.name || 'Dra. Karina';
+        const charRole = charOpt?.dataset?.role || 'Especialista';
+        const charGdrive = charOpt?.dataset?.gdrive || '';
+
+        const bgOpt = document.getElementById('backgroundSelect')?.selectedOptions[0];
+        const bgName = bgOpt?.value || 'Cálido / Crema Editorial (Luz natural difusa)';
+        const bgHex = bgOpt?.dataset?.hex || '#FDFBF7';
+        const bgDirective = bgOpt?.dataset?.directive || 'Fondo claro luminoso con iluminación cálida difusa de estudio clínico.';
+
+        const logoName = document.getElementById('logoSelect')?.selectedOptions[0]?.innerText || 'Logotipo Oficial Predeterminado';
         const brandName = '{{ addslashes($brand && !str_contains($brand->name, "Marcelo") && !str_contains($brand->name, "TecnoGen") ? $brand->name : "JM Odontología Integral") }}';
         const primaryColor = '{{ $brand->primary_color ?? "#16345F" }}';
         const accentColor = '{{ $brand->accent_color ?? "#7DD3FC" }}';
+
+        // Buscar especificación del Tipo Visual
+        const vtItem = visualTypesCatalog.find(item => item.name === visual || item.sheetLabel === visual);
+        const vtSpec = vtItem ? (vtItem.description + (vtItem.prompt_spec ? ' | Especificación: ' + vtItem.prompt_spec : '')) : '';
 
         // Recolectar todas las láminas del formulario para el contexto narrativo completo
         let slidesNarrative = '';
         const slideCards = document.querySelectorAll('.slide-card');
         const s1Headline = document.getElementById('slide_headline_1')?.value || '';
         const s1Badge = document.getElementById('slide_badge_1')?.value || '';
+        const s1Body = document.getElementById('slide_body_1')?.value || '';
         const totalCount = 1 + slideCards.length;
 
-        slidesNarrative += `• Lámina 1 (Portada/Hook): [${s1Badge}] "${s1Headline}"\n`;
+        slidesNarrative += `  • Lámina 1 (Portada / Hook Principal): [${s1Badge}] "${s1Headline}"${s1Body ? ' - ' + s1Body : ''}\n`;
         slideCards.forEach((card, idx) => {
             const num = idx + 2;
             const h = card.querySelector(`[name="slides[${idx+1}][headline]"]`)?.value || '';
             const b = card.querySelector(`[name="slides[${idx+1}][badge]"]`)?.value || '';
-            slidesNarrative += `• Lámina ${num}: [${b}] "${h}"\n`;
+            const t = card.querySelector(`[name="slides[${idx+1}][body_text]"]`)?.value || '';
+            slidesNarrative += `  • Lámina ${num}: [${b}] "${h}"${t ? ' - ' + t : ''}\n`;
         });
 
-        const promptText = `PROMPT MAESTRO COMPILADO [gpt-image-2.5-sunburst via Reference Canvas]:
-Formato: ${type === 'single_post' ? 'Post Cuadrado para Feed (1080x1080 px)' : 'Carrusel Instagram (1080x1350 px, ' + totalCount + ' Láminas)'}
-Estructura Visual: ${visual} ${type === 'carousel' ? '| Paginador: ' + paginator : ''}
-Identidad de Marca: ${brandName} (Primario: ${primaryColor}, Acento: ${accentColor}, Fondo: Limpio Quirúrgico Grafito)
-Logotipo: ${logoName} [Extraído de Google Drive de ${brandName}]
+        let promptText = `PROMPT MAESTRO DE PRODUCCIÓN VISUAL [gpt-image-2.5-sunburst via Reference Canvas]:\n`;
+        promptText += `FORMATO: ${type === 'single_post' ? 'Post Cuadrado para Feed (1080x1080 px)' : 'Carrusel Instagram (1080x1350 px, Proporción 4:5, ' + totalCount + ' Láminas)'}\n`;
+        promptText += `ESTRUCTURA VISUAL SELECCIONADA: ${visual}\n`;
+        if (vtSpec) {
+            promptText += `- Guía de Estructura: ${vtSpec}\n`;
+        }
+        if (type === 'carousel') {
+            promptText += `ESTILO DE PAGINADOR / DESLIZADOR: ${paginator}\n`;
+        }
+        promptText += `\n`;
 
-NARRATIVA Y GUION DEL CARRUSEL COMPLETO (${totalCount} Láminas):
-${slidesNarrative}
-PRESENCIA Y POSE DEL PROFESIONAL:
-- ${charName} (${charRole}) [Foto real extraída de carpeta Google Drive].
-- Pose & Sonrisa: Debe lucir sumamente atractiva, con sonrisa cálida, radiante y empática. Postura corporal abierta, dinámica y profesional con ambo médico impecable de tono institucional, mirando al paciente.
+        promptText += `FUENTES OFICIALES Y ACTIVOS EN GOOGLE DRIVE:\n`;
+        if (charGdrive) {
+            promptText += `- Carpeta Oficial de Fotos Reales del Personaje (${charName}): ${charGdrive}\n`;
+        } else {
+            promptText += `- Carpeta Oficial de Fotos Reales del Personaje: No vinculada (Usar foto activa del sistema)\n`;
+        }
+        if (logosGdriveFolderUrl) {
+            promptText += `- Carpeta Oficial de Logotipos de Marca: ${logosGdriveFolderUrl}\n`;
+        }
+        if (brandManualGdriveUrl) {
+            promptText += `- Manual de Identidad de Marca: ${brandManualGdriveUrl}\n`;
+        }
+        promptText += `- Logotipo Seleccionado: ${logoName}\n\n`;
 
-DIRECCIÓN DE ARTE Y CREATIVIDAD:
-- Composición fotográfica de estudio clínico de alta gama, iluminación suave difusa, modelos anatómicos 3D de precisión dental y acabados de revista médica internacional. Tipografía limpia en español.`;
+        promptText += `IDENTIDAD DE MARCA Y PALETA CROMÁTICA:\n`;
+        promptText += `- Marca: "${brandName}"\n`;
+        promptText += `- Color Primario Institucional: ${primaryColor}\n`;
+        promptText += `- Color Acento: ${accentColor}\n`;
+        promptText += `- Fondo y Atmósfera Visual: ${bgName} (Tono base: ${bgHex})\n`;
+        promptText += `- Directriz de Fondo: ${bgDirective}\n`;
+        promptText += `- Regla Cromática: El fondo debe respetar el tono y atmósfera seleccionada. Los títulos, detalles gráficos y elementos de marca aplican ${primaryColor} y ${accentColor}.\n\n`;
 
-        document.getElementById('promptPreviewBox').innerText = promptText;
+        promptText += `DIRECCIÓN DE ARTE Y PRODUCCIÓN CREATIVA DEL PERSONAJE:\n`;
+        promptText += `- Personaje Seleccionado: ${charName} (${charRole})\n`;
+        promptText += `- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive de ${charName}, analizar las fotografías reales y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de cada lámina y la estructura visual seleccionada (${visual}).\n`;
+        promptText += `- FIDELIDAD ESTRICTA: Mantener fielmente el rostro real, rasgos faciales y tono de ${charName} según la fotografía de referencia. Prohibido sustituir el rostro o generar a otra persona con IA; acabado fotorrealista de revista médica de alto nivel.\n`;
+        promptText += `- LOGOTIPO OFICIAL: Insertar el archivo oficial de "${brandName}" desde la carpeta de Drive sin redibujarlo ni deformarlo.\n\n`;
+
+        promptText += `GUION SECUENCIAL Y NARRATIVA COMPLETA (${totalCount} Láminas):\n`;
+        promptText += `${slidesNarrative}\n`;
+
+        promptText += `LÁMINA EN PROCESO (PORTADA INICIAL 01/${totalCount}):\n`;
+        promptText += `- Pastilla / Categoría Superior: "${s1Badge}"\n`;
+        promptText += `- Titular Principal de Impacto: "${s1Headline}"\n\n`;
+
+        promptText += `ACABADO EDITORIAL:\n`;
+        promptText += `Composición de alto impacto para Instagram, equilibrada, con aire visual, iluminación profesional y tipografía en español sin errores ortográficos.`;
+
+        const box = document.getElementById('promptPreviewBox');
+        if (box) box.innerText = promptText;
+        const input = document.getElementById('promptCompiledInput');
+        if (input) input.value = promptText;
     }
 
     // Inicializar formato y prompt preview
     document.addEventListener('DOMContentLoaded', () => {
         handleFormatChange();
         handleCharacterChange();
+        handleBackgroundChange();
         updatePromptPreview();
     });
 </script>

@@ -146,6 +146,72 @@ class Brand extends Model
     }
 
     /**
+     * Retorna las opciones de fondos disponibles basadas dinámicamente en la identidad de la marca
+     */
+    public function getBackgroundOptions(): array
+    {
+        $primary = $this->primary_color ?: '#16345F';
+        $accent = $this->accent_color ?: '#7DD3FC';
+        $bg = $this->bg_color ?: '#FFFFFF';
+
+        $options = [
+            [
+                'id' => 'warm_light',
+                'name' => 'Cálido / Crema Editorial (Luz natural difusa)',
+                'hex' => '#FDFBF7',
+                'description' => 'Fondo claro/crema cálido con bokeh difuso y estética editorial luminosa. Ideal para salud, estética y odontología.',
+                'style_directive' => 'Fondo claro luminoso (#FDFBF7 o crema suave) con iluminación cálida difusa de estudio clínico, luz natural suave y detalles curvos sutiles.'
+            ],
+            [
+                'id' => 'pure_white',
+                'name' => 'Blanco Puro Clínico (#FFFFFF)',
+                'hex' => '#FFFFFF',
+                'description' => 'Fondo blanco puro con estética médica minimalista de alto contraste y máximo aire visual.',
+                'style_directive' => 'Fondo blanco clínico puro (#FFFFFF) con iluminación neutra de alta gama y espacio negativo generoso.'
+            ],
+            [
+                'id' => 'brand_bg',
+                'name' => "Fondo Oficial de Marca ({$bg})",
+                'hex' => $bg,
+                'description' => "Color de fondo configurado en la identidad de marca ({$bg}).",
+                'style_directive' => "Fondo sólido con el color de marca oficial ({$bg}) con iluminación suave y contraste equilibrado."
+            ],
+            [
+                'id' => 'brand_primary',
+                'name' => "Fondo Primario Institucional ({$primary})",
+                'hex' => $primary,
+                'description' => "Tono primario de la marca ({$primary}) para composiciones profundas y elegantes.",
+                'style_directive' => "Fondo profundo en color primario institucional ({$primary}) con acentos en {$accent} y tipografías claras de alto contraste."
+            ],
+            [
+                'id' => 'brand_accent',
+                'name' => "Fondo Acento Tecnológico ({$accent})",
+                'hex' => $accent,
+                'description' => "Tono acento luminoso ({$accent}) para piezas de alto impacto y vitalidad.",
+                'style_directive' => "Fondo luminoso con el color acento ({$accent}) y tipografía en azul oscuro institucional ({$primary})."
+            ],
+            [
+                'id' => 'brand_gradient',
+                'name' => "Gradiente Dinámico de Marca ({$primary} → {$accent})",
+                'hex' => $primary,
+                'description' => "Transición cromática suave entre {$primary} y {$accent}.",
+                'style_directive' => "Fondo con suave gradiente difuso entre el color primario ({$primary}) y el acento ({$accent}) con atmósfera cinematográfica médica."
+            ],
+        ];
+
+        $rules = $this->brand_rules ?? [];
+        if (!empty($rules['custom_backgrounds']) && is_array($rules['custom_backgrounds'])) {
+            foreach ($rules['custom_backgrounds'] as $custom) {
+                if (!empty($custom['name']) && !empty($custom['hex'])) {
+                    $options[] = $custom;
+                }
+            }
+        }
+
+        return $options;
+    }
+
+    /**
      * Escanea y obtiene los logos desde Google Drive de forma paralela y con caché
      */
     public function getDriveLogos(): array

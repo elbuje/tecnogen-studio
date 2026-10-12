@@ -684,8 +684,9 @@ Route::prefix('app')->group(function () {
         $currentPaginator = $brandRules['default_paginator'] ?? '01. Numeración simple (01 / 07)';
         $brandLogos = $brand ? $brand->getLogosList() : [];
         $defaultLogoId = $brandRules['default_logo_id'] ?? ($brandLogos[0]['id'] ?? null);
+        $backgroundOptions = $brand ? $brand->getBackgroundOptions() : [];
 
-        return view('app.create', compact('brand', 'brandRules', 'characters', 'visualTypes', 'paginators', 'currentPaginator', 'brandLogos', 'defaultLogoId'));
+        return view('app.create', compact('brand', 'brandRules', 'characters', 'visualTypes', 'paginators', 'currentPaginator', 'brandLogos', 'defaultLogoId', 'backgroundOptions'));
     });
 
     // Micro-asistente IA para campo individual
@@ -775,8 +776,11 @@ Route::prefix('app')->group(function () {
         $caption = $request->input('caption_copy', '');
         $hashtags = $request->input('hashtags', '');
         $characterId = $request->input('character_id');
-        $visualType = $request->input('visual_type', 'Infografía');
-        $paginatorStyle = $request->input('paginator_style', '01. Numeración simple');
+        $visualType = $request->input('visual_type', 'Conceptual');
+        $paginatorStyle = $request->input('paginator_style', '01. Numeración simple (01 / 07)');
+        $backgroundStyle = $request->input('background_style', 'Cálido / Crema Editorial (Luz natural difusa)');
+        $backgroundHex = $request->input('background_hex', '#FDFBF7');
+        $promptCompiled = $request->input('prompt_compiled', '');
         $renderNow = (bool) $request->input('render_now', false);
 
         $charModel = $characterId ? \App\Models\Character::find($characterId) : null;
@@ -784,17 +788,22 @@ Route::prefix('app')->group(function () {
 
         $contentId = (string) Str::uuid();
 
-        // 1. Guardar Content
+        // 1. Guardar Content con sus opciones visuales seleccionadas
         DB::table('contents')->insert([
             'id' => $contentId,
             'brand_id' => $brand ? $brand->id : null,
             'character_id' => $characterId,
             'logo_id' => $request->input('logo_id'),
             'type' => $type,
+            'visual_type' => $visualType,
+            'paginator_style' => $paginatorStyle,
+            'background_style' => $backgroundStyle,
+            'background_hex' => $backgroundHex,
             'title' => $title,
             'hook_text' => $hookText,
             'caption_copy' => $caption,
             'hashtags' => $hashtags,
+            'prompt_compiled' => $promptCompiled,
             'status' => 'draft',
             'source' => 'studio_generator',
             'total_slides' => count($slidesData),
@@ -845,6 +854,8 @@ Route::prefix('app')->group(function () {
                 'logo_id' => $request->input('logo_id'),
                 'visual_type' => $visualType,
                 'paginator' => $paginatorStyle,
+                'background_style' => $backgroundStyle,
+                'background_hex' => $backgroundHex,
                 'primary_color' => $brand ? $brand->primary_color : '#16345F',
                 'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
                 'type' => $type,
@@ -881,6 +892,7 @@ Route::prefix('app')->group(function () {
 
         $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first();
         $char = $content->character_id ? \App\Models\Character::find($content->character_id) : (\App\Models\Character::where('name', 'like', '%Karina%')->first() ?? \App\Models\Character::first());
+        $brandRules = $brand && $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
 
         $slidesList = \App\Models\Slide::where('content_id', $content->id)->orderBy('slide_number')->get()->map(function($s) {
             return [
@@ -897,8 +909,10 @@ Route::prefix('app')->group(function () {
             'character_id' => $char ? $char->id : null,
             'character_name' => $char ? $char->name : 'Dra. Karina',
             'logo_id' => $content->logo_id,
-            'visual_type' => 'Infografía Clínica',
-            'paginator' => '01. Numeración simple',
+            'visual_type' => $content->visual_type ?: ($brandRules['tipo_visual'] ?? 'Conceptual'),
+            'paginator' => $content->paginator_style ?: ($brandRules['default_paginator'] ?? '01. Numeración simple (01 / 07)'),
+            'background_style' => $content->background_style ?: 'Cálido / Crema Editorial (Luz natural difusa)',
+            'background_hex' => $content->background_hex ?: ($brand ? ($brand->bg_color ?: '#FDFBF7') : '#FDFBF7'),
             'primary_color' => $brand ? $brand->primary_color : '#16345F',
             'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
             'type' => $content->type,
@@ -949,6 +963,7 @@ Route::prefix('app')->group(function () {
 
         $brand = \App\Models\Brand::find($content->brand_id) ?? \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::first();
         $char = $content->character_id ? \App\Models\Character::find($content->character_id) : (\App\Models\Character::where('name', 'like', '%Karina%')->first() ?? \App\Models\Character::first());
+        $brandRules = $brand && $brand->brand_rules ? (is_array($brand->brand_rules) ? $brand->brand_rules : json_decode($brand->brand_rules, true)) : [];
 
         $slidesList = $content->slides->map(function($s) {
             return [
@@ -965,8 +980,10 @@ Route::prefix('app')->group(function () {
             'character_id' => $char ? $char->id : null,
             'character_name' => $char ? $char->name : 'Dra. Karina',
             'logo_id' => $content->logo_id,
-            'visual_type' => 'Infografía Clínica',
-            'paginator' => '01. Numeración simple',
+            'visual_type' => $content->visual_type ?: ($brandRules['tipo_visual'] ?? 'Conceptual'),
+            'paginator' => $content->paginator_style ?: ($brandRules['default_paginator'] ?? '01. Numeración simple (01 / 07)'),
+            'background_style' => $content->background_style ?: 'Cálido / Crema Editorial (Luz natural difusa)',
+            'background_hex' => $content->background_hex ?: ($brand ? ($brand->bg_color ?: '#FDFBF7') : '#FDFBF7'),
             'primary_color' => $brand ? $brand->primary_color : '#16345F',
             'accent_color' => $brand ? $brand->accent_color : '#7DD3FC',
             'type' => $content->type,
