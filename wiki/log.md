@@ -4,6 +4,16 @@ Historial cronológico de cambios, decisiones técnicas e hitos del proyecto.
 
 ---
 
+## 2026-10-13
+* `FEAT`: **Fondos Dinámicos de Marca en Formulario (`/app/create`)**: derivación directa de colores (`bg_color`, `primary_color`, `accent_color`) y gradiente desde el modelo `Brand` agrupados con `<optgroup>` y dot interactivo en vivo.
+* `FEAT`: **Previsualizador de Miniatura y Modal de Galería de Logos**: miniatura contigua al selector sobre contenedor oscuro y modal `#logosModal` que permite seleccionar visualmente las variantes oficiales de logo escaneadas de Drive.
+* `FIX`: **Fidelidad Temática de Micro-Asistente IA**: eliminación de valores hardcodeados de demo en el HTML; `assistField` toma el texto actual del input como tema inamovible y `AIService.php` prohíbe explícitamente desviaciones hacia cirugías o implantes cuando el usuario propone bienestar, hábitos o prevención.
+* `FIX`: **Compilación Estricta de Prompt para Post Único**: validación en `updatePromptPreview()` para que el modo `single_post` genere exactamente 1 pieza en el prompt, suprimiendo paginadores y guiones secuenciales múltiples.
+* `FEAT`: **Prompt Maestro Editable y Copiable**: reemplazo de div estático por `<textarea id="promptPreviewBox">` nativo, botones de copiado y expansión, detección de edición manual (`✏️ Editado manualmente`) y recompilación desde formulario.
+* `FEAT`: **Generación de Copy y Hashtags Sincronizados**: nuevo endpoint `/app/ai/generate-post-copy`, método `AIService::generatePostCopy()` y botón `✨ Redactar Copy y Hashtags Alineados con IA` para generar pie de foto y hashtags coherentes con el titular de la pieza.
+* `FEAT`: **Visor de Prompts en Biblioteca (`/app/creations`)**: botón `⌨️ Prompt` en tarjetas de creación, visor modal `#promptViewerModal` seleccionable y copiable, y visualización de prompt por slide individual.
+* `DEPLOY`: Despliegue en producción verificado en Ploi `errante` (`studio.tecnogen.ar`).
+
 ## 2026-10-10
 * `FEAT`: **Dinamismo Total de Marca (JM Odontología Integral)**: vinculación unificada de la marca oficial en la base de datos, purga de marcas genéricas anteriores y actualización de `DatabaseSeeder.php` para que todas las cuentas operen bajo JM Odontología Integral (#16345F, #7DD3FC, #1D1D1B).
 * `FEAT`: **Extracción de Fotografías de Personajes desde Google Drive**: actualización de `AIService.php` y `Character.php` para priorizar y descargar directamente los assets fotográficos reales desde las carpetas de Google Drive de cada profesional (`1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ`, `1Qc8t4ZAQEao4spaQjdL07WjppBu1ThZo`, `1PNC5gKeTv6OgHyXlgbZmHuAeNw8IH4ps`) y alimentar el canvas de referencia en `images.edit`.

@@ -28,24 +28,30 @@ El pipeline visual combina la potencia de **OpenAI `gpt-image-2.5-sunburst`** a 
 
 ---
 
-## 📐 2. Configuración Dinámica de Layout (Google Sheets)
+## 📐 2. Micro-Asistentes de Texto & Generación de Copy (`AIService.php`)
 
-El pipeline respeta 4 nuevas dimensiones configurables por fila desde el Sheet:
-1. **`PRESENCIA DOCTORA`:** `Portada y Cierre`, `Todas las slides`, `Solo portada`, `Solo en cierre`, `Ninguna`.
-2. **`ESTILO PAGINADOR`:** `Puntos y Flechas`, `Línea Conectada`, `Pastilla Superior`, `Simple`.
-3. **`BADGE ESTILO`:** `Conceptos / Beneficios`, `Mito vs Verdad`, `Pasos Numerados`, `Sin Badge`.
-4. **`IDIOMA PROMPTS`:** `Español`, `Inglés`.
+* **Asistente de Campos (`/app/ai/assist-field`):** Permite enriquecer o sugerir titulares, categorías y cuerpos para cada lámina. Incorpora **fidelidad temática estricta**: respeta inamoviblemente el tema del usuario (miedos, prevención, bienestar) y prohíbe explícitamente desviaciones hacia tratamientos invasivos o implantes a menos que el usuario lo indique.
+* **Redactor de Copy y Hashtags (`/app/ai/generate-post-copy`):** Redacta el pie de foto (caption) y hashtags optimizados para Instagram según el titular y el tipo de contenido (Post Único vs Carrusel), evitando invitaciones erróneas a "deslizar" cuando se trata de una pieza única.
+* **Compilador de Prompt Maestro Editable:** Formateador reactivo en frontend y backend. En modo `single_post`, genera la directriz para exactamente 1 pieza (1080x1080 px) sin paginador ni slides múltiples. Se presenta en un `<textarea>` editable por el usuario con detección de cambios manuales y recompilación bajo demanda.
 
 ---
 
-## 🔄 3. Regeneración Granular y Sincronización en Producción
+## 🎨 3. Selección Dinámica de Fondos y Logos de Marca
 
-* Selección de lámina individual desde el visor `/app/viewer/:id`.
-* Endpoint de sincronización masiva `/api/v1/contents/sync-import` para sincronizar de inmediato SQLite y MySQL de producción.
-* Endpoint público `/api/v1/contents/public/:id` para revisión fluida de previews sin requerir login.
+* **Fondos Dinámicos (`Brand::getBackgroundOptions()`):** Derivados 100% de la identidad de la marca activa (`bg_color`, `primary_color`, `accent_color`, gradientes corporativos y fondos de estudio neutros), organizados en grupos visuales en el generador.
+* **Modal y Miniatura de Variantes de Logo:** Selector visual con miniatura interactiva sobre fondo oscuro y modal emergente de variantes indexadas desde Google Drive para selección con un clic.
+
+---
+
+## 🔄 4. Biblioteca de Creaciones & Visor de Prompts (`/app/creations`)
+
+* **Visor de Prompts (`#promptViewerModal`):** Acceso al Prompt Maestro de producción y a los prompts específicos de cada slide con copiado rápido al portapapeles.
+* **Regeneración Granular:** Regeneración individual lámina por lámina o en lote.
+* **Sincronización Directa:** Integración con Google Drive para persistencia de piezas en la carpeta del cliente.
 
 ---
 
 ## 📚 Documentación Técnica Detallada
 * Guía completa de integración y arquitectura: [[guides/pipeline_sunburst_real_assets_architecture]]
+
 

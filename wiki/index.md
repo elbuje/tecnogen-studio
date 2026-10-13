@@ -50,6 +50,7 @@ Plataforma SaaS multi-tenant que permite a dueños de negocio, clínicas y agenc
 
 ---
 
+* [[sessions/2026-10-13-optimizacion-prompts-logos-copy-biblioteca]] — Optimización integral de fondos de marca, logos visuales con modal, fidelidad temática estricta del micro-asistente IA, prompt exclusivo para Post Único, copy/hashtags sincronizados y visor de prompts en la biblioteca de creaciones.
 * [[sessions/2026-10-10-fidelidad-marca-drive-ia]] — Dinamismo total de marca (JM Odontología Integral), purga de referencias residuales, micro-asistentes contextualizados y extracción de fotografías de personajes directamente desde carpetas de Google Drive.
 * [[sessions/2026-10-10-generador-ia-creaciones-drive]] — Implementación del Generador de Contenido (/app/create), renderizado IA y biblioteca de creaciones con conexión a Google Drive.
 * [[sessions/2026-10-10-definicion-marca-logos-gdrive-y-manual]] — Implementación del módulo Definición de Marca, catálogo e indexación de logos desde Google Drive, integración de Manual de Marca y configuración del selector estético de logos para IA.
