@@ -187,16 +187,23 @@
                                 <!-- Acordeón de Láminas Completo -->
                                 <div id="slides_{{ $item->id }}" class="hidden pt-2 space-y-2 text-xs border-t border-slate-100 max-h-48 overflow-y-auto">
                                     @foreach($item->slides as $slide)
-                                        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200">
-                                            <div class="flex items-center gap-1.5 font-bold text-slate-800">
-                                                <span class="px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded-md text-[10px]">#{{ $slide->slide_number }}</span>
-                                                @if($slide->badge)
-                                                    <span class="text-[10px] text-sky-600 font-mono">[{{ $slide->badge }}]</span>
+                                        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+                                            <div class="flex items-center justify-between gap-1.5 font-bold text-slate-800">
+                                                <div class="flex items-center gap-1.5 truncate">
+                                                    <span class="px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded-md text-[10px]">#{{ $slide->slide_number }}</span>
+                                                    @if($slide->badge)
+                                                        <span class="text-[10px] text-sky-600 font-mono">[{{ $slide->badge }}]</span>
+                                                    @endif
+                                                    <span class="truncate">{{ $slide->headline }}</span>
+                                                </div>
+                                                @if(!empty($slide->prompt_used))
+                                                    <button type="button" onclick="showSpecificPromptModal('Lámina #{{ $slide->slide_number }} · {{ addslashes($slide->headline) }}', `{{ addslashes($slide->prompt_used) }}`)" class="px-2 py-0.5 rounded bg-slate-900 text-sky-400 hover:text-white text-[10px] font-mono shrink-0 cursor-pointer" title="Ver Prompt de esta lámina">
+                                                        Prompt
+                                                    </button>
                                                 @endif
-                                                <span class="truncate">{{ $slide->headline }}</span>
                                             </div>
                                             @if($slide->body_text)
-                                                <p class="text-slate-600 text-[11px] mt-1">{{ $slide->body_text }}</p>
+                                                <p class="text-slate-600 text-[11px]">{{ $slide->body_text }}</p>
                                             @endif
                                         </div>
                                     @endforeach
@@ -215,9 +222,13 @@
 
                     <!-- Footer de Acciones -->
                     <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <button type="button" onclick="copyCaption(`{{ addslashes($item->caption_copy . "\n\n" . $item->hashtags) }}`)" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 shadow-2xs cursor-pointer" title="Copiar Copy">
                                 📋 Copy
+                            </button>
+
+                            <button type="button" onclick="showPromptModal('{{ $item->id }}')" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-400 border border-slate-700 text-xs font-mono font-bold flex items-center gap-1 shadow-2xs cursor-pointer" title="Ver el Prompt utilizado en esta creación">
+                                ⌨️ Prompt
                             </button>
 
                             @if(!empty($creationsFolderUrl))
@@ -302,7 +313,86 @@
     </div>
 </div>
 
+<!-- MODAL: VISOR DE PROMPT UTILIZADO -->
+<div id="promptViewerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden" onclick="closePromptModal()">
+    <div class="bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-700 shadow-2xl p-6 space-y-4 max-h-[85vh] flex flex-col text-slate-100" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+                <div>
+                    <h3 id="modalPromptTitle" class="font-bold text-sm text-slate-100 font-heading">Prompt Maestro Utilizado</h3>
+                    <p id="modalPromptSubtitle" class="text-xs text-slate-400">Prompt exacto enviado al motor de IA para renderizar la pieza.</p>
+                </div>
+            </div>
+            <button type="button" onclick="closePromptModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer">
+                ✕
+            </button>
+        </div>
+
+        <div class="overflow-y-auto flex-1">
+            <textarea id="modalPromptContent" rows="15" readonly class="w-full p-4 bg-slate-950 rounded-xl text-xs font-mono text-slate-200 leading-relaxed border border-slate-800 focus:outline-hidden select-all resize-y"></textarea>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-[11px] text-slate-400">💡 Puedes seleccionar cualquier parte del texto con el mouse para copiar partes, o copiar todo.</span>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="copyModalPrompt()" id="modalCopyPromptBtn" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+                    📋 <span>Copiar Prompt</span>
+                </button>
+                <button type="button" onclick="closePromptModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold text-xs text-slate-300 cursor-pointer">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    const contentPrompts = {
+        @foreach($contents as $item)
+            '{{ $item->id }}': {
+                title: @json($item->title ?: $item->hook_text ?: 'Sin título'),
+                prompt: @json($item->prompt_compiled ?: ($item->slides->first()->prompt_used ?? 'No se registró un prompt para esta creación.'))
+            },
+        @endforeach
+    };
+
+    function showPromptModal(contentId) {
+        const data = contentPrompts[contentId];
+        if (!data) return;
+        document.getElementById('modalPromptTitle').innerText = 'Prompt Utilizado · ' + data.title;
+        document.getElementById('modalPromptSubtitle').innerText = 'Prompt maestro enviado al modelo de generación de imagen.';
+        document.getElementById('modalPromptContent').value = data.prompt || 'Sin registro de prompt';
+        document.getElementById('promptViewerModal').classList.remove('hidden');
+    }
+
+    function showSpecificPromptModal(title, promptText) {
+        document.getElementById('modalPromptTitle').innerText = title;
+        document.getElementById('modalPromptSubtitle').innerText = 'Prompt específico utilizado para renderizar esta lámina individual.';
+        document.getElementById('modalPromptContent').value = promptText || 'Sin registro de prompt';
+        document.getElementById('promptViewerModal').classList.remove('hidden');
+    }
+
+    function closePromptModal() {
+        document.getElementById('promptViewerModal').classList.add('hidden');
+    }
+
+    function copyModalPrompt() {
+        const text = document.getElementById('modalPromptContent').value;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById('modalCopyPromptBtn');
+            if (btn) {
+                btn.innerHTML = '✅ <span>¡Copiado!</span>';
+                setTimeout(() => {
+                    btn.innerHTML = '📋 <span>Copiar Prompt</span>';
+                }, 2000);
+            }
+        }).catch(() => {
+            alert('Prompt copiado al portapapeles');
+        });
+    }
+
     function openDriveConfigModal() {
         document.getElementById('driveConfigModal').classList.remove('hidden');
     }
