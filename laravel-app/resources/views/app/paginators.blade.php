@@ -103,12 +103,16 @@
                             {{ $p['category'] }}
                         </span>
                         <span class="text-xs font-mono font-bold text-slate-400">
-                            #{{ $p['number'] }}
+                            @if($p['number'] > 0)
+                                #{{ sprintf('%02d', $p['number']) }}
+                            @else
+                                🎲
+                            @endif
                         </span>
                     </div>
 
                     <h3 class="text-sm font-bold text-slate-900 font-heading">
-                        {{ $p['name'] }}
+                        {{ preg_replace('/^\d+\.\s*/', '', $p['name']) }}
                     </h3>
 
                     <!-- Mini Preview Visual Blanca o Imagen Generada -->

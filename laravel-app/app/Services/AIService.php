@@ -320,18 +320,22 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             }
         }
 
-        // 2. Pegar logotipo oficial transparente de la marca
+        // 2. Pegar logotipo oficial transparente de la marca manteniendo proporción matemática exacta
         if (!empty($logoBytes)) {
             $logoImg = @imagecreatefromstring($logoBytes);
             if ($logoImg) {
                 $lw = imagesx($logoImg);
                 $lh = imagesy($logoImg);
-                $targetLw = (int) ($width * 0.30);
-                $targetLh = (int) ($lh * ($targetLw / $lw));
-                if ($targetLh > 140) $targetLh = 140;
-                // Ubicar en esquina inferior izquierda como en la composición oficial
-                $posY = $height - $targetLh - 35;
-                imagecopyresampled($canvas, $logoImg, 35, $posY, 0, 0, $targetLw, $targetLh, $lw, $lh);
+                if ($lw > 0 && $lh > 0) {
+                    $maxLw = (int) ($width * 0.28);
+                    $maxLh = 100;
+                    $scale = min($maxLw / $lw, $maxLh / $lh);
+                    $targetLw = (int) round($lw * $scale);
+                    $targetLh = (int) round($lh * $scale);
+                    // Ubicar en esquina inferior izquierda como en la composición oficial
+                    $posY = $height - $targetLh - 40;
+                    imagecopyresampled($canvas, $logoImg, 40, $posY, 0, 0, $targetLw, $targetLh, $lw, $lh);
+                }
                 imagedestroy($logoImg);
             }
         }
@@ -345,9 +349,9 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
     }
 
     /**
-     * Obtiene los bytes de la fotografía real del personaje seleccionado
+     * Obtiene los bytes de la fotografía real del personaje seleccionado (respetando foto específica si fue elegida)
      */
-    public function getCharacterPhotoBytes(?string $characterId, ?string $charName = null): ?string
+    public function getCharacterPhotoBytes(?string $characterId, ?string $charName = null, ?string $photoId = null, ?string $photoUrl = null): ?string
     {
         $char = null;
         if ($characterId) {
@@ -362,7 +366,49 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
 
         if (!$char) return null;
 
-        // 1. Prioridad: Obtener directamente desde la carpeta de Google Drive del personaje
+        // 1. Si el usuario seleccionó una foto específica (por ID de Drive o URL)
+        $targetDriveId = null;
+        if (!empty($photoId) && preg_match('/^[a-zA-Z0-9_-]{20,}$/', $photoId)) {
+            $targetDriveId = $photoId;
+        } elseif (!empty($photoUrl) && preg_match('/(?:gdrive-proxy|d)\/([a-zA-Z0-9_-]+)/', $photoUrl, $m)) {
+            $targetDriveId = $m[1];
+        }
+
+        if ($targetDriveId) {
+            try {
+                $url = "https://lh3.googleusercontent.com/d/{$targetDriveId}=w1200";
+                $res = Http::timeout(10)->get($url);
+                if ($res->successful() && strlen($res->body()) > 2000) {
+                    return $res->body();
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // Si es archivo local por nombre o ruta
+        if (!empty($photoId) && !empty($char->folder_path) && !str_starts_with($char->folder_path, 'http')) {
+            $localPath = public_path(rtrim($char->folder_path, '/') . '/' . $photoId);
+            if (file_exists($localPath) && filesize($localPath) > 1000) {
+                return file_get_contents($localPath);
+            }
+        }
+
+        // 2. Si tiene cover_photo configurada en el personaje
+        if (!empty($char->cover_photo)) {
+            if (preg_match('/(?:gdrive-proxy|d)\/([a-zA-Z0-9_-]+)/', $char->cover_photo, $m)) {
+                $driveId = $m[1];
+                $url = "https://lh3.googleusercontent.com/d/{$driveId}=w1200";
+                try {
+                    $res = Http::timeout(8)->get($url);
+                    if ($res->successful() && strlen($res->body()) > 2000) {
+                        return $res->body();
+                    }
+                } catch (\Throwable $e) {}
+            } elseif (file_exists(public_path($char->cover_photo))) {
+                return file_get_contents(public_path($char->cover_photo));
+            }
+        }
+
+        // 3. Fallback: Obtener desde la carpeta de Google Drive del personaje
         $drivePhotos = $char->getDrivePhotos();
         if (!empty($drivePhotos)) {
             foreach ($drivePhotos as $photo) {
@@ -379,21 +425,7 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             }
         }
 
-        // 2. Intentar desde cover_photo si tiene ID de Google Drive
-        if (!empty($char->cover_photo)) {
-            if (preg_match('/(?:gdrive-proxy|d)\/([a-zA-Z0-9_-]+)/', $char->cover_photo, $m)) {
-                $driveId = $m[1];
-                $url = "https://lh3.googleusercontent.com/d/{$driveId}=w1200";
-                try {
-                    $res = Http::timeout(8)->get($url);
-                    if ($res->successful() && strlen($res->body()) > 2000) {
-                        return $res->body();
-                    }
-                } catch (\Throwable $e) {}
-            }
-        }
-
-        // 3. Fallback a archivos locales si existen
+        // 4. Fallback a archivos locales si existen
         $localCandidates = [
             public_path("assets/characters/dra_karina/IMG_4609.HIF.jpg"),
             base_path("../public/assets/characters/dra_karina/IMG_4609.HIF.jpg"),
@@ -490,7 +522,9 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
         }
 
         // 1. Obtener bytes reales de la profesional y del logo oficial
-        $charBytes = $this->getCharacterPhotoBytes($charId, $charName);
+        $characterPhotoId = $meta['character_photo_id'] ?? null;
+        $characterPhotoUrl = $meta['character_photo_url'] ?? null;
+        $charBytes = $this->getCharacterPhotoBytes($charId, $charName, $characterPhotoId, $characterPhotoUrl);
         $logoBytes = $this->getBrandLogoBytes($brandId, $logoId);
 
         // 2. Construir Canvas de Referencia compuesto usando el color de fondo elegido
@@ -552,9 +586,9 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
 
             $prompt .= "DIRECCIÓN DE ARTE Y PRODUCCIÓN CREATIVA DEL PERSONAJE:\n";
             $prompt .= "- Personaje: {$charName} ({$charRole})\n";
-            $prompt .= "- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive del personaje ({$charName}), analizar las fotografías reales disponibles y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de esta lámina y la estructura visual seleccionada ({$visualType}).\n";
+            $prompt .= "- INSTRUCCIÓN AL AGENTE / MODELO: Analizar la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de esta lámina y la estructura visual seleccionada ({$visualType}).\n";
             $prompt .= "- FIDELIDAD ESTRICTA: Mantén fielmente el rostro, rasgos faciales y tono real de {$charName} según la fotografía provista. Prohibido sustituir el rostro o generar a otra persona con IA; acabado fotorrealista de alto nivel editorial médico.\n";
-            $prompt .= "- LOGOTIPO OFICIAL: Integra el logotipo oficial de \"{$brandName}\" en la composición sin deformar su proporción ni redibujarlo.\n\n";
+            $prompt .= "- LOGOTIPO OFICIAL: Ubicado en la esquina inferior izquierda. Prohibido redibujar o agregar logotipos inventados o deformados en la ropa o accesorios del personaje.\n\n";
 
             if (!$isSinglePost && !empty($carouselNarrative)) {
                 $prompt .= $carouselNarrative;
@@ -570,6 +604,13 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
             }
             $prompt .= "\nACABADO EDITORIAL:\n";
             $prompt .= "Composición fotográfica de estudio clínico internacional de prestigio. Iluminación suave difusa, acabado fotorrealista y tipografía en español limpia, moderna, elegante y de fácil lectura sin errores ortográficos.";
+        }
+
+        // Si es Post Único, forzar eliminación estricta de paginadores y números de lámina
+        if ($isSinglePost) {
+            $prompt = preg_replace('/(?i)ESTILO DE PAGINADOR[^\n]*\n?/', '', $prompt);
+            $prompt = preg_replace('/(?i)Lámina #\d+ de \d+/', 'Post Cuadrado Feed (1080x1080)', $prompt);
+            $prompt .= "\nREGLA CRÍTICA DE FORMATO: Este diseño es un POST ÚNICO ESTÁTICO (NO es un carrusel). PROHIBIDO TERMINANTEMENTE incluir barras de progreso, líneas de avance, numeración de láminas (como 1/1), puntos ni deslizadores de ningún tipo.\n";
         }
 
         // Directorios de almacenamiento
@@ -615,26 +656,46 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
 
             if ($response->successful()) {
                 $b64 = $response->json()['data'][0]['b64_json'] ?? null;
+                $rawUrl = $response->json()['data'][0]['url'] ?? null;
+                $imgBinary = null;
                 if ($b64) {
                     $imgBinary = base64_decode($b64);
+                } elseif ($rawUrl) {
+                    $imgBinary = Http::timeout(30)->get($rawUrl)->body();
+                }
+
+                if ($imgBinary) {
+                    // Sellar el logotipo oficial nítido y sin deformaciones
+                    if (!empty($logoBytes)) {
+                        $finalImg = @imagecreatefromstring($imgBinary);
+                        $stampLogo = @imagecreatefromstring($logoBytes);
+                        if ($finalImg && $stampLogo) {
+                            imagealphablending($finalImg, true);
+                            imagesavealpha($finalImg, true);
+                            $fw = imagesx($finalImg);
+                            $fh = imagesy($finalImg);
+                            $lw = imagesx($stampLogo);
+                            $lh = imagesy($stampLogo);
+                            if ($lw > 0 && $lh > 0) {
+                                $maxLw = (int) ($fw * 0.28);
+                                $maxLh = 100;
+                                $scale = min($maxLw / $lw, $maxLh / $lh);
+                                $targetLw = (int) round($lw * $scale);
+                                $targetLh = (int) round($lh * $scale);
+                                $posY = $fh - $targetLh - 40;
+                                imagecopyresampled($finalImg, $stampLogo, 40, $posY, 0, 0, $targetLw, $targetLh, $lw, $lh);
+                                ob_start();
+                                imagepng($finalImg);
+                                $imgBinary = ob_get_clean();
+                            }
+                            imagedestroy($finalImg);
+                            imagedestroy($stampLogo);
+                        }
+                    }
+
                     file_put_contents($filePath, $imgBinary);
                     if (is_dir($rootPublicDir)) {
                         @file_put_contents("{$rootPublicDir}/{$fileName}", $imgBinary);
-                    }
-                    return [
-                        'success' => true,
-                        'url' => $publicUrl,
-                        'path' => $filePath,
-                        'prompt' => $prompt
-                    ];
-                }
-
-                $rawUrl = $response->json()['data'][0]['url'] ?? null;
-                if ($rawUrl) {
-                    $imgData = Http::timeout(30)->get($rawUrl)->body();
-                    file_put_contents($filePath, $imgData);
-                    if (is_dir($rootPublicDir)) {
-                        @file_put_contents("{$rootPublicDir}/{$fileName}", $imgData);
                     }
                     return [
                         'success' => true,

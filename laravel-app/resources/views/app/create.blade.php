@@ -54,15 +54,15 @@
                     </select>
                 </div>
 
-                <!-- Personaje -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
+                <!-- Personaje y Foto Específica -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between mb-1">
                         <label class="block text-xs font-semibold text-slate-700">Personaje / Especialista</label>
                         <a id="charDriveLink" href="#" target="_blank" class="text-[11px] text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1 hidden">
-                            📁 <span>Ver Drive</span>
+                            📁 <span>Drive</span>
                         </a>
                     </div>
-                    <select name="character_id" id="characterSelect" onchange="handleCharacterChange()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all cursor-pointer">
+                    <select name="character_id" id="characterSelect" onchange="handleCharacterChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all cursor-pointer">
                         <option value="">👤 Sin personaje específico</option>
                         @foreach($characters as $char)
                             <option value="{{ $char['id'] }}" data-name="{{ $char['name'] }}" data-role="{{ $char['role'] }}" data-gdrive="{{ $char['gdrive_folder_url'] ?? '' }}" {{ $loop->first ? 'selected' : '' }}>
@@ -70,6 +70,23 @@
                             </option>
                         @endforeach
                     </select>
+
+                    <!-- Selector de Foto Específica del Especialista -->
+                    <div id="charPhotoSelectorWrapper" class="pt-1.5 border-t border-slate-100 flex items-center gap-2">
+                        <div class="w-8 h-8 shrink-0 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center cursor-pointer shadow-xs hover:border-sky-500 transition-colors" onclick="openCharPhotosModal()" title="Clic para elegir foto del catálogo visual">
+                            <img id="charPhotoPreviewThumb" src="" alt="Foto" class="w-full h-full object-cover hidden">
+                            <span id="charPhotoPlaceholderIcon" class="text-xs">📸</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <select name="character_photo_id" id="charPhotoSelect" onchange="handleCharPhotoChange()" class="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden cursor-pointer truncate">
+                                <option value="" data-thumb="" data-url="">✨ Foto Aleatoria / Rotativa</option>
+                            </select>
+                            <input type="hidden" name="character_photo_url" id="charPhotoUrlInput" value="">
+                        </div>
+                        <button type="button" onclick="openCharPhotosModal()" class="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 text-[11px] font-semibold border border-sky-200 transition-colors shrink-0 flex items-center gap-1 cursor-pointer" title="Ver catálogo de fotos">
+                            <span>Ver</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Tipo Visual -->
@@ -89,8 +106,12 @@
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Paginador / Deslizador</label>
                     <select name="paginator_style" id="paginatorSelect" onchange="updatePromptPreview()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all cursor-pointer">
                         @foreach($paginators as $pag)
+                            @php
+                                $cleanName = preg_replace('/^\d+[\.\s\-]+/', '', $pag['name']);
+                                $label = $pag['number'] > 0 ? '#' . sprintf('%02d', $pag['number']) . ' · ' . $cleanName : $pag['name'];
+                            @endphp
                             <option value="{{ $pag['sheetLabel'] }}" {{ ($currentPaginator ?? '') == $pag['sheetLabel'] || $pag['number'] == 1 ? 'selected' : '' }}>
-                                #{{ sprintf('%02d', $pag['number']) }} · {{ $pag['name'] }}
+                                {{ $label }}
                             </option>
                         @endforeach
                     </select>
@@ -594,8 +615,44 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
             <span>💡 El fondo oscuro en las tarjetas te permite ver logotipos blancos o transparentes sin dificultad.</span>
             <button type="button" onclick="closeLogosModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-semibold text-slate-700 cursor-pointer">Cerrar</button>
         </div>
+</div>
+
+<!-- MODAL: CATÁLOGO DE FOTOS DEL PERSONAJE -->
+<div id="charPhotosModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-3xl w-full border border-slate-200 shadow-2xl p-6 space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <span class="p-2 rounded-lg bg-sky-50 text-sky-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </span>
+                <div>
+                    <h3 id="charPhotosModalTitle" class="font-bold text-slate-900 font-heading">Fotos Oficiales de la Especialista</h3>
+                    <p class="text-xs text-slate-500">Haz clic en la foto exacta que deseas que la IA use como referencia en esta pieza.</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeCharPhotosModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
+                ✕
+            </button>
+        </div>
+
+        <div class="flex items-center justify-between px-1">
+            <span id="charPhotosCountBadge" class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">Cargando fotos...</span>
+            <button type="button" onclick="selectCharPhotoFromModal('', '', '✨ Foto Aleatoria / Rotativa', '')" class="text-xs text-sky-600 hover:text-sky-700 font-semibold cursor-pointer">
+                ✨ Usar selección aleatoria
+            </button>
+        </div>
+
+        <div id="charPhotosGrid" class="overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-1">
+            <!-- Cargado dinámicamente con JS -->
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>💡 Las fotos provienen directamente de la carpeta de Drive oficial de la especialista.</span>
+            <button type="button" onclick="closeCharPhotosModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-semibold text-slate-700 cursor-pointer">Cerrar</button>
+        </div>
     </div>
 </div>
+
 
 <script>
     let slideCount = 3;
@@ -616,6 +673,7 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         const btnAddSlide = document.getElementById('btnAddSlide');
         const ctaCardWrapper = document.getElementById('ctaCardWrapper');
         const paginatorWrapper = document.getElementById('paginatorWrapper');
+        const paginatorSelect = document.getElementById('paginatorSelect');
 
         const slide1NumBadge = document.getElementById('slide1NumBadge');
         const slide1TitleLabel = document.getElementById('slide1TitleLabel');
@@ -630,6 +688,7 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
             btnAddSlide.classList.add('hidden');
             ctaCardWrapper.classList.add('hidden');
             paginatorWrapper.classList.add('hidden');
+            if (paginatorSelect) paginatorSelect.disabled = true;
 
             slide1NumBadge.innerText = '🖼️';
             slide1TitleLabel.innerText = 'Diseño del Post Único (1080x1080)';
@@ -643,6 +702,7 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
             btnAddSlide.classList.add('hidden');
             ctaCardWrapper.classList.remove('hidden');
             paginatorWrapper.classList.add('hidden');
+            if (paginatorSelect) paginatorSelect.disabled = true;
 
             slide1NumBadge.innerText = '📱';
             slide1TitleLabel.innerText = 'Estructura del Reel / Video (1080x1920)';
@@ -656,6 +716,7 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
             btnAddSlide.classList.remove('hidden');
             ctaCardWrapper.classList.remove('hidden');
             paginatorWrapper.classList.remove('hidden');
+            if (paginatorSelect) paginatorSelect.disabled = false;
 
             slide1NumBadge.innerText = '01';
             slide1TitleLabel.innerText = 'Lámina de Portada / Gancho Principal';
@@ -1046,11 +1107,13 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
 
     const visualTypesCatalog = @json($visualTypes);
     const paginatorsCatalog = @json($paginators);
+    const charactersCatalog = @json($characters);
     const logosGdriveFolderUrl = '{{ $brand->logos_folder_url ?? "" }}';
     const brandManualGdriveUrl = '{{ $brand->brand_manual_url ?? "" }}';
 
     function handleCharacterChange() {
         const sel = document.getElementById('characterSelect');
+        const charId = sel?.value;
         const opt = sel?.selectedOptions[0];
         const gdriveUrl = opt?.dataset?.gdrive;
         const driveLink = document.getElementById('charDriveLink');
@@ -1062,6 +1125,130 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
                 driveLink.classList.add('hidden');
             }
         }
+
+        const charData = charactersCatalog.find(c => String(c.id) === String(charId));
+        const photos = charData?.photos || [];
+        const photoSel = document.getElementById('charPhotoSelect');
+        const charPhotosGrid = document.getElementById('charPhotosGrid');
+        const countBadge = document.getElementById('charPhotosCountBadge');
+        const modalTitle = document.getElementById('charPhotosModalTitle');
+        const previewThumb = document.getElementById('charPhotoPreviewThumb');
+        const placeholderIcon = document.getElementById('charPhotoPlaceholderIcon');
+        const urlInput = document.getElementById('charPhotoUrlInput');
+
+        if (modalTitle) {
+            modalTitle.innerText = `Fotos Oficiales de ${charData?.name || 'la Especialista'}`;
+        }
+
+        if (photoSel) {
+            photoSel.innerHTML = '<option value="" data-thumb="" data-url="">✨ Foto Aleatoria / Rotativa</option>';
+            photos.forEach((p, idx) => {
+                const optEl = document.createElement('option');
+                optEl.value = p.id;
+                optEl.dataset.thumb = p.thumb || p.url;
+                optEl.dataset.url = p.url;
+                optEl.innerText = `📸 ${p.filename || ('Foto ' + (idx + 1))}`;
+                photoSel.appendChild(optEl);
+            });
+            photoSel.value = '';
+        }
+
+        if (urlInput) urlInput.value = '';
+        if (previewThumb && placeholderIcon) {
+            if (photos.length > 0 && (photos[0].thumb || photos[0].url)) {
+                previewThumb.src = photos[0].thumb || photos[0].url;
+                previewThumb.classList.remove('hidden');
+                placeholderIcon.classList.add('hidden');
+            } else {
+                previewThumb.src = '';
+                previewThumb.classList.add('hidden');
+                placeholderIcon.classList.remove('hidden');
+            }
+        }
+
+        if (countBadge) {
+            countBadge.innerText = `${photos.length} fotos disponibles en Drive`;
+        }
+
+        if (charPhotosGrid) {
+            if (photos.length === 0) {
+                charPhotosGrid.innerHTML = '<p class="col-span-full text-center py-8 text-slate-400 text-xs">No se encontraron fotos en la carpeta vinculada.</p>';
+            } else {
+                charPhotosGrid.innerHTML = '';
+                photos.forEach((p, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'char-photo-card border-2 border-slate-200 hover:border-sky-500 rounded-xl p-2 flex flex-col items-center gap-2 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md bg-white group';
+                    card.onclick = () => selectCharPhotoFromModal(p.id, p.url, p.filename || ('Foto ' + (idx + 1)), p.thumb || p.url);
+                    card.innerHTML = `
+                        <div class="h-28 w-full rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center">
+                            <img src="${p.thumb || p.url}" alt="${p.filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy">
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-700 truncate w-full text-center">${p.filename || ('Foto ' + (idx + 1))}</span>
+                    `;
+                    charPhotosGrid.appendChild(card);
+                });
+            }
+        }
+
+        updatePromptPreview();
+    }
+
+    function handleCharPhotoChange() {
+        const photoSel = document.getElementById('charPhotoSelect');
+        const opt = photoSel?.selectedOptions[0];
+        const photoId = opt?.value;
+        const photoUrl = opt?.dataset?.url || '';
+        const thumb = opt?.dataset?.thumb || '';
+
+        const urlInput = document.getElementById('charPhotoUrlInput');
+        if (urlInput) urlInput.value = photoUrl;
+
+        const previewThumb = document.getElementById('charPhotoPreviewThumb');
+        const placeholderIcon = document.getElementById('charPhotoPlaceholderIcon');
+        if (previewThumb && placeholderIcon) {
+            if (thumb) {
+                previewThumb.src = thumb;
+                previewThumb.classList.remove('hidden');
+                placeholderIcon.classList.add('hidden');
+            } else {
+                previewThumb.classList.add('hidden');
+                placeholderIcon.classList.remove('hidden');
+            }
+        }
+
+        updatePromptPreview();
+    }
+
+    function openCharPhotosModal() {
+        document.getElementById('charPhotosModal')?.classList.remove('hidden');
+    }
+
+    function closeCharPhotosModal() {
+        document.getElementById('charPhotosModal')?.classList.add('hidden');
+    }
+
+    function selectCharPhotoFromModal(id, url, label, thumb) {
+        const photoSel = document.getElementById('charPhotoSelect');
+        if (photoSel) {
+            photoSel.value = id;
+        }
+        const urlInput = document.getElementById('charPhotoUrlInput');
+        if (urlInput) {
+            urlInput.value = url;
+        }
+        const previewThumb = document.getElementById('charPhotoPreviewThumb');
+        const placeholderIcon = document.getElementById('charPhotoPlaceholderIcon');
+        if (previewThumb && placeholderIcon) {
+            if (thumb) {
+                previewThumb.src = thumb;
+                previewThumb.classList.remove('hidden');
+                placeholderIcon.classList.add('hidden');
+            } else {
+                previewThumb.classList.add('hidden');
+                placeholderIcon.classList.remove('hidden');
+            }
+        }
+        closeCharPhotosModal();
         updatePromptPreview();
     }
 
@@ -1237,8 +1424,17 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
         promptText += `- Directriz de Fondo: ${bgDirective}\n`;
         promptText += `- Regla Cromática: El fondo debe respetar el tono y atmósfera seleccionada. Los títulos, detalles gráficos y elementos de marca aplican ${primaryColor} y ${accentColor}.\n\n`;
 
+        const photoOpt = document.getElementById('charPhotoSelect')?.selectedOptions[0];
+        const photoId = photoOpt?.value;
+        const photoName = photoOpt?.innerText ? photoOpt.innerText.replace(/^📸\s*/, '').trim() : '';
+
         promptText += `DIRECCIÓN DE ARTE Y PRODUCCIÓN CREATIVA DEL PERSONAJE:\n`;
         promptText += `- Personaje Seleccionado: ${charName} (${charRole})\n`;
+        if (photoId) {
+            promptText += `- FOTO DE REFERENCIA SELECCIONADA POR EL USUARIO: Usar obligatoriamente la fotografía oficial "${photoName}" (ID: ${photoId}) de ${charName} para reproducir fielmente su peinado, rasgos, expresión y actitud de esta toma específica.\n`;
+        } else {
+            promptText += `- FOTO DE REFERENCIA: Selección rotativa/aleatoria de alta calidad desde la carpeta de Drive de ${charName}.\n`;
+        }
         promptText += `- INSTRUCCIÓN AL AGENTE / MODELO: Acceder a la carpeta de Google Drive de ${charName}, analizar las fotografías reales y utilizar toda la creatividad artística para componer la imagen con la pose, actitud, encuadre e interacción más conveniente y atractiva según el contenido textual de esta pieza y la estructura visual seleccionada (${visual}).\n`;
         promptText += `- FIDELIDAD ESTRICTA: Mantener fielmente el rostro real, rasgos faciales y tono de ${charName} según la fotografía de referencia. Prohibido sustituir el rostro o generar a otra persona con IA; acabado fotorrealista de revista médica de alto nivel.\n`;
         promptText += `- LOGOTIPO OFICIAL: Insertar el archivo oficial de "${brandName}" desde la carpeta de Drive sin redibujarlo ni deformarlo.\n\n`;
@@ -1252,7 +1448,8 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
             if (s1Body) {
                 promptText += `- Texto / Cuerpo Gráfico: "${s1Body}"\n`;
             }
-            promptText += `\n`;
+            promptText += `\nREGLA ESTRICTA DE COMPOSICIÓN (POST ÚNICO):\n`;
+            promptText += `- PROHIBIDO ABSOLUTAMENTE incluir barras de progreso de 7 líneas o segmentos, numeraciones tipo "1/1" o "01/07", paginadores, puntos o flechas de deslizador. Es una única imagen independiente para el feed.\n\n`;
         } else if (type === 'carousel') {
             const slideCards = document.querySelectorAll('.slide-card');
             const totalCount = 1 + slideCards.length;
