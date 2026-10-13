@@ -366,27 +366,31 @@
                             <span>✨ Generar / Mejorar CTA</span>
                         </button>
                     </div>
-                    <input type="text" name="cta_text" id="ctaText" value="Guardá esta guía para tu próxima consulta o dejanos tu duda en comentarios." placeholder="Ej: Escribinos al enlace del perfil para evaluar tu caso con tomografía 3D." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                    <input type="text" name="cta_text" id="ctaText" value="" placeholder="Ej: Guardá este consejo o escribinos un mensaje para evaluar tu caso con calidez." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
                 </div>
             </div>
 
             <!-- 3. COPY PARA INSTAGRAM (CAPTION & HASHTAGS) -->
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-bold text-slate-900 font-heading">3. Copy de Publicación (Instagram Caption & Hashtags)</h2>
-                    <button type="button" onclick="assistField('captionText', 'caption')" class="text-xs font-semibold px-3 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg hover:bg-sky-100 flex items-center gap-1 transition-colors cursor-pointer">
-                        <span>✨ Redactar / Pulir Copy Completo con IA</span>
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 font-heading">3. Copy de Publicación (Instagram Caption & Hashtags)</h2>
+                        <p class="text-[11px] text-slate-500">Se alinea automáticamente con el titular y temática de tu post.</p>
+                    </div>
+                    <button type="button" id="btnGeneratePostCopy" onclick="generateFullPostCopy()" class="text-xs font-bold px-3.5 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>✨ Redactar Copy y Hashtags Alineados con IA</span>
                     </button>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Texto del Post / Pie de Foto</label>
-                        <textarea name="caption_copy" id="captionText" rows="4" placeholder="Redacta el texto que acompañará la publicación en el feed..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">¿Sabías que un implante dental bien planificado puede acompañarte toda la vida? ✨ En {{ $brand->name ?? 'JM Odontología Integral' }} combinamos diagnóstico digital 3D y materiales de vanguardia para que recuperes tu sonrisa con total seguridad y confort.
-
-Deslizá para conocer las 3 claves de la durabilidad en odontología moderna. 👉
-
-¿Tenés dudas sobre tu tratamiento? Dejanos tu comentario o envianos un mensaje directo a {{ $brand->name ?? 'JM Odontología Integral' }}.</textarea>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-xs font-semibold text-slate-700">Texto del Post / Pie de Foto (Instagram)</label>
+                            <button type="button" onclick="assistField('captionText', 'caption')" class="text-[11px] font-semibold text-sky-600 hover:text-sky-700 cursor-pointer">
+                                ✨ Pulir con IA
+                            </button>
+                        </div>
+                        <textarea name="caption_copy" id="captionText" rows="5" placeholder="Escribe el texto de tu publicación o presiona '✨ Redactar Copy y Hashtags Alineados' para generarlo según el tema de tu post..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden"></textarea>
                     </div>
 
                     <div>
@@ -396,7 +400,7 @@ Deslizá para conocer las 3 claves de la durabilidad en odontología moderna. �
                                 ✨ IA
                             </button>
                         </div>
-                        <textarea name="hashtags" id="hashtagsText" rows="4" placeholder="#{{ preg_replace('/[^A-Za-z0-9]/', '', $brand->name ?? 'JMOdontologia') }} #Implantes..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-700 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden">#{{ preg_replace('/[^A-Za-z0-9]/', '', $brand->name ?? 'JMOdontologia') }} #OdontologiaIntegral #ImplantesDentales #CirugiaGuiada #SonrisaSaludable #EsteticaDental</textarea>
+                        <textarea name="hashtags" id="hashtagsText" rows="5" placeholder="#{{ preg_replace('/[^A-Za-z0-9]/', '', $brand->name ?? 'JMOdontologia') }} #SaludBucal #Bienestar #Prevencion..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-700 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden"></textarea>
                     </div>
                 </div>
             </div>
@@ -687,11 +691,15 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
 
         const currentVal = inputEl.value.trim();
         const headlineVal = document.getElementById('slide_headline_1')?.value.trim() || '';
+        const bodyVal = document.getElementById('slide_body_1')?.value.trim() || '';
         const badgeVal = document.getElementById('slide_badge_1')?.value.trim() || '';
+        const contentType = document.getElementById('contentType')?.value || 'single_post';
 
         // El tema se deduce directamente de lo que el usuario está escribiendo o del título
         let topic = '';
-        if (currentVal) {
+        if (fieldId === 'captionText' || fieldId === 'hashtagsText') {
+            topic = headlineVal || bodyVal || currentVal || 'Salud y bienestar bucodental';
+        } else if (currentVal) {
             topic = currentVal;
         } else if (headlineVal) {
             topic = headlineVal;
@@ -718,8 +726,11 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
                 },
                 body: JSON.stringify({
                     field_type: fieldType,
-                    current_text: currentVal,
+                    current_text: (fieldId === 'captionText' || fieldId === 'hashtagsText') ? '' : currentVal,
                     topic: topic,
+                    headline: headlineVal,
+                    body: bodyVal,
+                    content_type: contentType,
                     character: charName,
                     visual_type: visualType
                 })
@@ -736,6 +747,67 @@ CTA: Guardá este post si estás pensando en colocarte implantes." class="w-full
             alert('Error de conexión con el motor de IA');
         } finally {
             inputEl.classList.remove('animate-pulse', 'bg-sky-50', 'border-sky-400');
+        }
+    }
+
+    // Genera Copy y Hashtags sincronizados con el titular y cuerpo de la pieza
+    async function generateFullPostCopy() {
+        const headline = (document.getElementById('slide_headline_1')?.value || '').trim();
+        const body = (document.getElementById('slide_body_1')?.value || '').trim();
+        const badge = (document.getElementById('slide_badge_1')?.value || '').trim();
+        const contentType = document.getElementById('contentType')?.value || 'single_post';
+
+        if (!headline && !body && !badge) {
+            alert('Por favor escribe al menos el titular o tema de tu post antes de generar el copy.');
+            return;
+        }
+
+        const captionEl = document.getElementById('captionText');
+        const hashtagsEl = document.getElementById('hashtagsText');
+        const btn = document.getElementById('btnGeneratePostCopy');
+
+        if (captionEl) captionEl.classList.add('animate-pulse', 'bg-sky-50', 'border-sky-400');
+        if (hashtagsEl) hashtagsEl.classList.add('animate-pulse', 'bg-sky-50', 'border-sky-400');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ <span>Redactando Copy y Hashtags...</span>';
+        }
+
+        try {
+            const res = await fetch('/app/ai/generate-post-copy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    headline: headline,
+                    body: body,
+                    badge: badge,
+                    content_type: contentType
+                })
+            });
+
+            const data = await res.json();
+            if (data.success && data.result) {
+                if (captionEl && data.result.caption) {
+                    captionEl.value = data.result.caption;
+                }
+                if (hashtagsEl && data.result.hashtags) {
+                    hashtagsEl.value = data.result.hashtags;
+                }
+            } else {
+                alert('No se pudo generar el copy: ' + (data.error || 'Error desconocido'));
+            }
+        } catch (e) {
+            alert('Error de conexión con el motor de IA para el copy');
+        } finally {
+            if (captionEl) captionEl.classList.remove('animate-pulse', 'bg-sky-50', 'border-sky-400');
+            if (hashtagsEl) hashtagsEl.classList.remove('animate-pulse', 'bg-sky-50', 'border-sky-400');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '✨ <span>Redactar Copy y Hashtags Alineados con IA</span>';
+            }
         }
     }
 

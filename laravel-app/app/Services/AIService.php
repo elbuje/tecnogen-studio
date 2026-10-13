@@ -73,9 +73,71 @@ DIRECTRICES ESTRICTAS E INQUEBRANTABLES:
             $prompt .= "\nNota de formato: Explicación clara, empática y tranquilizadora de 1 o 2 oraciones concisas.";
         } elseif ($fieldType === 'cta') {
             $prompt .= "\nNota de formato: Llamado a la acción invitando a comentar, guardar o agendar una consulta en {$brandName}.";
+        } elseif ($fieldType === 'caption') {
+            $isSingle = ($context['content_type'] ?? '') === 'single_post';
+            $headlineContext = $context['headline'] ?? $topic;
+            $bodyContext = $context['body'] ?? '';
+            $prompt .= "\nNota de formato: Redacta el Copy completo para el pie de foto de Instagram.\n";
+            $prompt .= "- Debe conectar de inmediato con el titular: \"{$headlineContext}\" y desarrollar con calidez: \"{$bodyContext}\".\n";
+            if ($isSingle) {
+                $prompt .= "- Formato: POST ÚNICO. Prohibido decir 'deslizá para ver las láminas' o hablar de slides porque es una sola imagen en el feed.\n";
+            } else {
+                $prompt .= "- Formato: CARRUSEL. Puedes invitar a deslizar las láminas para ver el contenido completo.\n";
+            }
+            $prompt .= "- Estructura: 1) Gancho de apertura que dialogue con el titular, 2) 2 o 3 párrafos cortos explicando el beneficio con empatía, 3) Pregunta o llamada a la acción invitando a dejar su consulta en {$brandName}.\n";
+            $prompt .= "- Tono: Profesional, humano, empático y claro. Terminantemente prohibido desviar a temas de implantes o cirugías si el tema no lo pide.";
+        } elseif ($fieldType === 'hashtags') {
+            $prompt .= "\nNota de formato: Genera entre 6 y 10 hashtags en una sola línea separados por espacio.\n";
+            $prompt .= "- Deben relacionarse DIRECTAMENTE con el tema específico (\"{$topic}\") y la odontología preventiva/salud bucal.\n";
+            $prompt .= "- NO incluyas hashtags de #ImplantesDentales ni #Cirugia si el tema no es de implantes.";
         }
 
         return $this->callOpenAIText($systemPrompt, $prompt);
+    }
+
+    /**
+     * Genera el Copy (pie de foto) y los Hashtags perfectamente alineados con el titular y contenido del post
+     */
+    public function generatePostCopy(string $headline, ?string $body = '', ?string $badge = '', string $contentType = 'single_post', string $brandName = 'JM Odontología Integral'): array
+    {
+        $isSingle = ($contentType === 'single_post');
+
+        $systemPrompt = "Eres un director creativo y copywriter senior especializado en Instagram para marcas de salud y odontología (\"{$brandName}\").
+Tu tarea es redactar el Copy (pie de foto) y los Hashtags para una publicación, ALINEÁNDOTE 100% con el titular y el texto específico que definió el usuario.
+
+REGLAS CRÍTICAS E INQUEBRANTABLES:
+1. Respeta fielmente la temática del titular: \"{$headline}\".
+2. Queda TERMINANTEMENTE PROHIBIDO hablar de implantes dentales, cirugías u otros tratamientos invasivos a menos que el titular o el texto del usuario los mencione explícitamente. Si el tema es sobre prevención, hábitos, miedos, ansiedad o bienestar (\"{$headline}\"), enfócate EXCLUSIVAMENTE en esos beneficios.
+3. Formato: " . ($isSingle ? "POST ÚNICO (1 sola imagen). PROHIBIDO decir 'deslizá para ver las láminas' o hablar de pasos en futuros slides." : "CARRUSEL. Puedes invitar a deslizar las láminas.") . "
+4. Devuelve ÚNICAMENTE un JSON válido con la siguiente estructura:
+{
+  \"caption\": \"Texto completo para el pie de foto de Instagram (apertura atractiva conectando con el titular, 2 o 3 párrafos cortos explicando el beneficio con calidez humana, y llamada a la acción invitando a dejar su consulta o comentar en {$brandName})\",
+  \"hashtags\": \"#HashtagsRelevantesAlTema (6 a 10 hashtags alineados al tema específico y sin etiquetas de implantes si no corresponden)\"
+}";
+
+        $userPrompt = "Datos de la publicación:
+- Marca: {$brandName}
+- Formato: " . ($isSingle ? "Post Único (1080x1080)" : "Carrusel de Instagram") . "
+- Categoría / Kicker: {$badge}
+- Titular Principal: \"{$headline}\"
+- Texto / Cuerpo Gráfico: \"{$body}\"
+
+Genera el copy y los hashtags coherentes:";
+
+        $response = $this->callOpenAIText($systemPrompt, $userPrompt, true);
+        $json = json_decode($response, true);
+
+        if (is_array($json) && !empty($json['caption'])) {
+            return [
+                'caption' => trim($json['caption']),
+                'hashtags' => trim($json['hashtags'] ?? '')
+            ];
+        }
+
+        return [
+            'caption' => $response,
+            'hashtags' => '#SaludBucal #BienestarGeneral #OdontologiaPreventiva #SonrisaSaludable'
+        ];
     }
 
     /**

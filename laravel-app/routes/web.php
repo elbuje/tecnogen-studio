@@ -704,9 +704,33 @@ Route::prefix('app')->group(function () {
             'topic' => $request->input('topic', ''),
             'character' => $request->input('character', 'Dra. Karina'),
             'visual_type' => $request->input('visual_type', ''),
+            'content_type' => $request->input('content_type', 'single_post'),
+            'headline' => $request->input('headline', ''),
+            'body' => $request->input('body', ''),
         ];
 
         $result = $ai->assistField($fieldType, $currentText, $context);
+        return response()->json(['success' => true, 'result' => $result]);
+    });
+
+    // Generador de Copy y Hashtags alineados con el titular y post actual
+    Route::post('/ai/generate-post-copy', function (Request $request, \App\Services\AIService $ai) {
+        if (!session('user')) return response()->json(['error' => 'Unauthorized'], 401);
+
+        $user = session('user');
+        $brand = \App\Models\Brand::where('name', 'like', '%JM%')->first() ?? \App\Models\Brand::where('user_id', $user->id)->first() ?? \App\Models\Brand::first();
+        $brandName = $brand ? $brand->name : 'JM Odontología Integral';
+
+        $headline = $request->input('headline', '');
+        $body = $request->input('body', '');
+        $badge = $request->input('badge', '');
+        $contentType = $request->input('content_type', 'single_post');
+
+        if (empty(trim($headline)) && empty(trim($body))) {
+            return response()->json(['success' => false, 'error' => 'Por favor escribe al menos un titular o tema para tu post.'], 422);
+        }
+
+        $result = $ai->generatePostCopy($headline, $body, $badge, $contentType, $brandName);
         return response()->json(['success' => true, 'result' => $result]);
     });
 
