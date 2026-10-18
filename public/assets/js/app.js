@@ -304,8 +304,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 mainVars.forEach(v => {
                     const rowDiv = document.createElement('div');
                     rowDiv.style.marginBottom = '3px';
-                    const val = data.vars[v] || '(vacío)';
-                    rowDiv.innerHTML = `<span style="color: var(--primary);">{{${v}}}:</span> <span style="color: #e2e8f0;">${escapeHtml(val.substring(0, 100))}${val.length > 100 ? '...' : ''}</span>`;
+                    const rawVal = (data.vars && data.vars[v] !== undefined && data.vars[v] !== null) ? data.vars[v] : '';
+                    const val = (rawVal !== '') ? String(rawVal) : '(vacío)';
+                    rowDiv.innerHTML = `<span style="color: var(--primary);">{{${v}}}:</span> <span style="color: #e2e8f0;">${escapeHtml(val.substring(0, 120))}${val.length > 120 ? '...' : ''}</span>`;
                     varsList.appendChild(rowDiv);
                 });
 
@@ -517,8 +518,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function escapeHtml(text) {
-        if (!text) return '';
-        return text
+        if (text === null || text === undefined) return '';
+        return String(text)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
