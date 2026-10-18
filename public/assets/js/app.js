@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentRowVars = null;
     let configData = {};
     let sheetRowsData = [];
+    let currentGalleryItems = [];
+    let galleryViewMode = 'ig'; // 'ig' | 'grid'
 
     // Elements
     const navBtns = document.querySelectorAll('.nav-btn');
@@ -396,20 +398,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 consoleBox.textContent += `Slides generados: ${data.generated_count} de ${data.total_slides}\n`;
 
                 if (data.images && data.images.length > 0) {
-                    data.images.forEach((imgUrl, i) => {
-                        const card = document.createElement('div');
-                        card.className = 'slide-card';
-                        card.innerHTML = `
-                            <div class="slide-img-wrapper">
-                                <img src="${imgUrl}" alt="Slide ${i+1}">
+                    // Render Instagram Live Carousel Preview for the newly generated post
+                    const previewItem = {
+                        folder: data.folder,
+                        slides: data.images,
+                        total_slides: data.images.length,
+                        row_data: currentRowData,
+                        created_at: new Date().toLocaleTimeString()
+                    };
+
+                    galleryContainer.innerHTML = `
+                        <div style="width: 100%; margin-bottom: 2rem;">
+                            <div style="text-align: center; margin-bottom: 1rem; color: var(--primary); font-weight: 700; font-size: 1.05rem;">
+                                📱 Vista Previa en Feed de Instagram
                             </div>
-                            <div class="slide-info">
-                                <span class="slide-badge">Slide ${i+1}</span>
-                                <a href="${imgUrl}" download class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">⬇ Descargar</a>
+                            ${renderInstagramCard(previewItem, 'prod_preview')}
+                        </div>
+                        <div style="width: 100%;">
+                            <div style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">
+                                🔲 Descarga de Slides Individuales (${data.images.length} imágenes)
                             </div>
-                        `;
-                        galleryContainer.appendChild(card);
-                    });
+                            <div class="slides-grid">
+                                ${data.images.map((imgUrl, i) => `
+                                    <div class="slide-card">
+                                        <div class="slide-img-wrapper">
+                                            <img src="${imgUrl}" alt="Slide ${i+1}">
+                                        </div>
+                                        <div class="slide-info">
+                                            <span class="slide-badge">Slide ${i+1}</span>
+                                            <a href="${imgUrl}" download class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">⬇ Descargar</a>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+
+                    // Attach gesture listeners to the preview card
+                    setTimeout(() => {
+                        const vp = document.getElementById('viewport-prod_preview');
+                        if (vp) attachSwipeListeners(vp, 'prod_preview', previewItem.slides);
+                    }, 50);
                 }
             } else {
                 consoleBox.textContent += `[${new Date().toLocaleTimeString()}] ❌ ERROR: ${data.message}\n`;
@@ -467,55 +496,367 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --------------------------------------------------------------------------
-    // 7. GALERÍA DE HISTORIAL
+    // 7. GALERÍA DE HISTORIAL — INSTAGRAM CAROUSEL & GRID
     // --------------------------------------------------------------------------
     async function loadHistory() {
         const container = document.getElementById('history-container');
-        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">Cargando producciones anteriores...</div>';
+        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 3rem;">Cargando producciones anteriores...</div>';
 
         try {
             const res = await fetch('api.php?action=get_history');
             const data = await res.json();
-            if (data.status === 'ok' && data.history.length > 0) {
-                container.innerHTML = '';
-                data.history.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.style.marginBottom = '2rem';
-                    
-                    let slidesHtml = '';
-                    item.slides.forEach((s, idx) => {
-                        slidesHtml += `
-                            <div class="slide-card">
-                                <div class="slide-img-wrapper">
-                                    <img src="${s}" alt="Slide ${idx+1}">
-                                </div>
-                                <div class="slide-info">
-                                    <span class="slide-badge">Slide ${idx+1}</span>
-                                    <a href="${s}" download class="btn btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;">⬇</a>
-                                </div>
-                            </div>
-                        `;
-                    });
+            if (data.status === 'ok') {
+                currentGalleryItems = data.history || [];
+                renderGallery();
+            } else {
+                container.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 3rem;">Error: ${data.message}</div>`;
+            }
+        } catch (e) {
+            container.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 3rem;">Error cargando historial: ${e}</div>`;
+        }
+    }
 
-                    card.innerHTML = `
-                        <div class="card-title" style="display: flex; justify-content: space-between;">
-                            <span>📁 ${item.folder}</span>
-                            <span class="pill">${item.total_slides} slides</span>
+    window.setGalleryViewMode = function(mode) {
+        galleryViewMode = mode;
+        const btnIg = document.getElementById('view-mode-ig');
+        const btnGrid = document.getElementById('view-mode-grid');
+
+        if (btnIg && btnGrid) {
+            if (mode === 'ig') {
+                btnIg.classList.add('active');
+                btnGrid.classList.remove('active');
+            } else {
+                btnGrid.classList.add('active');
+                btnIg.classList.remove('active');
+            }
+        }
+        renderGallery();
+    };
+
+    function renderGallery() {
+        const container = document.getElementById('history-container');
+        if (!container) return;
+
+        if (!currentGalleryItems || currentGalleryItems.length === 0) {
+            container.innerHTML = `
+                <div style="color: var(--text-muted); text-align: center; padding: 4rem 1rem;">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">📸</div>
+                    <div style="font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Aún no se han producido carruseles</div>
+                    <div style="font-size: 0.85rem;">Ve a la pestaña <strong>🚀 Generador</strong> para crear tu primer carrusel de Instagram.</div>
+                </div>
+            `;
+            return;
+        }
+
+        if (galleryViewMode === 'ig') {
+            // Instagram Feed Layout
+            let html = '<div class="ig-feed-container">';
+            currentGalleryItems.forEach((item, idx) => {
+                html += renderInstagramCard(item, idx);
+            });
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Attach touch swipe & mouse drag listeners to each card viewport
+            currentGalleryItems.forEach((item, idx) => {
+                const vp = document.getElementById(`viewport-${idx}`);
+                if (vp) attachSwipeListeners(vp, idx, item.slides);
+            });
+        } else {
+            // Grid Layout
+            let html = '';
+            currentGalleryItems.forEach((item, idx) => {
+                let slidesHtml = '';
+                item.slides.forEach((s, sIdx) => {
+                    slidesHtml += `
+                        <div class="slide-card">
+                            <div class="slide-img-wrapper">
+                                <img src="${s}" alt="Slide ${sIdx+1}" loading="lazy">
+                            </div>
+                            <div class="slide-info">
+                                <span class="slide-badge">Slide ${sIdx+1}</span>
+                                <a href="${s}" download class="btn btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;">⬇</a>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const topic = item.row_data ? (item.row_data['TEMA'] || item.folder) : item.folder;
+                const rowN = item.row_data ? (item.row_data['N°'] || '') : '';
+
+                html += `
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <span>📁 Fila ${rowN ? `N° ${rowN}: ` : ''}${escapeHtml(topic)}</span>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span class="pill">${item.total_slides} slides</span>
+                                <a href="api.php?action=download_zip&folder=${encodeURIComponent(item.folder)}" class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                                    📦 Descargar ZIP
+                                </a>
+                            </div>
                         </div>
                         <div class="slides-grid">
                             ${slidesHtml}
                         </div>
-                    `;
-                    container.appendChild(card);
-                });
-            } else {
-                container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 3rem;">Aún no se han producido carruseles desde la web.</div>';
-            }
-        } catch (e) {
-            container.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 2rem;">Error cargando historial: ${e}</div>`;
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
         }
     }
+
+    // --------------------------------------------------------------------------
+    // INSTAGRAM CARD COMPONENT BUILDER
+    // --------------------------------------------------------------------------
+    function renderInstagramCard(item, postIndex) {
+        const totalSlides = item.slides.length;
+        const title = item.row_data ? (item.row_data['TÍTULO / PORTADA'] || item.row_data['TEMA'] || item.folder) : item.folder;
+        const topic = item.row_data ? (item.row_data['TEMA'] || '') : '';
+        const dra = item.row_data ? (item.row_data['DRA'] || 'Jovany') : 'Jovany';
+        const rowNum = item.row_data ? (item.row_data['N°'] || '') : '';
+        const dateStr = item.created_at || 'Reciente';
+
+        let slidesHtml = '';
+        item.slides.forEach((s, i) => {
+            slidesHtml += `
+                <div class="ig-slide">
+                    <img src="${s}" alt="Slide ${i+1}" loading="lazy">
+                </div>
+            `;
+        });
+
+        let dotsHtml = '';
+        for (let i = 0; i < totalSlides; i++) {
+            dotsHtml += `<div class="ig-dot ${i === 0 ? 'active' : ''}" data-idx="${i}" onclick="jumpToSlide('${postIndex}', ${i})"></div>`;
+        }
+
+        return `
+            <article class="ig-post-card" id="ig-post-${postIndex}" data-current="0" data-total="${totalSlides}">
+                <!-- Instagram Header -->
+                <div class="ig-post-header">
+                    <div class="ig-profile-info">
+                        <div class="ig-avatar-ring">
+                            <div class="ig-avatar-inner">JM</div>
+                        </div>
+                        <div class="ig-username-box">
+                            <div class="ig-username-line">
+                                jm.odontologiaintegral
+                                <span class="ig-badge-verified">✓</span>
+                                <span style="color: var(--text-muted); font-size: 0.78rem; font-weight: normal; margin-left: 2px;">• Siguiendo</span>
+                            </div>
+                            <div class="ig-subtitle-line">
+                                ${topic ? escapeHtml(topic) : 'Consultorio JM Odontología'} ${rowNum ? `• Fila ${rowNum}` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ig-more-options" title="Opciones de publicación">•••</div>
+                </div>
+
+                <!-- 4:5 Slider Viewport -->
+                <div class="ig-viewport" id="viewport-${postIndex}">
+                    <div class="ig-counter-badge" id="counter-${postIndex}">1/${totalSlides}</div>
+
+                    ${totalSlides > 1 ? `
+                        <button class="ig-arrow-btn ig-arrow-prev hidden" id="prev-${postIndex}" onclick="moveSlide('${postIndex}', -1)" aria-label="Slide anterior">‹</button>
+                        <button class="ig-arrow-btn ig-arrow-next" id="next-${postIndex}" onclick="moveSlide('${postIndex}', 1)" aria-label="Slide siguiente">›</button>
+                    ` : ''}
+
+                    <div class="ig-track" id="track-${postIndex}">
+                        ${slidesHtml}
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="ig-actions-bar">
+                    <div class="ig-actions-left">
+                        <button class="ig-action-btn" id="like-${postIndex}" onclick="toggleLike('${postIndex}')" title="Me gusta">🤍</button>
+                        <button class="ig-action-btn" title="Comentar">💬</button>
+                        <button class="ig-action-btn" title="Compartir">↗️</button>
+                    </div>
+
+                    <div class="ig-dots-box" id="dots-${postIndex}">
+                        ${dotsHtml}
+                    </div>
+
+                    <div>
+                        <button class="ig-action-btn" title="Guardar">🔖</button>
+                    </div>
+                </div>
+
+                <!-- Caption & Metadata -->
+                <div class="ig-caption-box">
+                    <div class="ig-likes-label" id="likes-count-${postIndex}">1.248 Me gusta</div>
+                    <div class="ig-caption-body">
+                        <strong>jm.odontologiaintegral</strong>
+                        <span>${escapeHtml(title)}</span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: #38bdf8; margin-bottom: 0.5rem; word-break: break-word;">
+                        #JMOdontologia #SaludBucal #Dra${escapeHtml(dra)} #EsteticaDental #OdontologiaIntegral
+                    </div>
+                    <div class="ig-time-meta">
+                        Producido: ${dateStr} • ${item.folder}
+                    </div>
+
+                    <!-- Toolbar de Descargas -->
+                    <div class="ig-post-toolbar">
+                        <a id="btn-download-slide-${postIndex}" href="${item.slides[0]}" download class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.85rem; flex: 1;">
+                            ⬇ Descargar Slide Actual
+                        </a>
+                        <a href="api.php?action=download_zip&folder=${encodeURIComponent(item.folder)}" class="btn btn-primary" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;">
+                            📦 Descargar Todos (.ZIP)
+                        </a>
+                    </div>
+                </div>
+            </article>
+        `;
+    }
+
+    // --------------------------------------------------------------------------
+    // INSTAGRAM SLIDER CONTROLS & GESTURES
+    // --------------------------------------------------------------------------
+    window.moveSlide = function(postIndex, direction) {
+        const card = document.getElementById(`ig-post-${postIndex}`);
+        if (!card) return;
+        const total = parseInt(card.getAttribute('data-total'), 10);
+        let current = parseInt(card.getAttribute('data-current'), 10);
+
+        let next = current + direction;
+        if (next < 0) next = 0;
+        if (next >= total) next = total - 1;
+
+        updateSlidePosition(postIndex, next);
+    };
+
+    window.jumpToSlide = function(postIndex, slideIdx) {
+        updateSlidePosition(postIndex, slideIdx);
+    };
+
+    function updateSlidePosition(postIndex, newIdx) {
+        const card = document.getElementById(`ig-post-${postIndex}`);
+        if (!card) return;
+        const total = parseInt(card.getAttribute('data-total'), 10);
+        card.setAttribute('data-current', newIdx);
+
+        // Move track
+        const track = document.getElementById(`track-${postIndex}`);
+        if (track) {
+            track.style.transform = `translateX(-${newIdx * 100}%)`;
+        }
+
+        // Update badge 1/8
+        const counter = document.getElementById(`counter-${postIndex}`);
+        if (counter) {
+            counter.textContent = `${newIdx + 1}/${total}`;
+        }
+
+        // Update dots
+        const dotsBox = document.getElementById(`dots-${postIndex}`);
+        if (dotsBox) {
+            const dots = dotsBox.querySelectorAll('.ig-dot');
+            dots.forEach((d, i) => {
+                if (i === newIdx) d.classList.add('active');
+                else d.classList.remove('active');
+            });
+        }
+
+        // Update arrow visibility
+        const prevBtn = document.getElementById(`prev-${postIndex}`);
+        const nextBtn = document.getElementById(`next-${postIndex}`);
+        if (prevBtn) {
+            if (newIdx === 0) prevBtn.classList.add('hidden');
+            else prevBtn.classList.remove('hidden');
+        }
+        if (nextBtn) {
+            if (newIdx === total - 1) nextBtn.classList.add('hidden');
+            else nextBtn.classList.remove('hidden');
+        }
+
+        // Update current slide download button href
+        const dlBtn = document.getElementById(`btn-download-slide-${postIndex}`);
+        if (dlBtn) {
+            let slideUrl = '';
+            if (postIndex === 'prod_preview') {
+                const img = track ? track.querySelectorAll('.ig-slide img')[newIdx] : null;
+                if (img) slideUrl = img.getAttribute('src');
+            } else if (currentGalleryItems[postIndex] && currentGalleryItems[postIndex].slides[newIdx]) {
+                slideUrl = currentGalleryItems[postIndex].slides[newIdx];
+            }
+            if (slideUrl) dlBtn.href = slideUrl;
+        }
+    }
+
+    // Touch and mouse drag swipe support
+    function attachSwipeListeners(viewportEl, postIndex, slides) {
+        let startX = 0;
+        let currentX = 0;
+        let isTouching = false;
+        let isMouseDown = false;
+
+        // Touch gestures
+        viewportEl.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            isTouching = true;
+        }, { passive: true });
+
+        viewportEl.addEventListener('touchmove', (e) => {
+            if (!isTouching) return;
+            currentX = e.touches[0].clientX;
+        }, { passive: true });
+
+        viewportEl.addEventListener('touchend', () => {
+            if (!isTouching) return;
+            const diffX = currentX - startX;
+            if (Math.abs(diffX) > 40 && currentX !== 0) {
+                if (diffX < 0) moveSlide(postIndex, 1);
+                else moveSlide(postIndex, -1);
+            }
+            isTouching = false;
+            startX = 0;
+            currentX = 0;
+        });
+
+        // Mouse drag gestures
+        viewportEl.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            startX = e.clientX;
+        });
+
+        viewportEl.addEventListener('mouseup', (e) => {
+            if (!isMouseDown) return;
+            const diffX = e.clientX - startX;
+            if (Math.abs(diffX) > 45) {
+                if (diffX < 0) moveSlide(postIndex, 1);
+                else moveSlide(postIndex, -1);
+            }
+            isMouseDown = false;
+        });
+
+        viewportEl.addEventListener('mouseleave', () => {
+            isMouseDown = false;
+        });
+
+        // Double click to like effect
+        viewportEl.addEventListener('dblclick', () => {
+            toggleLike(postIndex);
+        });
+    }
+
+    // Like button toggle
+    window.toggleLike = function(postIndex) {
+        const btn = document.getElementById(`like-${postIndex}`);
+        const count = document.getElementById(`likes-count-${postIndex}`);
+        if (!btn) return;
+
+        if (btn.classList.contains('liked')) {
+            btn.classList.remove('liked');
+            btn.textContent = '🤍';
+            if (count) count.textContent = '1.248 Me gusta';
+        } else {
+            btn.classList.add('liked');
+            btn.textContent = '❤️';
+            if (count) count.textContent = '1.249 Me gusta';
+        }
+    };
 
     function escapeHtml(text) {
         if (text === null || text === undefined) return '';
@@ -526,6 +867,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
+
+    // Export loadHistory to window
+    window.loadHistory = loadHistory;
 
     // Inicialización al cargar la página
     loadConfig();

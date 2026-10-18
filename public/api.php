@@ -635,23 +635,73 @@ if ($action === 'get_history') {
         foreach ($dirs as $d) {
             if ($d === '.' || $d === '..' || !is_dir($outputDir . '/' . $d)) continue;
             if (strpos($d, 'carrusel_') === 0) {
-                $files = glob($outputDir . '/' . $d . '/slide_*.png');
+                $targetPath = $outputDir . '/' . $d;
+                $files = glob($targetPath . '/slide_*.png');
                 if (!empty($files)) {
                     sort($files);
                     $slideUrls = array_map(function($f) use ($d) {
                         return 'output/' . $d . '/' . basename($f);
                     }, $files);
+
+                    $metaFile = $targetPath . '/row_data.json';
+                    $rowData = file_exists($metaFile) ? json_decode(file_get_contents($metaFile), true) : [];
+                    $promptFile = $targetPath . '/prompt_utilizado.txt';
+                    $promptUsed = file_exists($promptFile) ? file_get_contents($promptFile) : '';
+                    $mtime = filemtime($targetPath);
+
                     $history[] = [
                         'folder' => $d,
                         'total_slides' => count($slideUrls),
                         'thumbnail' => $slideUrls[0] ?? '',
-                        'slides' => $slideUrls
+                        'slides' => $slideUrls,
+                        'row_data' => $rowData,
+                        'prompt_used' => $promptUsed,
+                        'created_at' => date('d/m/Y H:i', $mtime),
+                        'timestamp' => $mtime
                     ];
                 }
             }
         }
     }
     echo json_encode(['status' => 'ok', 'history' => $history]);
+    exit;
+}
+
+// --------------------------------------------------------------------------
+// 9. DESCARGAR TODOS LOS SLIDES EN ARCHIVO ZIP
+// --------------------------------------------------------------------------
+if ($action === 'download_zip') {
+    $folder = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['folder'] ?? '');
+    $targetPath = $outputDir . '/' . $folder;
+    if (!$folder || !is_dir($targetPath)) {
+        http_response_code(404);
+        echo 'Carpeta no encontrada';
+        exit;
+    }
+
+    $files = glob($targetPath . '/slide_*.png');
+    if (empty($files)) {
+        http_response_code(404);
+        echo 'No hay slides en este carrusel';
+        exit;
+    }
+
+    $zipPath = $targetPath . '/carrusel_' . $folder . '.zip';
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+        foreach ($files as $f) {
+            $zip->addFile($f, basename($f));
+        }
+        if (file_exists($targetPath . '/prompt_utilizado.txt')) {
+            $zip->addFile($targetPath . '/prompt_utilizado.txt', 'prompt_utilizado.txt');
+        }
+        $zip->close();
+    }
+
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="carrusel_' . $folder . '.zip"');
+    header('Content-Length: ' . filesize($zipPath));
+    readfile($zipPath);
     exit;
 }
 

@@ -290,6 +290,30 @@
 
         <!-- ==================== TAB 5: GALERÍA DE HISTORIAL ==================== -->
         <section id="tab-history" class="tab-pane">
+            <div class="gallery-header-bar">
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">
+                        🖼️ Galería de Carruseles Producidos
+                    </h2>
+                    <p style="font-size: 0.82rem; color: var(--text-muted);">
+                        Visualiza los carruseles exactamente como se verán en el feed de Instagram con deslizador táctil e interactivo.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <div class="view-toggle-group">
+                        <button id="view-mode-ig" class="view-toggle-btn active" onclick="setGalleryViewMode('ig')">
+                            📱 Vista Instagram Feed
+                        </button>
+                        <button id="view-mode-grid" class="view-toggle-btn" onclick="setGalleryViewMode('grid')">
+                            🔲 Vista Cuadrícula
+                        </button>
+                    </div>
+                    <button onclick="loadHistory()" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.85rem;">
+                        🔄 Refrescar
+                    </button>
+                </div>
+            </div>
+
             <div id="history-container">
                 <!-- Se cargan dinámicamente los carruseles producidos -->
             </div>
