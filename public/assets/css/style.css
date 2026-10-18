@@ -388,3 +388,52 @@ textarea {
     border: 1px solid rgba(248, 113, 113, 0.3);
     color: var(--danger);
 }
+
+/* Variable Chips & Templates */
+.chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem 0;
+}
+
+.chip-tag {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: var(--primary);
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.chip-tag:hover {
+    background: var(--primary);
+    color: #0b1120;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+}
+
+.chip-help {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.info-callout {
+    background: rgba(14, 165, 233, 0.08);
+    border-left: 4px solid var(--primary);
+    padding: 0.85rem 1.15rem;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+    color: #bae6fd;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+
+.info-callout strong {
+    color: #fff;
+}
+

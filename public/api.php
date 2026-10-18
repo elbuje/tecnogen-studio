@@ -12,12 +12,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $baseDir = dirname(__DIR__);
 $configFile = $baseDir . '/data/config.json';
 $outputDir = __DIR__ . '/output';
+$masterTemplateFile = $baseDir . '/data/prompt_master_template.txt';
+$slideTemplateFile = $baseDir . '/data/slide_prompt_template.txt';
 
 if (!is_dir($outputDir)) {
     @mkdir($outputDir, 0775, true);
 }
 if (!is_dir($baseDir . '/data')) {
     @mkdir($baseDir . '/data', 0775, true);
+}
+
+// --------------------------------------------------------------------------
+// PLANTILLAS POR DEFECTO
+// --------------------------------------------------------------------------
+function getDefaultMasterTemplate() {
+    return <<<'EOT'
+ACTUÁ COMO DIRECTOR/A DE ARTE, DISEÑADOR/A GRÁFICO/A PROFESIONAL Y PRODUCTOR/A DE CARRUSELES PARA INSTAGRAM DE JM ODONTOLOGÍA INTEGRAL.
+
+FUENTE DE DATOS
+Trabajá exclusivamente con la fila seleccionada del Google Sheet:
+- FILA N°: {{N}}
+- TEMA: {{TEMA}}
+- TÍTULO / PORTADA: {{TITULO}}
+- DOCTORA PROTAGONISTA: Dra. {{DRA}}
+- SUBTÍTULOS / PALABRAS CLAVE: {{SUBTITULOS}}
+- LINK A CARPETA DE FOTOS: {{LINK_FOTOS}}
+- LINK A CARPETA DE LOGOS: {{LINK_LOGOS}}
+- LINK A MANUAL DE MARCA: {{LINK_MANUAL}}
+- ESTADO: {{ESTADO}}
+
+OBJETIVO Y ALCANCE
+Crear un carrusel de Instagram para “JM Odontología Integral”, formado por imágenes finales INDIVIDUALES: una imagen por cada slide enumerado dentro de la columna “GUION”.
+Total de piezas a generar: exactamente {{CANTIDAD_SLIDES}} imágenes independientes.
+
+FORMATO OBLIGATORIO
+- Una pieza final independiente por slide (slide_01, slide_02, etc.).
+- Proporción vertical 4:5 (1080 × 1350 px).
+- Sin grillas, collages ni plantillas repetitivas.
+- Cada slide debe ser una pieza editorial completa y lista para publicar.
+
+GUION COMPLETO SLIDE POR SLIDE:
+{{GUION}}
+
+DIRECCIÓN DE FOTOGRAFÍA, ACTUACIÓN Y ESCENOGRAFÍA
+- Espacio real y tridimensional: consultorio moderno, limpio, luminoso y acogedor, con estilo escandinavo y elementos de alta gama.
+- Actuación orgánica y espontánea: la doctora habita el espacio naturalmente (sentada al borde de un sillón, conversando distendida, apoyada en una mesada o mostrando un procedimiento con soltura).
+- Mirada y conexión: contacto visual directo, cálido y empático con la lente cuando converse con el usuario, o concentración profesional en el paciente/pantalla/elemento clínico.
+- Variación cinematográfica de planos: alternar planos medios de conversación, planos detalle/macro de elementos dentales o instrumental, y primeros planos cálidos y cercanos.
+
+IDENTIDAD VISUAL Y APLICACIÓN DE MARCA
+- Paleta oficial del Manual de Marca:
+  * Relax Blue: #16345F
+  * Sky Pulse: #7DD3FC
+  * Core Black: #1D1D1B
+  * Grey Calm: #F2F2F2
+  * White: #FFFFFF
+- Tipografía editorial sans-serif limpia, con jerarquía visual clara y legible en smartphones sobre el espacio negativo de cada toma.
+- Indicador sutil de navegación («Deslizá →» en portada y progreso discreto en slides intermedios).
+- Logo oficial ubicado en posición armónica respetando su área de protección.
+
+Generá las piezas individuales correspondientes a cada slide del guion.
+EOT;
+}
+
+function getDefaultSlideTemplate() {
+    return <<<'EOT'
+High-end professional cinematic photograph for Instagram carousel slide {{SLIDE_NUM}} of {{TOTAL_SLIDES}}.
+Topic: {{TEMA}}.
+Content to visualize: {{SLIDE_TEXT}}.
+Scene and subject: Female dentist Dra. {{DRA}} in modern, bright, premium dental clinic with clean Scandinavian architectural design.
+Natural, authentic posture and spontaneous body language. Warm, empathetic expression with direct eye contact to camera lens or natural professional focus.
+High-end editorial aesthetic, soft balanced lighting, ample clean negative space. Colors: Relax Blue (#16345F), Sky Pulse (#7DD3FC), pristine clinical whites. Highly detailed, photorealistic 4k.
+EOT;
+}
+
+function getMasterTemplate($file) {
+    if (file_exists($file)) {
+        $content = file_get_contents($file);
+        if (trim($content) !== '') return $content;
+    }
+    $default = getDefaultMasterTemplate();
+    file_put_contents($file, $default);
+    return $default;
+}
+
+function getSlideTemplate($file) {
+    if (file_exists($file)) {
+        $content = file_get_contents($file);
+        if (trim($content) !== '') return $content;
+    }
+    $default = getDefaultSlideTemplate();
+    file_put_contents($file, $default);
+    return $default;
+}
+
+function renderTemplate($template, $variables) {
+    foreach ($variables as $key => $val) {
+        if (is_array($val)) continue;
+        $strVal = (string)$val;
+        $template = str_replace('{{' . $key . '}}', $strVal, $template);
+        $template = str_replace('{{' . strtolower($key) . '}}', $strVal, $template);
+        $template = str_replace('{{' . strtoupper($key) . '}}', $strVal, $template);
+    }
+    return $template;
 }
 
 function getConfig($configFile) {
@@ -29,7 +126,8 @@ function getConfig($configFile) {
     return [
         'openai_api_key' => '',
         'selected_model' => 'gpt-image-2.5-sunburst',
-        'sheet_url' => 'https://docs.google.com/spreadsheets/d/1xvNd-tg2gXnMkXh8T4W8ibbyZE1I29gMjrG3jYwiPDo/export?format=csv&gid=1841829525'
+        'sheet_url' => 'https://docs.google.com/spreadsheets/d/1xvNd-tg2gXnMkXh8T4W8ibbyZE1I29gMjrG3jYwiPDo/export?format=csv&gid=1841829525',
+        'generation_mode' => 'edits'
     ];
 }
 
@@ -37,9 +135,36 @@ function saveConfig($configFile, $data) {
     file_put_contents($configFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
+function parseCsvRows($csvContent) {
+    $stream = fopen('php://memory', 'r+');
+    fwrite($stream, $csvContent);
+    rewind($stream);
+
+    $headers = fgetcsv($stream);
+    if (!$headers) {
+        fclose($stream);
+        return [];
+    }
+    $headers = array_map('trim', $headers);
+
+    $rows = [];
+    while (($r = fgetcsv($stream)) !== false) {
+        if (empty(array_filter($r))) continue;
+        if (count($r) < count($headers)) {
+            $r = array_pad($r, count($headers), '');
+        }
+        $row = array_combine($headers, array_slice($r, 0, count($headers)));
+        $rows[] = $row;
+    }
+    fclose($stream);
+    return $rows;
+}
+
 $action = $_GET['action'] ?? '';
 
+// --------------------------------------------------------------------------
 // 1. OBTENER CONFIGURACIÓN
+// --------------------------------------------------------------------------
 if ($action === 'get_config') {
     $cfg = getConfig($configFile);
     $key = $cfg['openai_api_key'] ?? '';
@@ -49,12 +174,15 @@ if ($action === 'get_config') {
         'openai_api_key' => $key,
         'masked_key' => $maskedKey,
         'selected_model' => $cfg['selected_model'] ?? 'gpt-image-2.5-sunburst',
-        'sheet_url' => $cfg['sheet_url'] ?? ''
+        'sheet_url' => $cfg['sheet_url'] ?? '',
+        'generation_mode' => $cfg['generation_mode'] ?? 'edits'
     ]);
     exit;
 }
 
+// --------------------------------------------------------------------------
 // 2. GUARDAR CONFIGURACIÓN
+// --------------------------------------------------------------------------
 if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
@@ -65,12 +193,61 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($input['openai_api_key'])) $cfg['openai_api_key'] = trim($input['openai_api_key']);
     if (isset($input['selected_model'])) $cfg['selected_model'] = trim($input['selected_model']);
     if (isset($input['sheet_url'])) $cfg['sheet_url'] = trim($input['sheet_url']);
+    if (isset($input['generation_mode'])) $cfg['generation_mode'] = trim($input['generation_mode']);
     saveConfig($configFile, $cfg);
-    echo json_encode(['status' => 'ok', 'message' => 'Configuración guardada']);
+    echo json_encode(['status' => 'ok', 'message' => 'Configuración guardada exitosamente']);
     exit;
 }
 
-// 3. CONSULTAR MODELOS DE OPENAI EN VIVO
+// --------------------------------------------------------------------------
+// 3. GESTIÓN DE PLANTILLAS DE PROMPT (NO HARDCODED)
+// --------------------------------------------------------------------------
+if ($action === 'get_templates') {
+    $masterTpl = getMasterTemplate($masterTemplateFile);
+    $slideTpl = getSlideTemplate($slideTemplateFile);
+    echo json_encode([
+        'status' => 'ok',
+        'master_template' => $masterTpl,
+        'slide_template' => $slideTpl,
+        'files' => [
+            'master' => 'data/prompt_master_template.txt',
+            'slide' => 'data/slide_prompt_template.txt'
+        ]
+    ]);
+    exit;
+}
+
+if ($action === 'save_templates' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        echo json_encode(['status' => 'error', 'message' => 'Payload JSON inválido']);
+        exit;
+    }
+    if (isset($input['master_template'])) {
+        file_put_contents($masterTemplateFile, $input['master_template']);
+    }
+    if (isset($input['slide_template'])) {
+        file_put_contents($slideTemplateFile, $input['slide_template']);
+    }
+    echo json_encode(['status' => 'ok', 'message' => 'Plantillas guardadas en archivos de texto exitosamente']);
+    exit;
+}
+
+if ($action === 'reset_templates' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    file_put_contents($masterTemplateFile, getDefaultMasterTemplate());
+    file_put_contents($slideTemplateFile, getDefaultSlideTemplate());
+    echo json_encode([
+        'status' => 'ok',
+        'message' => 'Plantillas restauradas a sus valores por defecto',
+        'master_template' => getDefaultMasterTemplate(),
+        'slide_template' => getDefaultSlideTemplate()
+    ]);
+    exit;
+}
+
+// --------------------------------------------------------------------------
+// 4. CONSULTAR MODELOS DE OPENAI EN VIVO
+// --------------------------------------------------------------------------
 if ($action === 'get_models') {
     $cfg = getConfig($configFile);
     $apiKey = $cfg['openai_api_key'] ?? '';
@@ -110,7 +287,6 @@ if ($action === 'get_models') {
     }
     sort($modelsList);
 
-    // Filtrar modelos de imagen
     $imageKeywords = ['image', 'dall', 'sunburst', 'flare'];
     $imageModels = array_values(array_filter($modelsList, function($id) use ($imageKeywords) {
         $lower = strtolower($id);
@@ -129,7 +305,9 @@ if ($action === 'get_models') {
     exit;
 }
 
-// 4. OBTENER FILAS DEL GOOGLE SHEET
+// --------------------------------------------------------------------------
+// 5. OBTENER FILAS DEL GOOGLE SHEET
+// --------------------------------------------------------------------------
 if ($action === 'get_sheet_rows') {
     $cfg = getConfig($configFile);
     $sheetUrl = $cfg['sheet_url'] ?? '';
@@ -152,24 +330,15 @@ if ($action === 'get_sheet_rows') {
         exit;
     }
 
-    $lines = str_getcsv($csvContent, "\n");
-    if (empty($lines)) {
-        echo json_encode(['status' => 'error', 'message' => 'Archivo CSV vacío']);
+    $rawRows = parseCsvRows($csvContent);
+    if (empty($rawRows)) {
+        echo json_encode(['status' => 'error', 'message' => 'Archivo CSV vacío o sin filas válidas']);
         exit;
     }
 
-    $headers = str_getcsv(array_shift($lines));
-    $headers = array_map('trim', $headers);
-
+    $headers = array_keys($rawRows[0]);
     $rows = [];
-    foreach ($lines as $lineStr) {
-        if (!trim($lineStr)) continue;
-        $rowCols = str_getcsv($lineStr);
-        if (count($rowCols) < count($headers)) {
-            $rowCols = array_pad($rowCols, count($headers), '');
-        }
-        $row = array_combine($headers, array_slice($rowCols, 0, count($headers)));
-        
+    foreach ($rawRows as $row) {
         $guion = $row['GUION'] ?? '';
         $slideCount = preg_match_all('/(?:^\s*\d+\.|\bSlide\s+\d+)/mi', $guion, $matches);
         if ($slideCount === 0 && !empty($guion)) {
@@ -196,7 +365,9 @@ if ($action === 'get_sheet_rows') {
     exit;
 }
 
-// 5. GENERAR PROMPT PARA UNA FILA
+// --------------------------------------------------------------------------
+// 6. GENERAR PROMPT PARA UNA FILA (APLICANDO LA PLANTILLA EXTERNA)
+// --------------------------------------------------------------------------
 if ($action === 'get_row_prompt') {
     $nTarget = trim($_GET['n'] ?? '');
     if ($nTarget === '') {
@@ -215,16 +386,9 @@ if ($action === 'get_row_prompt') {
     $csvContent = curl_exec($ch);
     curl_close($ch);
 
-    $lines = str_getcsv($csvContent, "\n");
-    $headers = str_getcsv(array_shift($lines));
-    $headers = array_map('trim', $headers);
-
+    $rawRows = parseCsvRows($csvContent);
     $targetRow = null;
-    foreach ($lines as $lineStr) {
-        if (!trim($lineStr)) continue;
-        $rowCols = str_getcsv($lineStr);
-        if (count($rowCols) < count($headers)) $rowCols = array_pad($rowCols, count($headers), '');
-        $row = array_combine($headers, array_slice($rowCols, 0, count($headers)));
+    foreach ($rawRows as $row) {
         if (trim($row['N°'] ?? '') === $nTarget) {
             $targetRow = $row;
             break;
@@ -236,52 +400,58 @@ if ($action === 'get_row_prompt') {
         exit;
     }
 
-    $n = $targetRow['N°'] ?? '';
-    $tema = $targetRow['TEMA'] ?? '';
-    $titulo = $targetRow['TÍTULO / PORTADA'] ?? '';
     $guion = $targetRow['GUION'] ?? '';
-    $subtitulos = $targetRow['SUBTÍTULOS / PALABRAS CLAVE'] ?? '';
-    $dra = $targetRow['DRA'] ?? 'Jovany';
+    $slideCount = preg_match_all('/(?:^\s*\d+\.|\bSlide\s+\d+)/mi', $guion, $matches);
+    if ($slideCount === 0 && !empty($guion)) {
+        $slideCount = count(array_filter(explode("\n", $guion)));
+    }
+    $slideCount = $slideCount ?: 1;
+
     $linkFotos = $targetRow['Link a carpeta de fotos'] ?? ($targetRow['Elegir una foto dentro de este link'] ?? '');
     $linkLogo = $targetRow['Link a carpeta donde elegir el logo'] ?? '';
     $linkManual = $targetRow['Link a manual de marca'] ?? '';
 
-    $prompt = "ACTUÁ COMO DIRECTOR/A DE ARTE, DISEÑADOR/A GRÁFICO/A PROFESIONAL Y PRODUCTOR/A DE CARRUSELES PARA INSTAGRAM DE JM ODONTOLOGÍA INTEGRAL.\n\n"
-        . "FUENTE DE DATOS (FILA N° {$n})\n"
-        . "- TEMA: {$tema}\n"
-        . "- TÍTULO / PORTADA: {$titulo}\n"
-        . "- DOCTORA PROTAGONISTA: Dra. {$dra}\n"
-        . "- SUBTÍTULOS / PALABRAS CLAVE: {$subtitulos}\n"
-        . "- LINK A CARPETA DE FOTOS: {$linkFotos}\n"
-        . "- LINK A CARPETA DE LOGOS: {$linkLogo}\n"
-        . "- LINK A MANUAL DE MARCA: {$linkManual}\n\n"
-        . "OBJETIVO Y FORMATO\n"
-        . "Crear un carrusel de Instagram formado por imágenes finales INDIVIDUALES: una imagen por cada slide enumerado dentro de la columna GUION.\n"
-        . "- Formato: 1080 × 1350 px (proporción vertical 4:5).\n"
-        . "- Una pieza final independiente por slide (slide_01, slide_02, etc.).\n"
-        . "- Sin grillas, collages ni plantillas repetitivas.\n\n"
-        . "GUION COMPLETO SLIDE POR SLIDE:\n"
-        . "{$guion}\n\n"
-        . "DIRECCIÓN CINEMATOGRÁFICA Y ACTUACIÓN ORGÁNICA (CERO FOTO DE STOCK)\n"
-        . "- La doctora habita un espacio tridimensional real en el consultorio: sentada al borde del sillón, conversando distendida, agachada junto al paciente, caminando o apoyada en una mesada con naturalidad.\n"
-        . "- Gestos y miradas auténticas: mirada directa y conectada a la cámara cuando converse con el usuario, o concentrada en la acción médica/paciente/pantalla.\n"
-        . "- Variar planos: medios de conversación, escorzos con profundidad de campo, primeros planos cálidos y planos detalle/macro de elementos clínicos (dientes, esmalte, instrumental).\n\n"
-        . "DIRECCIÓN DE ARTE Y APLICACIÓN DE MARCA\n"
-        . "- Aplicar estrictamente la identidad visual extraída de 'Link a manual de marca': Relax Blue (#16345F), Sky Pulse (#7DD3FC), Core Black (#1D1D1B), Grey Calm (#F2F2F2), White (#FFFFFF).\n"
-        . "- Logo oficial colocado en posición fija con su área de protección.\n"
-        . "- Tipografía sans-serif editorial limpia y legible desde el celular en el espacio negativo natural de cada fotografía.\n"
-        . "- Navegación: 'Deslizá →' sutil en portada, indicador de progreso discreto (ej. 2/8) en intermedios, y foco en llamado a la acción al final.\n\n"
-        . "Generá las imágenes finales individuales según los slides del guion.";
+    // Mapeo completo de variables para el template
+    $vars = [
+        'N' => $targetRow['N°'] ?? '',
+        'TEMA' => $targetRow['TEMA'] ?? '',
+        'TITULO' => $targetRow['TÍTULO / PORTADA'] ?? '',
+        'GUION' => $guion,
+        'SUBTITULOS' => $targetRow['SUBTÍTULOS / PALABRAS CLAVE'] ?? '',
+        'DRA' => !empty($targetRow['DRA']) ? $targetRow['DRA'] : 'Jovany',
+        'LINK_FOTOS' => $linkFotos,
+        'LINK_LOGOS' => $linkLogo,
+        'LINK_MANUAL' => $linkManual,
+        'ESTADO' => $targetRow['ESTADO'] ?? '',
+        'CANTIDAD_SLIDES' => $slideCount,
+        'SHEET_URL' => $sheetUrl
+    ];
+
+    // Permitir cualquier otra columna del Sheet como variable dinámica
+    foreach ($targetRow as $k => $v) {
+        $safeKey = preg_replace('/[^A-Za-z0-9_]/', '_', strtoupper($k));
+        if (!isset($vars[$safeKey])) {
+            $vars[$safeKey] = $v;
+        }
+    }
+
+    // Leemos la plantilla desde el archivo data/prompt_master_template.txt
+    $masterTemplate = getMasterTemplate($masterTemplateFile);
+    $prompt = renderTemplate($masterTemplate, $vars);
 
     echo json_encode([
         'status' => 'ok',
         'row' => $targetRow,
+        'vars' => $vars,
+        'template_file' => 'data/prompt_master_template.txt',
         'prompt' => $prompt
     ]);
     exit;
 }
 
-// 6. ENVIAR A PRODUCIR (LLAMADO AL API DE OPENAI)
+// --------------------------------------------------------------------------
+// 7. ENVIAR A PRODUCIR (LLAMADO AL API DE OPENAI USANDO LA PLANTILLA DE SLIDES)
+// --------------------------------------------------------------------------
 if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
@@ -332,17 +502,31 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $results = [];
     $errors = [];
 
-    // Foto madre si existe en servidor
+    // Foto madre si existe en servidor para consistencia facial
     $fotoMadrePath = $baseDir . '/carrusel_fila2/foto_madre_1024.png';
     if (!file_exists($fotoMadrePath)) {
         $fotoMadrePath = $baseDir . '/carrusel_fila4/foto_madre_1024.png';
     }
 
+    // Leemos la plantilla de prompt por slide desde el archivo externo
+    $slideTemplate = getSlideTemplate($slideTemplateFile);
+
     foreach ($slides as $idx => $s) {
         $slideNum = $idx + 1;
         $slideFilename = sprintf('slide_%02d.png', $slideNum);
-        $slidePrompt = "Professional high-end cinematic dental clinic photograph. " . $s['text'] 
-            . ". Female dentist Dra Jovany in modern clean luminous dental clinic, natural authentic posture and expressions, direct eye contact or professional focus, soft Scandinavian lighting, ample negative space. 4k detail.";
+
+        $slideVars = [
+            'SLIDE_NUM' => $slideNum,
+            'TOTAL_SLIDES' => $totalSlides,
+            'SLIDE_TEXT' => $s['text'],
+            'DRA' => !empty($rowData['DRA']) ? $rowData['DRA'] : 'Jovany',
+            'TEMA' => $rowData['TEMA'] ?? '',
+            'TITULO' => $rowData['TÍTULO / PORTADA'] ?? '',
+            'SUBTITULOS' => $rowData['SUBTÍTULOS / PALABRAS CLAVE'] ?? ''
+        ];
+
+        // Construir el prompt del slide usando la plantilla externa
+        $slidePrompt = renderTemplate($slideTemplate, $slideVars);
 
         $success = false;
         // Modo Edits si sunburst y foto madre disponible
@@ -441,7 +625,9 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// 7. HISTORIAL DE PRODUCCIONES
+// --------------------------------------------------------------------------
+// 8. HISTORIAL DE PRODUCCIONES
+// --------------------------------------------------------------------------
 if ($action === 'get_history') {
     $history = [];
     if (is_dir($outputDir)) {

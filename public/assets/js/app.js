@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // State
     let currentRowData = null;
+    let currentRowVars = null;
     let configData = {};
     let sheetRowsData = [];
 
@@ -20,10 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (targetTab === 'tab-sheet') loadSheetExplorer();
             if (targetTab === 'tab-history') loadHistory();
+            if (targetTab === 'tab-templates') loadTemplates();
         });
     });
 
+    // --------------------------------------------------------------------------
     // 1. CARGAR CONFIGURACIÓN
+    // --------------------------------------------------------------------------
     async function loadConfig() {
         try {
             const res = await fetch('api.php?action=get_config');
@@ -144,7 +148,99 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. CARGAR FILAS DEL GOOGLE SHEET EN SELECTOR
+    // --------------------------------------------------------------------------
+    // 2. GESTIÓN DE PLANTILLAS DE INSTRUCCIÓN
+    // --------------------------------------------------------------------------
+    async function loadTemplates() {
+        try {
+            const res = await fetch('api.php?action=get_templates');
+            const data = await res.json();
+            if (data.status === 'ok') {
+                document.getElementById('textarea-master-tpl').value = data.master_template || '';
+                document.getElementById('textarea-slide-tpl').value = data.slide_template || '';
+            }
+        } catch (e) {
+            console.error('Error cargando plantillas:', e);
+        }
+    }
+
+    // Insertar variables al hacer clic en un chip
+    document.querySelectorAll('.chip-tag').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const targetId = chip.getAttribute('data-target');
+            const variableTag = chip.getAttribute('data-var');
+            const textarea = document.getElementById(targetId);
+            if (!textarea) return;
+
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+            const text = textarea.value;
+
+            textarea.value = text.substring(0, startPos) + variableTag + text.substring(endPos, text.length);
+            textarea.focus();
+            textarea.selectionStart = startPos + variableTag.length;
+            textarea.selectionEnd = startPos + variableTag.length;
+        });
+    });
+
+    // Guardar plantillas
+    document.getElementById('btn-save-templates').addEventListener('click', async () => {
+        const masterTpl = document.getElementById('textarea-master-tpl').value;
+        const slideTpl = document.getElementById('textarea-slide-tpl').value;
+        const alertBox = document.getElementById('alert-template');
+
+        try {
+            const res = await fetch('api.php?action=save_templates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    master_template: masterTpl,
+                    slide_template: slideTpl
+                })
+            });
+            const data = await res.json();
+            alertBox.style.display = 'block';
+            if (data.status === 'ok') {
+                alertBox.className = 'alert alert-success';
+                alertBox.textContent = '✓ ' + data.message;
+            } else {
+                alertBox.className = 'alert alert-error';
+                alertBox.textContent = 'Error: ' + data.message;
+            }
+            setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+        } catch (e) {
+            alert('Error al guardar plantillas: ' + e);
+        }
+    });
+
+    // Restaurar plantillas por defecto
+    document.getElementById('btn-reset-templates').addEventListener('click', async () => {
+        if (!confirm('¿Estás seguro de restaurar las plantillas a sus valores originales de fábrica? Se sobrescribirán los archivos.')) {
+            return;
+        }
+        const alertBox = document.getElementById('alert-template');
+        try {
+            const res = await fetch('api.php?action=reset_templates', { method: 'POST' });
+            const data = await res.json();
+            alertBox.style.display = 'block';
+            if (data.status === 'ok') {
+                document.getElementById('textarea-master-tpl').value = data.master_template;
+                document.getElementById('textarea-slide-tpl').value = data.slide_template;
+                alertBox.className = 'alert alert-success';
+                alertBox.textContent = '✓ ' + data.message;
+            } else {
+                alertBox.className = 'alert alert-error';
+                alertBox.textContent = 'Error: ' + data.message;
+            }
+            setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+        } catch (e) {
+            alert('Error al restaurar plantillas: ' + e);
+        }
+    });
+
+    // --------------------------------------------------------------------------
+    // 3. CARGAR FILAS DEL GOOGLE SHEET EN SELECTOR
+    // --------------------------------------------------------------------------
     async function loadSheetRowsToSelect() {
         try {
             const res = await fetch('api.php?action=get_sheet_rows');
@@ -172,7 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 3. BOTÓN: CARGAR DATOS Y ARMAR PROMPT
+    // --------------------------------------------------------------------------
+    // 4. BOTÓN: CARGAR DATOS Y ARMAR PROMPT
+    // --------------------------------------------------------------------------
     document.getElementById('btn-load-prompt').addEventListener('click', async () => {
         const rowNum = document.getElementById('input-row-num').value.trim();
         if (!rowNum) {
@@ -190,13 +288,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data.status === 'ok') {
                 currentRowData = data.row;
+                currentRowVars = data.vars;
                 
                 // Mostrar Ficha Técnica
                 document.getElementById('info-n').textContent = data.row['N°'] || rowNum;
                 document.getElementById('info-tema').textContent = data.row['TEMA'] || '-';
                 document.getElementById('info-titulo').textContent = data.row['TÍTULO / PORTADA'] || '-';
-                document.getElementById('info-dra').textContent = data.row['DRA'] || 'Jovany';
+                document.getElementById('info-dra').textContent = data.vars['DRA'] || 'Jovany';
+                document.getElementById('info-slides').textContent = `${data.vars['CANTIDAD_SLIDES'] || 1} slides`;
                 
+                // Mostrar variables reemplazadas
+                const varsList = document.getElementById('vars-list');
+                varsList.innerHTML = '';
+                const mainVars = ['N', 'TEMA', 'TITULO', 'DRA', 'SUBTITULOS', 'CANTIDAD_SLIDES', 'LINK_FOTOS', 'LINK_LOGOS', 'LINK_MANUAL'];
+                mainVars.forEach(v => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.style.marginBottom = '3px';
+                    const val = data.vars[v] || '(vacío)';
+                    rowDiv.innerHTML = `<span style="color: var(--primary);">{{${v}}}:</span> <span style="color: #e2e8f0;">${escapeHtml(val.substring(0, 100))}${val.length > 100 ? '...' : ''}</span>`;
+                    varsList.appendChild(rowDiv);
+                });
+
                 document.getElementById('panel-row-info').style.display = 'block';
 
                 // Mostrar y cargar el Prompt en el Editor
@@ -218,6 +330,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Toggle detalle de variables
+    document.getElementById('btn-toggle-vars').addEventListener('click', () => {
+        const p = document.getElementById('panel-vars-detail');
+        p.style.display = (p.style.display === 'none') ? 'block' : 'none';
+    });
+
     // Contador de caracteres del editor
     document.getElementById('prompt-editor').addEventListener('input', (e) => {
         document.getElementById('char-count').textContent = `${e.target.value.length} caracteres`;
@@ -233,7 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { btn.textContent = originalText; }, 2000);
     });
 
-    // 4. BOTÓN: ENVIAR A PRODUCIR
+    // --------------------------------------------------------------------------
+    // 5. BOTÓN: ENVIAR A PRODUCIR
+    // --------------------------------------------------------------------------
     document.getElementById('btn-produce').addEventListener('click', async () => {
         if (!currentRowData) {
             alert('Primero carga una fila del Sheet.');
@@ -303,11 +423,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 5. EXPLORADOR DEL SHEET
-    async function loadSheetExplorer() {
+    // --------------------------------------------------------------------------
+    // 6. EXPLORADOR DEL GOOGLE SHEET
+    // --------------------------------------------------------------------------
+    window.loadSheetExplorer = async function() {
         const tbody = document.getElementById('sheet-table-body');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem;">Cargando Google Sheet en tiempo real...</td></tr>';
-        
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Cargando filas del Sheet en tiempo real...</td></tr>`;
+
         try {
             const res = await fetch('api.php?action=get_sheet_rows');
             const data = await res.json();
@@ -317,25 +439,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><strong>${r.n}</strong></td>
-                        <td>${r.tema || '-'}</td>
-                        <td>${r.titulo || '-'}</td>
+                        <td>${r.tema || '<span style="color:var(--text-muted)">-</span>'}</td>
+                        <td>${r.titulo || '<span style="color:var(--text-muted)">-</span>'}</td>
                         <td>${r.dra || 'Jovany'}</td>
-                        <td><span class="pill">${r.slides_count} slides</span></td>
+                        <td><span class="pill" style="font-size: 0.75rem;">${r.slides_count} slides</span></td>
                         <td>
-                            <button class="btn btn-secondary btn-sm" onclick="selectRowFromTable('${r.n}')">
-                                Cargar al Generador
+                            <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="selectRowFromTable('${r.n}')">
+                                🚀 Cargar Fila
                             </button>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger); text-align:center;">Error: ${data.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 2rem;">Error: ${data.message}</td></tr>`;
             }
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger); text-align:center;">Error de conexión</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 2rem;">Error cargando filas: ${e}</td></tr>`;
         }
-    }
+    };
 
     window.selectRowFromTable = function(rowNum) {
         document.getElementById('input-row-num').value = rowNum;
@@ -343,10 +465,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-load-prompt').click();
     };
 
-    // 6. HISTORIAL
+    // --------------------------------------------------------------------------
+    // 7. GALERÍA DE HISTORIAL
+    // --------------------------------------------------------------------------
     async function loadHistory() {
         const container = document.getElementById('history-container');
-        container.innerHTML = '<p style="color:var(--text-muted);">Cargando historial...</p>';
+        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">Cargando producciones anteriores...</div>';
 
         try {
             const res = await fetch('api.php?action=get_history');
@@ -354,37 +478,56 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'ok' && data.history.length > 0) {
                 container.innerHTML = '';
                 data.history.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'card';
-                    div.style.marginBottom = '1.5rem';
-                    div.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                            <h3 style="font-size: 1rem; color: #fff;">📁 ${item.folder}</h3>
-                            <span class="pill"><strong>${item.total_slides}</strong> imágenes</span>
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.style.marginBottom = '2rem';
+                    
+                    let slidesHtml = '';
+                    item.slides.forEach((s, idx) => {
+                        slidesHtml += `
+                            <div class="slide-card">
+                                <div class="slide-img-wrapper">
+                                    <img src="${s}" alt="Slide ${idx+1}">
+                                </div>
+                                <div class="slide-info">
+                                    <span class="slide-badge">Slide ${idx+1}</span>
+                                    <a href="${s}" download class="btn btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;">⬇</a>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    card.innerHTML = `
+                        <div class="card-title" style="display: flex; justify-content: space-between;">
+                            <span>📁 ${item.folder}</span>
+                            <span class="pill">${item.total_slides} slides</span>
                         </div>
                         <div class="slides-grid">
-                            ${item.slides.map((s, i) => `
-                                <div class="slide-card">
-                                    <div class="slide-img-wrapper"><img src="${s}"></div>
-                                    <div class="slide-info">
-                                        <span class="slide-badge">Slide ${i+1}</span>
-                                        <a href="${s}" download class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">⬇</a>
-                                    </div>
-                                </div>
-                            `).join('')}
+                            ${slidesHtml}
                         </div>
                     `;
-                    container.appendChild(div);
+                    container.appendChild(card);
                 });
             } else {
-                container.innerHTML = '<p style="color:var(--text-muted);">Aún no hay producciones previas guardadas.</p>';
+                container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 3rem;">Aún no se han producido carruseles desde la web.</div>';
             }
         } catch (e) {
-            container.innerHTML = '<p style="color:var(--danger);">Error cargando historial.</p>';
+            container.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 2rem;">Error cargando historial: ${e}</div>`;
         }
     }
 
-    // Init
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Inicialización al cargar la página
     loadConfig();
     loadSheetRowsToSelect();
+    loadTemplates();
 });
