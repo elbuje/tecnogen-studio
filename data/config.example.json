@@ -1,0 +1,5 @@
+{
+  "openai_api_key": "YOUR_OPENAI_API_KEY",
+  "selected_model": "gpt-image-2.5-sunburst",
+  "sheet_url": "https://docs.google.com/spreadsheets/d/1xvNd-tg2gXnMkXh8T4W8ibbyZE1I29gMjrG3jYwiPDo/export?format=csv&gid=1841829525"
+}
