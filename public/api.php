@@ -160,81 +160,6 @@ function parseCsvRows($csvContent) {
     return $rows;
 }
 
-function composeInstagramSlide($imagePath, $logoPath, $targetPath) {
-    if (!file_exists($imagePath)) return false;
-
-    // Dimensiones 1080 x 1350 px (4:5 vertical Instagram)
-    $canvasW = 1080;
-    $canvasH = 1350;
-    $canvas = imagecreatetruecolor($canvasW, $canvasH);
-
-    // Fondo Relax Blue #16345F
-    $bg = imagecolorallocate($canvas, 22, 52, 95);
-    imagefill($canvas, 0, 0, $bg);
-
-    $imgInfo = @getimagesize($imagePath);
-    if (!$imgInfo) return false;
-    $mime = $imgInfo['mime'];
-    if ($mime === 'image/png') {
-        $src = @imagecreatefrompng($imagePath);
-    } elseif ($mime === 'image/jpeg' || $mime === 'image/jpg') {
-        $src = @imagecreatefromjpeg($imagePath);
-    } else {
-        return false;
-    }
-    if (!$src) return false;
-
-    $srcW = imagesx($src);
-    $srcH = imagesy($src);
-
-    // Llenar el canvas vertical 1080x1350 recortando proporcionalmente (cover)
-    $srcRatio = $srcW / $srcH;
-    $targetRatio = $canvasW / $canvasH;
-
-    if ($srcRatio > $targetRatio) {
-        $cropH = $srcH;
-        $cropW = (int)($srcH * $targetRatio);
-        $cropX = (int)(($srcW - $cropW) / 2);
-        $cropY = 0;
-    } else {
-        $cropW = $srcW;
-        $cropH = (int)($srcW / $targetRatio);
-        $cropX = 0;
-        $cropY = (int)(($srcH - $cropH) / 2);
-    }
-
-    imagecopyresampled($canvas, $src, 0, 0, $cropX, $cropY, $canvasW, $canvasH, $cropW, $cropH);
-    imagedestroy($src);
-
-    // Estampar el logo oficial de JM Odontología en la esquina superior derecha
-    if (file_exists($logoPath)) {
-        $logo = @imagecreatefrompng($logoPath);
-        if ($logo) {
-            imagealphablending($logo, true);
-            imagesavealpha($logo, true);
-            $logoW = imagesx($logo);
-            $logoH = imagesy($logo);
-
-            // Ancho del logo: 160px
-            $targetLogoW = 160;
-            $targetLogoH = (int)($logoH * ($targetLogoW / $logoW));
-
-            $logoX = $canvasW - $targetLogoW - 45; // Margen derecho 45px
-            $logoY = 45; // Margen superior 45px
-
-            imagealphablending($canvas, true);
-            imagesavealpha($canvas, true);
-            imagecopyresampled($canvas, $logo, $logoX, $logoY, 0, 0, $targetLogoW, $targetLogoH, $logoW, $logoH);
-            imagedestroy($logo);
-        }
-    }
-
-    // Guardar imagen final compuesta en PNG
-    imagepng($canvas, $targetPath, 8);
-    imagedestroy($canvas);
-    return true;
-}
-
 $action = $_GET['action'] ?? '';
 
 // --------------------------------------------------------------------------
@@ -608,33 +533,41 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
     $promptsSent = [];
 
-    // Foto madre y logo oficial en assets/
-    $fotoMadrePath = $baseDir . '/assets/foto_madre_1024.png';
-    $logoPath = $baseDir . '/assets/logo_jm_vertical_blanco.png';
-
-    // Limpiar URLs de Google Drive que la API no puede abrir para no confundir al modelo
-    $artDirectionCleaned = preg_replace('/LINK A [^\n]+https?:\/\/[^\n]+/i', '', $artDirection);
-    $artDirectionCleaned = preg_replace('/Elegir una foto de la dra desde LINK[^\n\.]*/i', '', $artDirectionCleaned);
-    $artDirectionCleaned = trim(preg_replace('/\n{3,}/', "\n\n", $artDirectionCleaned));
+    // Foto madre si existe en servidor para consistencia facial
+    $fotoMadrePath = $baseDir . '/carrusel_fila2/foto_madre_1024.png';
+    if (!file_exists($fotoMadrePath)) {
+        $fotoMadrePath = $baseDir . '/carrusel_fila4/foto_madre_1024.png';
+    }
 
     foreach ($slides as $idx => $s) {
         $slideNum = $idx + 1;
         $slideFilename = sprintf('slide_%02d.png', $slideNum);
 
-        // Construir el prompt específico usando la identidad de la doctora y las pautas del usuario
-        $slidePrompt = "Professional photograph for Instagram Carousel slide {$slideNum} of {$totalSlides}. "
-            . "Subject: Dra. Jovany, female dentist with the EXACT facial features, skin tone and dark hair from the provided reference image. "
-            . "Action: {$s['text']}. "
-            . "Environment: modern luminous high-end dental clinic with Scandinavian minimalist interior, Relax Blue #16345F details, clean clinical surfaces. "
-            . "Natural posture, authentic smile, direct eye contact with the camera. 4k resolution, cinematic lighting.\n\n"
-            . $artDirectionCleaned;
+        // Construir el prompt específico usando TODO el texto y modificaciones que el usuario tiene en pantalla
+        if (!empty($artDirection)) {
+            $slidePrompt = "Professional photograph for Instagram Carousel - Slide {$slideNum} of {$totalSlides}:\n"
+                . "SLIDE CONTENT: {$s['text']}\n\n"
+                . "ART DIRECTION AND VISUAL GUIDELINES (apply strictly from user):\n"
+                . $artDirection;
+        } else {
+            $slideVars = [
+                'SLIDE_NUM' => $slideNum,
+                'TOTAL_SLIDES' => $totalSlides,
+                'SLIDE_TEXT' => $s['text'],
+                'DRA' => !empty($rowData['DRA']) ? $rowData['DRA'] : 'Jovany',
+                'TEMA' => $rowData['TEMA'] ?? '',
+                'TITULO' => $rowData['TÍTULO / PORTADA'] ?? '',
+                'SUBTITULOS' => $rowData['SUBTÍTULOS / PALABRAS CLAVE'] ?? ''
+            ];
+            $slidePrompt = renderTemplate($fallbackSlideTemplate, $slideVars);
+        }
 
         // Guardar el prompt exacto enviado para este slide
         file_put_contents($targetDir . "/slide_{$slideNum}_prompt.txt", $slidePrompt);
         $promptsSent["slide_{$slideNum}"] = $slidePrompt;
 
         $success = false;
-        // Modo Edits con foto_madre_1024.png para mantener la cara real de la Dra. Jovany
+        // Modo Edits si sunburst y foto madre disponible
         if (file_exists($fotoMadrePath) && strpos($model, 'sunburst') !== false) {
             $cfile = new CURLFile($fotoMadrePath, 'image/png', 'foto_madre.png');
             $postFields = [
@@ -659,19 +592,14 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $apiData = json_decode($res, true);
             if (isset($apiData['data'][0])) {
                 $item = $apiData['data'][0];
-                $rawPath = $targetDir . '/' . $slideFilename;
                 if (!empty($item['b64_json'])) {
-                    file_put_contents($rawPath, base64_decode($item['b64_json']));
-                    // Componer a formato 1080x1350 y estampar el logo oficial de JM Odontología
-                    composeInstagramSlide($rawPath, $logoPath, $rawPath);
+                    file_put_contents($targetDir . '/' . $slideFilename, base64_decode($item['b64_json']));
                     $results[] = 'output/' . $folderName . '/' . $slideFilename;
                     $success = true;
                 } elseif (!empty($item['url'])) {
                     $imgContent = @file_get_contents($item['url']);
                     if ($imgContent) {
-                        file_put_contents($rawPath, $imgContent);
-                        // Componer a formato 1080x1350 y estampar el logo oficial de JM Odontología
-                        composeInstagramSlide($rawPath, $logoPath, $rawPath);
+                        file_put_contents($targetDir . '/' . $slideFilename, $imgContent);
                         $results[] = 'output/' . $folderName . '/' . $slideFilename;
                         $success = true;
                     }
@@ -703,19 +631,14 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $apiData = json_decode($res, true);
             if (isset($apiData['data'][0])) {
                 $item = $apiData['data'][0];
-                $rawPath = $targetDir . '/' . $slideFilename;
                 if (!empty($item['b64_json'])) {
-                    file_put_contents($rawPath, base64_decode($item['b64_json']));
-                    // Componer a formato 1080x1350 y estampar el logo oficial de JM Odontología
-                    composeInstagramSlide($rawPath, $logoPath, $rawPath);
+                    file_put_contents($targetDir . '/' . $slideFilename, base64_decode($item['b64_json']));
                     $results[] = 'output/' . $folderName . '/' . $slideFilename;
                     $success = true;
                 } elseif (!empty($item['url'])) {
                     $imgContent = @file_get_contents($item['url']);
                     if ($imgContent) {
-                        file_put_contents($rawPath, $imgContent);
-                        // Componer a formato 1080x1350 y estampar el logo oficial de JM Odontología
-                        composeInstagramSlide($rawPath, $logoPath, $rawPath);
+                        file_put_contents($targetDir . '/' . $slideFilename, $imgContent);
                         $results[] = 'output/' . $folderName . '/' . $slideFilename;
                         $success = true;
                     }
