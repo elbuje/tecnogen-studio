@@ -91,6 +91,57 @@
                 </div>
             </div>
 
+            <!-- Activos Detectados en Google Drive para esta Fila (Fotos Doctora, Marca, Logo) -->
+            <div id="panel-drive-assets" class="card" style="display: none;">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+                    <span>📁 Activos de Google Drive Vinculados a esta Fila</span>
+                    <span id="badge-drive-status" style="font-size: 0.78rem; background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 0.2rem 0.6rem; border-radius: 9999px;">
+                        Conectado a Google Drive
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
+                    <!-- Selector de Fotos de la Doctora -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: #fff; margin-bottom: 0;">
+                                👩‍⚕️ Fotos de la Doctora (<span id="count-doctor-photos">0</span> encontradas):
+                            </label>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">
+                                Seleccionada: <strong id="lbl-selected-photo" style="color: #60a5fa;">-</strong>
+                            </span>
+                        </div>
+                        <div id="doctor-photos-gallery" class="doctor-photos-scroll">
+                            <!-- Miniaturas cargadas dinámicamente -->
+                        </div>
+                        <small style="color: var(--text-muted); font-size: 0.72rem; display: block; margin-top: 0.4rem;">
+                            Haz clic en cualquier foto para elegirla como la referencia activa para mantener la cara real de la doctora.
+                        </small>
+                    </div>
+
+                    <!-- Manual de Marca y Logo -->
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem;">
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #fff; margin-bottom: 0.35rem;">
+                                🎨 Manual de Marca:
+                            </div>
+                            <div id="box-brand-manual" style="font-size: 0.78rem; color: var(--text-muted);">
+                                Cargando...
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem;">
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #fff; margin-bottom: 0.35rem;">
+                                🏷️ Logo Oficial Seleccionado:
+                            </div>
+                            <div id="box-brand-logo" style="font-size: 0.78rem; color: var(--text-muted);">
+                                Cargando...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Editor de Prompt y Envío a Producción (Oculto hasta cargar) -->
             <div id="panel-prompt-editor" class="card" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
@@ -280,6 +331,14 @@
                 <div class="form-group">
                     <label for="input-sheet-url">URL de Exportación CSV del Google Sheet:</label>
                     <input type="text" id="input-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=...">
+                </div>
+
+                <div class="form-group">
+                    <label for="input-drive-api-key">Google Drive API Key:</label>
+                    <input type="password" id="input-drive-api-key" placeholder="AIzaSy...">
+                    <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.3rem;">
+                        Permite leer automáticamente las fotos de la doctora, logos y manuales de marca desde las carpetas de Google Drive del Sheet.
+                    </small>
                 </div>
 
                 <button id="btn-save-config" class="btn btn-primary btn-large">

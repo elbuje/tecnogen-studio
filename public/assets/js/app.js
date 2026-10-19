@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 configData = data;
                 document.getElementById('input-api-key').value = data.openai_api_key || '';
                 document.getElementById('input-sheet-url').value = data.sheet_url || '';
+                if (document.getElementById('input-drive-api-key')) {
+                    document.getElementById('input-drive-api-key').value = data.google_drive_api_key || '';
+                }
                 
                 // Populate model selector with current selected
                 const modelSelect = document.getElementById('select-model');
@@ -58,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const apiKey = document.getElementById('input-api-key').value.trim();
         const model = document.getElementById('select-model').value.trim();
         const sheetUrl = document.getElementById('input-sheet-url').value.trim();
+        const driveApiKey = document.getElementById('input-drive-api-key') ? document.getElementById('input-drive-api-key').value.trim() : '';
         const alertBox = document.getElementById('alert-config');
 
         try {
@@ -67,7 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     openai_api_key: apiKey,
                     selected_model: model,
-                    sheet_url: sheetUrl
+                    sheet_url: sheetUrl,
+                    google_drive_api_key: driveApiKey
                 })
             });
             const data = await res.json();
@@ -302,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Mostrar variables reemplazadas
                 const varsList = document.getElementById('vars-list');
                 varsList.innerHTML = '';
-                const mainVars = ['N', 'TEMA', 'TITULO', 'DRA', 'SUBTITULOS', 'CANTIDAD_SLIDES', 'LINK_FOTOS', 'LINK_LOGOS', 'LINK_MANUAL'];
+                const mainVars = ['N', 'TEMA', 'TITULO', 'DRA', 'FOTO_DOCTORA', 'MANUAL_MARCA', 'LOGO_MARCA', 'SUBTITULOS', 'CANTIDAD_SLIDES', 'LINK_FOTOS', 'LINK_LOGOS', 'LINK_MANUAL'];
                 mainVars.forEach(v => {
                     const rowDiv = document.createElement('div');
                     rowDiv.style.marginBottom = '3px';
@@ -313,6 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 document.getElementById('panel-row-info').style.display = 'block';
+
+                // Mostrar y renderizar activos detectados en Google Drive
+                if (data.assets) {
+                    renderDriveAssets(data.assets, rowNum);
+                }
 
                 // Mostrar y cargar el Prompt en el Editor
                 const textarea = document.getElementById('prompt-editor');
@@ -353,6 +363,113 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = '✓ ¡Copiado!';
         setTimeout(() => { btn.textContent = originalText; }, 2000);
     });
+
+    // --------------------------------------------------------------------------
+    // RENDERIZAR PANEL DE ACTIVOS DETECTADOS EN GOOGLE DRIVE
+    // --------------------------------------------------------------------------
+    function renderDriveAssets(assets, rowNum) {
+        const panel = document.getElementById('panel-drive-assets');
+        if (!panel) return;
+
+        if (!assets || (!assets.photos && !assets.brand_manual && !assets.logos)) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        panel.style.display = 'block';
+
+        // 1. Fotos de la Doctora
+        const photos = assets.photos || [];
+        document.getElementById('count-doctor-photos').textContent = photos.length;
+        const selected = assets.selected_photo || (photos.length > 0 ? photos[0] : null);
+        document.getElementById('lbl-selected-photo').textContent = selected ? selected.name : 'Ninguna';
+
+        const gallery = document.getElementById('doctor-photos-gallery');
+        gallery.innerHTML = '';
+
+        if (photos.length === 0) {
+            gallery.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem;">No se encontraron imágenes en la carpeta de Drive de esta doctora.</div>';
+        } else {
+            photos.forEach(p => {
+                const card = document.createElement('div');
+                card.className = `doctor-photo-card ${p.is_selected ? 'selected' : ''}`;
+                card.id = `photo-card-${p.id}`;
+                card.innerHTML = `
+                    <span class="selected-badge">✓ Activa</span>
+                    <img src="${p.thumbnail}" alt="${escapeHtml(p.name)}" loading="lazy">
+                    <span class="photo-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
+                `;
+
+                card.addEventListener('click', async () => {
+                    document.querySelectorAll('.doctor-photo-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    document.getElementById('lbl-selected-photo').textContent = p.name;
+
+                    // Actualizar prompt en el editor
+                    const editor = document.getElementById('prompt-editor');
+                    if (editor) {
+                        const oldVal = editor.value;
+                        const replaced = oldVal.replace(/(- FOTO DE LA DOCTORA SELECCIONADA:\s*)[^\n]+/i, `$1${p.name}`);
+                        if (replaced !== oldVal) {
+                            editor.value = replaced;
+                        } else {
+                            editor.value = oldVal.replace(new RegExp(selected ? selected.name : 'BEM[0-9]+.JPG', 'g'), p.name);
+                        }
+                        document.getElementById('char-count').textContent = `${editor.value.length} caracteres`;
+                    }
+
+                    // Enviar selección al backend para preparar la foto
+                    try {
+                        await fetch('api.php?action=select_row_photo', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                n: rowNum,
+                                photo_id: p.id,
+                                photo_name: p.name
+                            })
+                        });
+                    } catch (e) {
+                        console.error('Error seleccionando foto:', e);
+                    }
+                });
+
+                gallery.appendChild(card);
+            });
+        }
+
+        // 2. Manual de Marca
+        const brandBox = document.getElementById('box-brand-manual');
+        if (assets.brand_manual) {
+            brandBox.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <img src="${assets.brand_manual.thumbnail}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <div>
+                        <div style="color: #fff; font-weight: 600; font-size: 0.78rem;">${escapeHtml(assets.brand_manual.name)}</div>
+                        <div style="color: #38bdf8; font-size: 0.7rem;">✓ Identidad y paleta vinculadas</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            brandBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.75rem;">No especificado en el Sheet</span>';
+        }
+
+        // 3. Logo Oficial
+        const logoBox = document.getElementById('box-brand-logo');
+        if (assets.selected_logo) {
+            logoBox.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <img src="${assets.selected_logo.thumbnail}" style="width: 44px; height: 44px; object-fit: contain; background: rgba(0,0,0,0.5); border-radius: 4px; padding: 2px;">
+                    <div>
+                        <div style="color: #fff; font-weight: 600; font-size: 0.78rem;">${escapeHtml(assets.selected_logo.name)}</div>
+                        <div style="color: #10b981; font-size: 0.7rem;">✓ Logo listo para composición</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            logoBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.75rem;">No especificado en el Sheet</span>';
+        }
+    }
 
     // --------------------------------------------------------------------------
     // 5. BOTÓN: ENVIAR A PRODUCIR

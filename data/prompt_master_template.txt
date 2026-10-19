@@ -7,6 +7,9 @@ Trabajá exclusivamente con la fila seleccionada del Google Sheet:
 - TÍTULO / PORTADA: {{TITULO}}
 - DOCTORA PROTAGONISTA: Dra. {{DRA}}
 - SUBTÍTULOS / PALABRAS CLAVE: {{SUBTITULOS}}
+- FOTO DE LA DOCTORA SELECCIONADA: {{FOTO_DOCTORA}}
+- MANUAL DE MARCA: {{MANUAL_MARCA}}
+- LOGO SELECCIONADO: {{LOGO_MARCA}}
 - LINK A CARPETA DE FOTOS: {{LINK_FOTOS}}
 - LINK A CARPETA DE LOGOS: {{LINK_LOGOS}}
 - LINK A MANUAL DE MARCA: {{LINK_MANUAL}}
@@ -21,7 +24,8 @@ FORMATO OBLIGATORIO
 - Proporción vertical 4:5 (1080 × 1350 px).
 - Sin grillas, collages ni plantillas repetitivas.
 - Cada slide debe ser una pieza editorial completa y lista para publicar.
-
+- Indicador sutil de navegación («Deslizá →» en portada y progreso discreto en slides intermedios).
+- Logo oficial ubicado en posición armónica respetando su área de protección.
 GUION COMPLETO SLIDE POR SLIDE:
 {{GUION}}
 
@@ -31,15 +35,6 @@ DIRECCIÓN DE FOTOGRAFÍA, ACTUACIÓN Y ESCENOGRAFÍA
 - Mirada y conexión: contacto visual directo, cálido y empático con la lente cuando converse con el usuario, o concentración profesional en el paciente/pantalla/elemento clínico.
 - Variación cinematográfica de planos: alternar planos medios de conversación, planos detalle/macro de elementos dentales o instrumental, y primeros planos cálidos y cercanos.
 
-IDENTIDAD VISUAL Y APLICACIÓN DE MARCA
-- Paleta oficial del Manual de Marca:
-  * Relax Blue: #16345F
-  * Sky Pulse: #7DD3FC
-  * Core Black: #1D1D1B
-  * Grey Calm: #F2F2F2
-  * White: #FFFFFF
-- Tipografía editorial sans-serif limpia, con jerarquía visual clara y legible en smartphones sobre el espacio negativo de cada toma.
-- Indicador sutil de navegación («Deslizá →» en portada y progreso discreto en slides intermedios).
-- Logo oficial ubicado en posición armónica respetando su área de protección.
+
 
 Generá las piezas individuales correspondientes a cada slide del guion.

@@ -127,12 +127,118 @@ function getConfig($configFile) {
         'openai_api_key' => '',
         'selected_model' => 'gpt-image-2.5-sunburst',
         'sheet_url' => 'https://docs.google.com/spreadsheets/d/1xvNd-tg2gXnMkXh8T4W8ibbyZE1I29gMjrG3jYwiPDo/export?format=csv&gid=1841829525',
-        'generation_mode' => 'edits'
+        'generation_mode' => 'edits',
+        'google_drive_api_key' => 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo'
     ];
 }
 
 function saveConfig($configFile, $data) {
     file_put_contents($configFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+function extractDriveId($url) {
+    if (!$url) return '';
+    $url = trim($url);
+    if (preg_match('/folders\/([a-zA-Z0-9_-]+)/', $url, $m)) return $m[1];
+    if (preg_match('/\/d\/([a-zA-Z0-9_-]+)/', $url, $m)) return $m[1];
+    if (preg_match('/[?&]id=([a-zA-Z0-9_-]+)/', $url, $m)) return $m[1];
+    if (preg_match('/^[a-zA-Z0-9_-]{20,}$/', $url)) return $url;
+    return '';
+}
+
+function fetchDriveFilesList($folderId, $apiKey, $mimeFilter = '') {
+    if (!$folderId || !$apiKey) return [];
+    $query = "'" . $folderId . "' in parents and trashed = false";
+    if ($mimeFilter) {
+        $query .= " and mimeType contains '" . $mimeFilter . "'";
+    }
+    $url = 'https://www.googleapis.com/drive/v3/files?q=' . urlencode($query)
+        . '&fields=' . urlencode('files(id,name,mimeType,thumbnailLink,webContentLink,size)')
+        . '&pageSize=100&key=' . urlencode($apiKey);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
+    $res = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200 || !$res) return [];
+    $json = json_decode($res, true);
+    return $json['files'] ?? [];
+}
+
+function downloadDriveFile($fileId, $targetPath, $apiKey) {
+    if (!$fileId || !$apiKey) return false;
+    $url = 'https://www.googleapis.com/drive/v3/files/' . urlencode($fileId) . '?alt=media&key=' . urlencode($apiKey);
+    $fp = fopen($targetPath, 'w+');
+    if (!$fp) return false;
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_FILE, $fp);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 40);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
+    $success = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    fclose($fp);
+
+    if (!$success || $httpCode !== 200 || filesize($targetPath) === 0) {
+        @unlink($targetPath);
+        return false;
+    }
+    return true;
+}
+
+function getDriveFileMetadata($fileId, $apiKey) {
+    if (!$fileId || !$apiKey) return null;
+    $url = 'https://www.googleapis.com/drive/v3/files/' . urlencode($fileId) . '?fields=' . urlencode('id,name,mimeType,thumbnailLink,size') . '&key=' . urlencode($apiKey);
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $res = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($httpCode !== 200 || !$res) return null;
+    return json_decode($res, true);
+}
+
+function prepareReferencePhoto($sourcePath, $targetPath) {
+    if (!file_exists($sourcePath)) return false;
+    $info = @getimagesize($sourcePath);
+    if (!$info) return false;
+    
+    $mime = $info['mime'] ?? '';
+    if ($mime === 'image/jpeg') {
+        $src = @imagecreatefromjpeg($sourcePath);
+    } elseif ($mime === 'image/png') {
+        $src = @imagecreatefrompng($sourcePath);
+    } elseif ($mime === 'image/webp') {
+        $src = @imagecreatefromwebp($sourcePath);
+    } else {
+        return false;
+    }
+    if (!$src) return false;
+
+    $w = imagesx($src);
+    $h = imagesy($src);
+
+    // Crop centrado a cuadrado y escalar a 1024x1024
+    $minDim = min($w, $h);
+    $cropX = (int)(($w - $minDim) / 2);
+    $cropY = (int)(($h - $minDim) / 2);
+
+    $thumb = imagecreatetruecolor(1024, 1024);
+    imagealphablending($thumb, false);
+    imagesavealpha($thumb, true);
+    imagecopyresampled($thumb, $src, 0, 0, $cropX, $cropY, 1024, 1024, $minDim, $minDim);
+    imagedestroy($src);
+
+    imagepng($thumb, $targetPath, 8);
+    imagedestroy($thumb);
+    return true;
 }
 
 function parseCsvRows($csvContent) {
@@ -169,10 +275,14 @@ if ($action === 'get_config') {
     $cfg = getConfig($configFile);
     $key = $cfg['openai_api_key'] ?? '';
     $maskedKey = (strlen($key) > 12) ? substr($key, 0, 7) . '...' . substr($key, -4) : $key;
+    $driveKey = $cfg['google_drive_api_key'] ?? 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo';
+    $maskedDriveKey = (strlen($driveKey) > 12) ? substr($driveKey, 0, 7) . '...' . substr($driveKey, -4) : $driveKey;
     echo json_encode([
         'status' => 'ok',
         'openai_api_key' => $key,
         'masked_key' => $maskedKey,
+        'google_drive_api_key' => $driveKey,
+        'masked_drive_key' => $maskedDriveKey,
         'selected_model' => $cfg['selected_model'] ?? 'gpt-image-2.5-sunburst',
         'sheet_url' => $cfg['sheet_url'] ?? '',
         'generation_mode' => $cfg['generation_mode'] ?? 'edits'
@@ -191,6 +301,7 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $cfg = getConfig($configFile);
     if (isset($input['openai_api_key'])) $cfg['openai_api_key'] = trim($input['openai_api_key']);
+    if (isset($input['google_drive_api_key'])) $cfg['google_drive_api_key'] = trim($input['google_drive_api_key']);
     if (isset($input['selected_model'])) $cfg['selected_model'] = trim($input['selected_model']);
     if (isset($input['sheet_url'])) $cfg['sheet_url'] = trim($input['sheet_url']);
     if (isset($input['generation_mode'])) $cfg['generation_mode'] = trim($input['generation_mode']);
@@ -410,15 +521,131 @@ if ($action === 'get_row_prompt') {
     $linkFotos = $targetRow['Link a carpeta de fotos'] ?? ($targetRow['Elegir una foto dentro de este link'] ?? '');
     $linkLogo = $targetRow['Link a carpeta donde elegir el logo'] ?? '';
     $linkManual = $targetRow['Link a manual de marca'] ?? '';
+    $dra = !empty($targetRow['DRA']) ? $targetRow['DRA'] : 'Jovany';
 
-    // Mapeo completo de variables para el template
+    // ----------------------------------------------------------------------
+    // RESOLUCIÓN DE ACTIVOS DE GOOGLE DRIVE (FOTO DOCTORA, MANUAL, LOGO)
+    // ----------------------------------------------------------------------
+    $driveApiKey = $cfg['google_drive_api_key'] ?? 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo';
+    $cacheDir = $baseDir . '/data/drive_cache';
+    if (!is_dir($cacheDir)) @mkdir($cacheDir, 0775, true);
+
+    $folderFotosId = extractDriveId($linkFotos);
+    $folderLogosId = extractDriveId($linkLogo);
+    $manualId = extractDriveId($linkManual);
+
+    $availablePhotos = [];
+    $selectedPhoto = null;
+    $availableLogos = [];
+    $selectedLogo = null;
+    $brandManualInfo = null;
+
+    // 1. Fotos de la doctora desde Drive
+    if ($folderFotosId && $driveApiKey) {
+        $drivePhotos = fetchDriveFilesList($folderFotosId, $driveApiKey, 'image/');
+        foreach ($drivePhotos as $dp) {
+            $availablePhotos[] = [
+                'id' => $dp['id'],
+                'name' => $dp['name'],
+                'thumbnail' => $dp['thumbnailLink'] ?? "https://drive.google.com/thumbnail?id={$dp['id']}&sz=w320"
+            ];
+        }
+
+        // Chequear foto previamente seleccionada o auto-seleccionar la primera relevante
+        $selectionFile = $cacheDir . "/fila_{$nTarget}_selected_photo.json";
+        $selectedId = null;
+        if (file_exists($selectionFile)) {
+            $saved = json_decode(file_get_contents($selectionFile), true);
+            $selectedId = $saved['id'] ?? null;
+        }
+
+        if (!$selectedId && !empty($availablePhotos)) {
+            $selectedId = $availablePhotos[0]['id'];
+        }
+
+        foreach ($availablePhotos as &$p) {
+            if ($p['id'] === $selectedId) {
+                $p['is_selected'] = true;
+                $selectedPhoto = $p;
+            } else {
+                $p['is_selected'] = false;
+            }
+        }
+        unset($p);
+
+        // Descargar y preparar la foto seleccionada localmente en 1024x1024
+        if ($selectedPhoto) {
+            $localRaw = $cacheDir . "/raw_{$selectedPhoto['id']}.jpg";
+            $localPrep = $cacheDir . "/fila_{$nTarget}_doctor_selected.png";
+            if (!file_exists($localPrep)) {
+                if (!file_exists($localRaw)) {
+                    downloadDriveFile($selectedPhoto['id'], $localRaw, $driveApiKey);
+                }
+                if (file_exists($localRaw)) {
+                    prepareReferencePhoto($localRaw, $localPrep);
+                }
+            }
+        }
+    }
+
+    // 2. Logos oficiales de la marca desde Drive
+    if ($folderLogosId && $driveApiKey) {
+        $driveLogos = fetchDriveFilesList($folderLogosId, $driveApiKey, 'image/');
+        foreach ($driveLogos as $dl) {
+            $availableLogos[] = [
+                'id' => $dl['id'],
+                'name' => $dl['name'],
+                'thumbnail' => $dl['thumbnailLink'] ?? "https://drive.google.com/thumbnail?id={$dl['id']}&sz=w320"
+            ];
+        }
+        if (!empty($availableLogos)) {
+            foreach ($availableLogos as $lg) {
+                if (stripos($lg['name'], 'vertical') !== false && stripos($lg['name'], 'blanco') !== false) {
+                    $selectedLogo = $lg;
+                    break;
+                }
+            }
+            if (!$selectedLogo) {
+                foreach ($availableLogos as $lg) {
+                    if (stripos($lg['name'], 'blanco') !== false) {
+                        $selectedLogo = $lg;
+                        break;
+                    }
+                }
+            }
+            if (!$selectedLogo) $selectedLogo = $availableLogos[0];
+            $localLogo = $cacheDir . "/fila_{$nTarget}_logo.png";
+            if (!file_exists($localLogo)) {
+                downloadDriveFile($selectedLogo['id'], $localLogo, $driveApiKey);
+            }
+        }
+    }
+
+    // 3. Manual de Marca desde Drive
+    if ($manualId && $driveApiKey) {
+        $meta = getDriveFileMetadata($manualId, $driveApiKey);
+        $localManual = $cacheDir . "/brand_manual_{$nTarget}_{$manualId}.png";
+        if (!file_exists($localManual)) {
+            downloadDriveFile($manualId, $localManual, $driveApiKey);
+        }
+        $brandManualInfo = [
+            'id' => $manualId,
+            'name' => $meta['name'] ?? 'BRAND_BOARD_JM.png',
+            'thumbnail' => $meta['thumbnailLink'] ?? "https://drive.google.com/thumbnail?id={$manualId}&sz=w400"
+        ];
+    }
+
+    // Mapeo completo de variables para el template con los archivos reales seleccionados
     $vars = [
         'N' => $targetRow['N°'] ?? '',
         'TEMA' => $targetRow['TEMA'] ?? '',
         'TITULO' => $targetRow['TÍTULO / PORTADA'] ?? '',
         'GUION' => $guion,
         'SUBTITULOS' => $targetRow['SUBTÍTULOS / PALABRAS CLAVE'] ?? '',
-        'DRA' => !empty($targetRow['DRA']) ? $targetRow['DRA'] : 'Jovany',
+        'DRA' => $dra,
+        'FOTO_DOCTORA' => $selectedPhoto['name'] ?? 'foto_madre_1024.png',
+        'MANUAL_MARCA' => $brandManualInfo['name'] ?? 'BRAND_BOARD_JM.png',
+        'LOGO_MARCA' => $selectedLogo['name'] ?? 'JM_vertical_blanco.png',
         'LINK_FOTOS' => $linkFotos,
         'LINK_LOGOS' => $linkLogo,
         'LINK_MANUAL' => $linkManual,
@@ -444,13 +671,65 @@ if ($action === 'get_row_prompt') {
         'row' => $targetRow,
         'vars' => $vars,
         'template_file' => 'data/prompt_master_template.txt',
-        'prompt' => $prompt
+        'prompt' => $prompt,
+        'assets' => [
+            'photos' => $availablePhotos,
+            'selected_photo' => $selectedPhoto,
+            'logos' => $availableLogos,
+            'selected_logo' => $selectedLogo,
+            'brand_manual' => $brandManualInfo
+        ]
     ]);
     exit;
 }
 
 // --------------------------------------------------------------------------
-// 7. ENVIAR A PRODUCIR (LLAMADO AL API DE OPENAI USANDO LA PLANTILLA DE SLIDES)
+// 7. SELECCIONAR FOTO DE LA DOCTORA PARA LA FILA
+// --------------------------------------------------------------------------
+if ($action === 'select_row_photo') {
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $n = trim($input['n'] ?? $_GET['n'] ?? '');
+    $photoId = trim($input['photo_id'] ?? $_GET['photo_id'] ?? '');
+    $photoName = trim($input['photo_name'] ?? $_GET['photo_name'] ?? '');
+
+    if (!$n || !$photoId) {
+        echo json_encode(['status' => 'error', 'message' => 'Faltan parámetros']);
+        exit;
+    }
+
+    $cfg = getConfig($configFile);
+    $driveApiKey = $cfg['google_drive_api_key'] ?? 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo';
+    $cacheDir = $baseDir . '/data/drive_cache';
+    if (!is_dir($cacheDir)) @mkdir($cacheDir, 0775, true);
+
+    $localRaw = $cacheDir . "/raw_{$photoId}.jpg";
+    $localPrep = $cacheDir . "/fila_{$n}_doctor_selected.png";
+
+    if (!file_exists($localRaw)) {
+        downloadDriveFile($photoId, $localRaw, $driveApiKey);
+    }
+    if (file_exists($localRaw)) {
+        prepareReferencePhoto($localRaw, $localPrep);
+    }
+
+    file_put_contents($cacheDir . "/fila_{$n}_selected_photo.json", json_encode([
+        'id' => $photoId,
+        'name' => $photoName,
+        'timestamp' => time()
+    ]));
+
+    echo json_encode([
+        'status' => 'ok',
+        'message' => 'Foto de la doctora seleccionada y preparada',
+        'photo_id' => $photoId,
+        'photo_name' => $photoName,
+        'local_path' => 'data/drive_cache/' . basename($localPrep)
+    ]);
+    exit;
+}
+
+// --------------------------------------------------------------------------
+// 8. ENVIAR A PRODUCIR (LLAMADO AL API DE OPENAI USANDO LA PLANTILLA DE SLIDES)
 // --------------------------------------------------------------------------
 if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -533,10 +812,10 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
     $promptsSent = [];
 
-    // Foto madre si existe en servidor para consistencia facial
-    $fotoMadrePath = $baseDir . '/carrusel_fila2/foto_madre_1024.png';
+    // Foto madre de la doctora seleccionada desde Google Drive para esta fila
+    $fotoMadrePath = $baseDir . "/data/drive_cache/fila_{$rowNum}_doctor_selected.png";
     if (!file_exists($fotoMadrePath)) {
-        $fotoMadrePath = $baseDir . '/carrusel_fila4/foto_madre_1024.png';
+        $fotoMadrePath = $baseDir . '/assets/foto_madre_1024.png';
     }
 
     foreach ($slides as $idx => $s) {

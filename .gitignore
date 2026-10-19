@@ -66,3 +66,4 @@ data/config.json
 output/
 public/output/
 carrusel_fila*/
+data/drive_cache/
