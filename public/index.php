@@ -3,20 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecnoGen Studio — Estudio de Carruseles IA (Sheet + Hilo ChatGPT)</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <title>TecnoGen Studio v2.1 — Estudio de Carruseles IA (Sheet + Hilo ChatGPT)</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=2.1.<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
 
+    <!-- Barra Superior de Verificación de Versión -->
+    <div style="background: linear-gradient(90deg, #065f46, #0284c7); color: #fff; font-size: 0.78rem; font-weight: 700; text-align: center; padding: 0.35rem 1rem; letter-spacing: 0.03em; border-bottom: 1px solid rgba(255,255,255,0.15);">
+        🟢 VERSIÓN 2.1 ACTIVA — ESTUDIO HÍBRIDO (GOOGLE SHEET + HILO ESTILO CHATGPT · CERO "FOTO MADRE" EN SERVIDOR · FIX EXIF)
+    </div>
+
     <!-- Header Navigation -->
     <header class="navbar">
         <div class="brand">
-            <span class="brand-badge">STUDIO 2.0</span>
+            <span class="brand-badge" style="background: linear-gradient(135deg, #10b981, #0284c7);">v2.1 HÍBRIDO</span>
             <div>
-                <div class="brand-title">TecnoGen Studio</div>
+                <div class="brand-title">TecnoGen Studio <span style="font-size: 0.75rem; color: #34d399; font-weight: 600;">[Build 2.1]</span></div>
                 <div class="brand-subtitle">Productor de Carruseles en Secuencia para JM Odontología (OpenAI Sunburst + Drive)</div>
             </div>
         </div>
@@ -510,9 +515,9 @@
     </main>
 
     <footer style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid var(--border-color);">
-        TecnoGen Studio 2.0 &copy; 2026 — JM Odontología Integral.
+        TecnoGen Studio <strong>v2.1 Híbrido</strong> &copy; 2026 — JM Odontología Integral (Sin Foto Madre · Secuencia + Hilo IA).
     </footer>
 
-    <script src="assets/js/app.js"></script>
+    <script src="assets/js/app.js?v=2.1.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
 </body>
 </html>
