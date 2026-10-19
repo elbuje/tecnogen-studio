@@ -4,7 +4,8 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+$reqMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if ($reqMethod === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
@@ -12,77 +13,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $baseDir = dirname(__DIR__);
 $configFile = $baseDir . '/data/config.json';
 $outputDir = __DIR__ . '/output';
+$uploadsDir = $baseDir . '/data/uploads';
+$tempRefsDir = $baseDir . '/data/temp_refs';
 $masterTemplateFile = $baseDir . '/data/prompt_master_template.txt';
 $slideTemplateFile = $baseDir . '/data/slide_prompt_template.txt';
 
-if (!is_dir($outputDir)) {
-    @mkdir($outputDir, 0775, true);
-}
-if (!is_dir($baseDir . '/data')) {
-    @mkdir($baseDir . '/data', 0775, true);
+foreach ([$outputDir, $baseDir . '/data', $uploadsDir, $tempRefsDir] as $dir) {
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
 }
 
+// Constantes por defecto del Sheet de JM Odontología
+define('DEFAULT_SHEET_URL', 'https://docs.google.com/spreadsheets/d/1xvNd-tg2gXnMkXh8T4W8ibbyZE1I29gMjrG3jYwiPDo/export?format=csv&gid=1841829525');
+define('DEFAULT_LOGO_FOLDER_ID', '1Nb7c7NW_vd8zXN1V1jjb1zNDO0wn0jxJ');
+define('DEFAULT_BRAND_MANUAL_ID', '1j-b3F4hr_LCcl9z1Tgzmliz5eE9ArPbZ');
+
 // --------------------------------------------------------------------------
-// PLANTILLAS POR DEFECTO
+// PLANTILLAS POR DEFECTO (MODULARES EN ARCHIVOS .TXT)
 // --------------------------------------------------------------------------
 function getDefaultMasterTemplate() {
     return <<<'EOT'
 ACTUÁ COMO DIRECTOR/A DE ARTE, DISEÑADOR/A GRÁFICO/A PROFESIONAL Y PRODUCTOR/A DE CARRUSELES PARA INSTAGRAM DE JM ODONTOLOGÍA INTEGRAL.
 
-FUENTE DE DATOS
-Trabajá exclusivamente con la fila seleccionada del Google Sheet:
+DATOS DEL CONTENIDO ACTUAL:
 - FILA N°: {{N}}
 - TEMA: {{TEMA}}
 - TÍTULO / PORTADA: {{TITULO}}
 - DOCTORA PROTAGONISTA: Dra. {{DRA}}
 - SUBTÍTULOS / PALABRAS CLAVE: {{SUBTITULOS}}
-- LINK A CARPETA DE FOTOS: {{LINK_FOTOS}}
-- LINK A CARPETA DE LOGOS: {{LINK_LOGOS}}
-- LINK A MANUAL DE MARCA: {{LINK_MANUAL}}
-- ESTADO: {{ESTADO}}
-
-OBJETIVO Y ALCANCE
-Crear un carrusel de Instagram para “JM Odontología Integral”, formado por imágenes finales INDIVIDUALES: una imagen por cada slide enumerado dentro de la columna “GUION”.
-Total de piezas a generar: exactamente {{CANTIDAD_SLIDES}} imágenes independientes.
-
-FORMATO OBLIGATORIO
-- Una pieza final independiente por slide (slide_01, slide_02, etc.).
-- Proporción vertical 4:5 (1080 × 1350 px).
-- Sin grillas, collages ni plantillas repetitivas.
-- Cada slide debe ser una pieza editorial completa y lista para publicar.
+- TOTAL DE SLIDES EN SECUENCIA: {{CANTIDAD_SLIDES}}
 
 GUION COMPLETO SLIDE POR SLIDE:
 {{GUION}}
 
-DIRECCIÓN DE FOTOGRAFÍA, ACTUACIÓN Y ESCENOGRAFÍA
-- Espacio real y tridimensional: consultorio moderno, limpio, luminoso y acogedor, con estilo escandinavo y elementos de alta gama.
-- Actuación orgánica y espontánea: la doctora habita el espacio naturalmente (sentada al borde de un sillón, conversando distendida, apoyada en una mesada o mostrando un procedimiento con soltura).
-- Mirada y conexión: contacto visual directo, cálido y empático con la lente cuando converse con el usuario, o concentración profesional en el paciente/pantalla/elemento clínico.
-- Variación cinematográfica de planos: alternar planos medios de conversación, planos detalle/macro de elementos dentales o instrumental, y primeros planos cálidos y cercanos.
-
-IDENTIDAD VISUAL Y APLICACIÓN DE MARCA
-- Paleta oficial del Manual de Marca:
-  * Relax Blue: #16345F
-  * Sky Pulse: #7DD3FC
-  * Core Black: #1D1D1B
-  * Grey Calm: #F2F2F2
-  * White: #FFFFFF
-- Tipografía editorial sans-serif limpia, con jerarquía visual clara y legible en smartphones sobre el espacio negativo de cada toma.
-- Indicador sutil de navegación («Deslizá →» en portada y progreso discreto en slides intermedios).
-- Logo oficial ubicado en posición armónica respetando su área de protección.
-
-Generá las piezas individuales correspondientes a cada slide del guion.
+REGLAS DE DIRECCIÓN DE ARTE Y CONTINUIDAD DE SECUENCIA:
+1. Cada slide es una pieza editorial vertical 4:5 (1080 × 1350 px) INDIVIDUAL y COMPLETA, nunca un collage ni una grilla de múltiples cuadros.
+2. CERO REPETICIÓN / ANTI-SESGO DE FOTO DE REFERENCIA:
+   - Si se adjunta foto de referencia de la Dra. {{DRA}}, se debe tomar ÚNICAMENTE su rostro, fisonomía, cabello y rasgos reales para mantener la identidad de la protagonista.
+   - PROHIBIDO copiar la misma pose estática, encuadre o fondo de la foto de referencia en todos los slides. Cada slide debe tener una puesta en escena, postura corporal y plano cinematográfico nuevo y orgánico.
+3. VARIACIÓN CINEMATOGRÁFICA ENTRE SLIDES:
+   - Slide 1 (Portada): Plano medio corto o plano medio luminoso en consultorio moderno escandinavo, contacto visual cálido y empático con cámara, titular editorial de alto impacto y señalizador sutil «Deslizá →».
+   - Slides Intermedios (Desarrollo): Alternar planos dinámicos (plano 3/4 conversando espontáneamente, plano sobre el hombro mostrando un elemento clínico/pantalla/modelo dental, plano detalle o macro luminoso de estética/higiene dental, plano medio en recepción o escritorio moderno).
+   - Último Slide (Cierre / CTA): Plano cercano cálido y confiable de la Dra. {{DRA}} invitando a la acción (comentarios / consulta por WhatsApp).
+4. IDENTIDAD VISUAL Y MARCA (JM ODONTOLOGÍA INTEGRAL):
+   - Paleta Oficial: Relax Blue (#16345F), Sky Pulse (#7DD3FC), Core Black (#1D1D1B), Grey Calm (#F2F2F2), White (#FFFFFF).
+   - Tipografía editorial sans-serif moderna, perfectamente legible en español, integrada con alto contraste sobre áreas limpias de la composición.
+   - Integrar el logotipo oficial seleccionado en una esquina con área de respiro limpia.
 EOT;
 }
 
 function getDefaultSlideTemplate() {
     return <<<'EOT'
-High-end professional cinematic photograph for Instagram carousel slide {{SLIDE_NUM}} of {{TOTAL_SLIDES}}.
-Topic: {{TEMA}}.
-Content to visualize: {{SLIDE_TEXT}}.
-Scene and subject: Female dentist Dra. {{DRA}} in modern, bright, premium dental clinic with clean Scandinavian architectural design.
-Natural, authentic posture and spontaneous body language. Warm, empathetic expression with direct eye contact to camera lens or natural professional focus.
-High-end editorial aesthetic, soft balanced lighting, ample clean negative space. Colors: Relax Blue (#16345F), Sky Pulse (#7DD3FC), pristine clinical whites. Highly detailed, photorealistic 4k.
+Pieza editorial individual para carrusel de Instagram (Formato vertical 4:5, 1080x1350 px) — Slide {{SLIDE_NUM}} de {{TOTAL_SLIDES}} ({{SLIDE_ROLE}}).
+Marca: JM Odontología Integral. Tema: {{TEMA}}.
+
+TEXTO EDITORIAL A RENDERIZAR EN ESTE SLIDE (exacto, en español, tipografía sans-serif moderna, nítida y de alto contraste):
+"{{SLIDE_TEXT}}"
+{{NAV_INDICATOR}}
+
+PUESTA EN ESCENA Y DIRECCIÓN DE FOTOGRAFÍA PARA ESTE SLIDE:
+- Plano y encuadre asignado: {{SHOT_TYPE}}
+- Protagonista e Identidad: {{DOCTOR_INSTRUCTION}}
+- Ambiente: Consultorio odontológico premium de diseño escandinavo moderno, luminoso, limpio y cálido, con profundidad de campo cinematográfica real (fotografía hiperrealista 8k, iluminación suave natural).
+- Paleta cromática de marca: Azul institucional Relax Blue (#16345F), acentos Sky Pulse (#7DD3FC), blanco clínico (#FFFFFF) y gris suave (#F2F2F2).
+- Marca y Logo: {{LOGO_INSTRUCTION}}
+- Restricción estricta: Generar UNA SOLA escena continua a pantalla completa para este slide individual (prohibido dividir en grillas, collages o múltiples recuadros).
 EOT;
 }
 
@@ -108,7 +104,7 @@ function getSlideTemplate($file) {
 
 function renderTemplate($template, $variables) {
     foreach ($variables as $key => $val) {
-        if (is_array($val)) continue;
+        if (is_array($val) || is_object($val)) continue;
         $strVal = (string)$val;
         $template = str_replace('{{' . $key . '}}', $strVal, $template);
         $template = str_replace('{{' . strtolower($key) . '}}', $strVal, $template);
@@ -118,24 +114,31 @@ function renderTemplate($template, $variables) {
 }
 
 function getConfig($configFile) {
+    $defaults = [
+        'openai_api_key' => '',
+        'selected_model' => 'gpt-image-2.5-sunburst',
+        'director_model' => 'gpt-4o',
+        'sheet_url' => DEFAULT_SHEET_URL,
+        'google_drive_api_key' => 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo',
+        'stamp_logo_overlay' => false
+    ];
     if (file_exists($configFile)) {
         $content = file_get_contents($configFile);
         $json = json_decode($content, true);
-        if ($json) return $json;
+        if (is_array($json)) {
+            return array_merge($defaults, $json);
+        }
     }
-    return [
-        'openai_api_key' => '',
-        'selected_model' => 'gpt-image-2.5-sunburst',
-        'sheet_url' => 'https://docs.google.com/spreadsheets/d/1xvNd-tg2gXnMkXh8T4W8ibbyZE1I29gMjrG3jYwiPDo/export?format=csv&gid=1841829525',
-        'generation_mode' => 'edits',
-        'google_drive_api_key' => 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo'
-    ];
+    return $defaults;
 }
 
 function saveConfig($configFile, $data) {
     file_put_contents($configFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
+// --------------------------------------------------------------------------
+// UTILIDADES DE GOOGLE DRIVE Y NORMALIZACIÓN DE IMÁGENES (CON FIX EXIF)
+// --------------------------------------------------------------------------
 function extractDriveId($url) {
     if (!$url) return '';
     $url = trim($url);
@@ -146,15 +149,34 @@ function extractDriveId($url) {
     return '';
 }
 
-function fetchDriveFilesList($folderId, $apiKey, $mimeFilter = '') {
+function extractDoctorAndUrl($rawCell, $explicitDra = '') {
+    $rawCell = trim((string)$rawCell);
+    $dra = trim((string)$explicitDra);
+    $url = $rawCell;
+
+    // En filas 6..31 el Sheet tiene formato "Melina: https://drive.google.com/..."
+    if (preg_match('/^([^:]+):\s*(https?:\/\/.+)$/i', $rawCell, $m)) {
+        if ($dra === '') {
+            $dra = trim($m[1]);
+        }
+        $url = trim($m[2]);
+    }
+    return [
+        'dra' => $dra ?: 'Jovany',
+        'url' => $url,
+        'folder_id' => extractDriveId($url)
+    ];
+}
+
+function fetchDriveFilesList($folderId, $apiKey, $onlyImages = true) {
     if (!$folderId || !$apiKey) return [];
     $query = "'" . $folderId . "' in parents and trashed = false";
-    if ($mimeFilter) {
-        $query .= " and mimeType contains '" . $mimeFilter . "'";
+    if ($onlyImages) {
+        $query .= " and mimeType contains 'image/'";
     }
     $url = 'https://www.googleapis.com/drive/v3/files?q=' . urlencode($query)
         . '&fields=' . urlencode('files(id,name,mimeType,thumbnailLink,webContentLink,size)')
-        . '&pageSize=100&key=' . urlencode($apiKey);
+        . '&orderBy=name&pageSize=100&key=' . urlencode($apiKey);
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -166,35 +188,31 @@ function fetchDriveFilesList($folderId, $apiKey, $mimeFilter = '') {
 
     if ($httpCode !== 200 || !$res) return [];
     $json = json_decode($res, true);
-    return $json['files'] ?? [];
-}
+    $files = $json['files'] ?? [];
 
-function downloadDriveFile($fileId, $targetPath, $apiKey) {
-    if (!$fileId || !$apiKey) return false;
-    $url = 'https://www.googleapis.com/drive/v3/files/' . urlencode($fileId) . '?alt=media&key=' . urlencode($apiKey);
-    $fp = fopen($targetPath, 'w+');
-    if (!$fp) return false;
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_FILE, $fp);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 40);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
-    $success = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    fclose($fp);
-
-    if (!$success || $httpCode !== 200 || filesize($targetPath) === 0) {
-        @unlink($targetPath);
-        return false;
+    // Filtrar solo imágenes reales
+    $out = [];
+    foreach ($files as $f) {
+        $mime = strtolower($f['mimeType'] ?? '');
+        if ($onlyImages && strpos($mime, 'image/') !== 0) continue;
+        $out[] = [
+            'id' => $f['id'],
+            'name' => $f['name'],
+            'mimeType' => $f['mimeType'] ?? 'image/jpeg',
+            'size' => (int)($f['size'] ?? 0),
+            'thumbnail' => 'api.php?action=proxy_drive_image&id=' . urlencode($f['id']) . '&sz=w400',
+            'highres_preview' => 'api.php?action=proxy_drive_image&id=' . urlencode($f['id']) . '&sz=w1200',
+            'source' => 'drive'
+        ];
     }
-    return true;
+    return $out;
 }
 
 function getDriveFileMetadata($fileId, $apiKey) {
     if (!$fileId || !$apiKey) return null;
-    $url = 'https://www.googleapis.com/drive/v3/files/' . urlencode($fileId) . '?fields=' . urlencode('id,name,mimeType,thumbnailLink,size') . '&key=' . urlencode($apiKey);
+    $url = 'https://www.googleapis.com/drive/v3/files/' . urlencode($fileId)
+        . '?fields=' . urlencode('id,name,mimeType,thumbnailLink,size')
+        . '&key=' . urlencode($apiKey);
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -205,42 +223,208 @@ function getDriveFileMetadata($fileId, $apiKey) {
     return json_decode($res, true);
 }
 
-function prepareReferencePhoto($sourcePath, $targetPath) {
+/**
+ * Descarga una imagen de Google Drive de forma rápida y confiable.
+ * Usa primero el endpoint de alta resolución de Drive (w1600) que ya viene con rotación EXIF aplicada
+ * y pesa ~250KB en lugar de 8MB, y si falla usa alt=media.
+ */
+function downloadDriveImageFresh($fileId, $targetPath, $apiKey, $preferThumbnailSize = 'w1600') {
+    if (!$fileId) return false;
+
+    // 1. Intentar desde el endpoint thumbnail de alta resolución de Google Drive (rápido y con EXIF ya derecho)
+    if ($preferThumbnailSize) {
+        $thumbUrl = 'https://drive.google.com/thumbnail?id=' . urlencode($fileId) . '&sz=' . urlencode($preferThumbnailSize);
+        $ch = curl_init($thumbUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
+        $data = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $data && strlen($data) > 1024 && stripos((string)$contentType, 'image/') !== false) {
+            file_put_contents($targetPath, $data);
+            return true;
+        }
+    }
+
+    // 2. Fallback al archivo binario directo vía Drive API v3
+    if ($apiKey) {
+        $url = 'https://www.googleapis.com/drive/v3/files/' . urlencode($fileId) . '?alt=media&key=' . urlencode($apiKey);
+        $fp = fopen($targetPath, 'w+');
+        if ($fp) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_FILE, $fp);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
+            $success = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            fclose($fp);
+
+            if ($success && $httpCode === 200 && file_exists($targetPath) && filesize($targetPath) > 512) {
+                return true;
+            }
+            @unlink($targetPath);
+        }
+    }
+    return false;
+}
+
+/**
+ * Carga una imagen corrigiendo automáticamente su orientación EXIF (para cámaras Sony/iPhone)
+ * y la exporta como PNG limpio sin recortar agresivamente la escena ni deformarla.
+ */
+function normalizeReferenceImage($sourcePath, $targetPngPath, $maxDim = 1536) {
     if (!file_exists($sourcePath)) return false;
     $info = @getimagesize($sourcePath);
     if (!$info) return false;
-    
+
     $mime = $info['mime'] ?? '';
     if ($mime === 'image/jpeg') {
         $src = @imagecreatefromjpeg($sourcePath);
+        // Corregir orientación EXIF si está rotada (ej. Sony ILCE-7M5 Orientation=6)
+        if ($src && function_exists('exif_read_data')) {
+            $exif = @exif_read_data($sourcePath);
+            if (!empty($exif['Orientation'])) {
+                switch ((int)$exif['Orientation']) {
+                    case 3:
+                        $src = imagerotate($src, 180, 0);
+                        break;
+                    case 6:
+                        $src = imagerotate($src, -90, 0);
+                        break;
+                    case 8:
+                        $src = imagerotate($src, 90, 0);
+                        break;
+                }
+            }
+        }
     } elseif ($mime === 'image/png') {
         $src = @imagecreatefrompng($sourcePath);
-    } elseif ($mime === 'image/webp') {
+    } elseif ($mime === 'image/webp' && function_exists('imagecreatefromwebp')) {
         $src = @imagecreatefromwebp($sourcePath);
     } else {
         return false;
     }
+
     if (!$src) return false;
 
     $w = imagesx($src);
     $h = imagesy($src);
 
-    // Crop centrado a cuadrado y escalar a 1024x1024
-    $minDim = min($w, $h);
-    $cropX = (int)(($w - $minDim) / 2);
-    $cropY = (int)(($h - $minDim) / 2);
+    // Escalar manteniendo proporción real (sin recorte cuadrado forzado)
+    $scale = 1.0;
+    if ($w > $maxDim || $h > $maxDim) {
+        $scale = min($maxDim / $w, $maxDim / $h);
+    }
+    $newW = max(1, (int)round($w * $scale));
+    $newH = max(1, (int)round($h * $scale));
 
-    $thumb = imagecreatetruecolor(1024, 1024);
-    imagealphablending($thumb, false);
-    imagesavealpha($thumb, true);
-    imagecopyresampled($thumb, $src, 0, 0, $cropX, $cropY, 1024, 1024, $minDim, $minDim);
+    $dst = imagecreatetruecolor($newW, $newH);
+    imagealphablending($dst, false);
+    imagesavealpha($dst, true);
+    $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+    imagefilledrectangle($dst, 0, 0, $newW, $newH, $transparent);
+
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $w, $h);
     imagedestroy($src);
 
-    imagepng($thumb, $targetPath, 8);
-    imagedestroy($thumb);
-    return true;
+    $ok = imagepng($dst, $targetPngPath, 6);
+    imagedestroy($dst);
+    return $ok;
 }
 
+/**
+ * Normaliza un slide generado al formato oficial de Instagram 4:5 (1080 x 1350 px)
+ * y opcionalmente estampa el logo oficial en una esquina con área de protección limpia.
+ */
+function finalizeSlideImage4x5($rawImagePath, $finalPath, $logoPath = null) {
+    if (!file_exists($rawImagePath)) return false;
+    $info = @getimagesize($rawImagePath);
+    if (!$info) return false;
+
+    $mime = $info['mime'] ?? '';
+    if ($mime === 'image/png') $src = @imagecreatefrompng($rawImagePath);
+    elseif ($mime === 'image/jpeg') $src = @imagecreatefromjpeg($rawImagePath);
+    elseif ($mime === 'image/webp') $src = @imagecreatefromwebp($rawImagePath);
+    else return false;
+
+    if (!$src) return false;
+
+    $srcW = imagesx($src);
+    $srcH = imagesy($src);
+
+    $targetW = 1080;
+    $targetH = 1350; // 4:5
+
+    $dst = imagecreatetruecolor($targetW, $targetH);
+    imagealphablending($dst, true);
+    imagesavealpha($dst, true);
+
+    // Calcular crop centrado suave para llevar a proporción 4:5 (0.8)
+    $targetRatio = $targetW / $targetH; // 0.8
+    $srcRatio = $srcW / $srcH;
+
+    if (abs($srcRatio - $targetRatio) < 0.02) {
+        $cropX = 0;
+        $cropY = 0;
+        $cropW = $srcW;
+        $cropH = $srcH;
+    } elseif ($srcRatio > $targetRatio) {
+        // Imagen más ancha que 4:5 (ej. 1:1) -> si es 1:1, para no cortar texto en bordes,
+        // hacemos un cover suave o adaptamos
+        $cropH = $srcH;
+        $cropW = (int)round($srcH * $targetRatio);
+        $cropX = (int)round(($srcW - $cropW) / 2);
+        $cropY = 0;
+    } else {
+        // Imagen más alta que 4:5 (ej. 1024x1536 = 2:3 = 0.666)
+        $cropW = $srcW;
+        $cropH = (int)round($srcW / $targetRatio);
+        $cropX = 0;
+        $cropY = (int)round(($srcH - $cropH) / 2);
+    }
+
+    imagecopyresampled($dst, $src, 0, 0, $cropX, $cropY, $targetW, $targetH, $cropW, $cropH);
+    imagedestroy($src);
+
+    // Si el usuario activó estampado programático de logo además de IA
+    if ($logoPath && file_exists($logoPath)) {
+        $lInfo = @getimagesize($logoPath);
+        if ($lInfo) {
+            $lMime = $lInfo['mime'] ?? '';
+            $lImg = null;
+            if ($lMime === 'image/png') $lImg = @imagecreatefrompng($logoPath);
+            elseif ($lMime === 'image/jpeg') $lImg = @imagecreatefromjpeg($logoPath);
+            if ($lImg) {
+                $lw = imagesx($lImg);
+                $lh = imagesy($lImg);
+                $maxLogoW = 150;
+                $maxLogoH = 110;
+                $lScale = min($maxLogoW / $lw, $maxLogoH / $lh);
+                $destLW = (int)round($lw * $lScale);
+                $destLH = (int)round($lh * $lScale);
+                $destLX = $targetW - $destLW - 42;
+                $destLY = 42;
+                imagealphablending($dst, true);
+                imagecopyresampled($dst, $lImg, $destLX, $destLY, 0, 0, $destLW, $destLH, $lw, $lh);
+                imagedestroy($lImg);
+            }
+        }
+    }
+
+    $ok = imagepng($dst, $finalPath, 7);
+    imagedestroy($dst);
+    return $ok;
+}
+
+// --------------------------------------------------------------------------
+// PARSER DE CSV Y DE GUION MULTILÍNEA (SIN PÉRDIDA DE RENGLONES)
+// --------------------------------------------------------------------------
 function parseCsvRows($csvContent) {
     $stream = fopen('php://memory', 'r+');
     fwrite($stream, $csvContent);
@@ -255,7 +439,7 @@ function parseCsvRows($csvContent) {
 
     $rows = [];
     while (($r = fgetcsv($stream)) !== false) {
-        if (empty(array_filter($r))) continue;
+        if (empty(array_filter($r, function($v) { return trim((string)$v) !== ''; }))) continue;
         if (count($r) < count($headers)) {
             $r = array_pad($r, count($headers), '');
         }
@@ -266,7 +450,301 @@ function parseCsvRows($csvContent) {
     return $rows;
 }
 
+/**
+ * Parsea un bloque de GUION extrayendo todos los slides (1..N) y conservando
+ * múltiples renglones dentro de cada slide.
+ */
+function parseGuionSlides($guionText, $fallbackTitle = 'Portada') {
+    $guionText = trim((string)$guionText);
+    if ($guionText === '') {
+        return [
+            ['num' => 1, 'role' => 'Portada', 'text' => $fallbackTitle]
+        ];
+    }
+
+    $lines = preg_split('/\r\n|\r|\n/', $guionText);
+    $slides = [];
+    $currentSlide = null;
+
+    foreach ($lines as $rawLine) {
+        $line = trim($rawLine);
+        if ($line === '') continue;
+
+        // Detectar inicio de slide: "1. ...", "Slide 1: ...", "SLIDE 2 - ...", "1) ..."
+        if (preg_match('/^(?:slide\s*)?(\d+)[\.\:\-\)\s]+(.*)$/i', $line, $m)) {
+            if ($currentSlide !== null) {
+                $slides[] = $currentSlide;
+            }
+            $num = (int)$m[1];
+            $rest = trim($m[2], " \t\n\r\0\x0B\"'");
+            $currentSlide = [
+                'num' => $num,
+                'text' => $rest
+            ];
+        } else {
+            // Línea de continuación dentro del mismo slide
+            $cleanLine = trim($line, " \t\n\r\0\x0B\"'");
+            if ($currentSlide !== null) {
+                $currentSlide['text'] .= ($currentSlide['text'] !== '' ? "\n" : '') . $cleanLine;
+            } else {
+                $currentSlide = [
+                    'num' => count($slides) + 1,
+                    'text' => $cleanLine
+                ];
+            }
+        }
+    }
+
+    if ($currentSlide !== null) {
+        $slides[] = $currentSlide;
+    }
+
+    if (empty($slides)) {
+        $slides[] = ['num' => 1, 'text' => $fallbackTitle];
+    }
+
+    // Asignar roles y normalizar numeración 1..N
+    $total = count($slides);
+    foreach ($slides as $idx => &$s) {
+        $s['num'] = $idx + 1;
+        // Limpiar prefijos redundantes como "Portada:" o "Cierre:" manteniendo el sentido
+        $text = $s['text'];
+        if ($idx === 0) {
+            $s['role'] = 'Portada';
+            $text = preg_replace('/^portada\s*[\:\-]\s*/i', '', $text);
+        } elseif ($idx === $total - 1 && $total > 1) {
+            $s['role'] = 'Cierre / CTA';
+            $text = preg_replace('/^cierre\s*[\:\-]\s*/i', '', $text);
+        } else {
+            $s['role'] = 'Desarrollo';
+        }
+        $s['text'] = trim($text, " \t\n\r\0\x0B\"'");
+    }
+    unset($s);
+
+    return $slides;
+}
+
+/**
+ * Construye una escaleta cinematográfica variada para los N slides
+ * evitando que todos los slides tengan la misma pose o encuadre.
+ */
+function buildVariedSlidePlan($slides, $meta, $slideTemplate) {
+    $total = count($slides);
+    $dra = $meta['dra'] ?: 'Jovany';
+    $tema = $meta['tema'] ?: 'Salud Bucal';
+    $titulo = $meta['titulo'] ?: '';
+    $subtitulos = $meta['subtitulos'] ?: '';
+
+    // Repertorio de planos cinematográficos distintos para alternar en el carrusel
+    $middleShots = [
+        "Plano 3/4 dinámico: la Dra. {$dra} conversando con expresión empática y cercana al borde del sillón odontológico moderno, gesticulando con naturalidad, iluminación cálida lateral.",
+        "Plano sobre el hombro / demostrativo: la Dra. {$dra} en el consultorio mostrando un modelo dental anatómico o tablet clínica con sonrisa profesional, desenfoque suave de fondo escandinavo.",
+        "Plano detalle / clínico editorial: composición limpia y luminosa de instrumental odontológico moderno o elemento de cuidado bucal sobre mesada blanca minimalista, con la Dra. {$dra} suavemente desenfocada en segundo plano.",
+        "Plano medio lateral en área de escritorio moderno del consultorio: la Dra. {$dra} tomando notas o explicando un diagnóstico con calidez y serenidad, luz natural de ventanal.",
+        "Primer plano medio cálido: la Dra. {$dra} mirando a cámara con gesto tranquilizador y profesional, ambiente clínico impecable con acentos en azul Relax Blue (#16345F) y Sky Pulse (#7DD3FC)."
+    ];
+
+    $plan = [];
+    foreach ($slides as $idx => $s) {
+        $num = $idx + 1;
+        $role = $s['role'] ?? ($num === 1 ? 'Portada' : ($num === $total ? 'Cierre / CTA' : 'Desarrollo'));
+
+        if ($num === 1) {
+            $shotType = "Plano medio de Portada Editorial: la Dra. {$dra} en el consultorio moderno e iluminado, postura segura, cálida y acogedora mirando directamente a la lente, con amplio espacio limpio superior/inferior para el titular de portada.";
+            $navIndicator = "Incluir indicador sutil de navegación en esquina inferior: «Deslizá →».";
+            $includeDoctor = true;
+        } elseif ($num === $total && $total > 1) {
+            $shotType = "Plano medio corto de Cierre (Call to Action): la Dra. {$dra} sonriendo con calidez y confianza mirando a cámara en recepción/consultorio luminoso, transmitiendo cercanía e invitando a comentar o consultar.";
+            $navIndicator = "Diseño de cierre limpio con llamado a la acción claro.";
+            $includeDoctor = true;
+        } else {
+            $shotType = $middleShots[($idx - 1) % count($middleShots)];
+            $navIndicator = "Incluir indicador discreto de secuencia «{$num}/{$total}» y flecha sutil «→».";
+            $includeDoctor = true;
+        }
+
+        $doctorInstruction = "Usar la fotografía adjunta de la Dra. {$dra} EXCLUSIVAMENTE como referencia de identidad facial (mantener sus rasgos faciales reales, ojos, sonrisa y cabello). OBLIGATORIO: Generar una POSE CORPORAL, ÁNGULO DE CÁMARA y ESCENA 100% NUEVA acorde al plano '{$shotType}'. NO copiar la pose estática ni el fondo de la foto de referencia.";
+        $logoInstruction = "Integrar el logotipo oficial de JM Odontología Integral de forma limpia y armónica en una esquina respetando su área de protección.";
+
+        $vars = [
+            'SLIDE_NUM' => $num,
+            'TOTAL_SLIDES' => $total,
+            'SLIDE_ROLE' => $role,
+            'SLIDE_TEXT' => $s['text'],
+            'SHOT_TYPE' => $shotType,
+            'NAV_INDICATOR' => $navIndicator,
+            'DOCTOR_INSTRUCTION' => $doctorInstruction,
+            'LOGO_INSTRUCTION' => $logoInstruction,
+            'DRA' => $dra,
+            'TEMA' => $tema,
+            'TITULO' => $titulo,
+            'SUBTITULOS' => $subtitulos
+        ];
+
+        $prompt = renderTemplate($slideTemplate, $vars);
+
+        $plan[] = [
+            'num' => $num,
+            'role' => $role,
+            'text' => $s['text'],
+            'shot_type' => $shotType,
+            'include_doctor' => $includeDoctor,
+            'assigned_photo_index' => -1, // -1 = rotar automáticamente entre las fotos seleccionadas por el usuario
+            'prompt' => $prompt
+        ];
+    }
+
+    return $plan;
+}
+
+/**
+ * Descarga y parsea el Google Sheet completo, devolviendo tanto las filas enriquecidas
+ * como el catálogo de todas las carpetas de Drive de doctoras encontradas.
+ */
+function fetchSheetDataAndCatalog($sheetUrl) {
+    $ch = curl_init($sheetUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
+    $csvContent = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200 || !$csvContent) {
+        return ['error' => 'No se pudo descargar el Google Sheet (HTTP ' . $httpCode . ')'];
+    }
+
+    $rawRows = parseCsvRows($csvContent);
+    if (empty($rawRows)) {
+        return ['error' => 'El Google Sheet está vacío o no tiene filas válidas'];
+    }
+
+    $doctorCatalog = [];
+    $logoFolderId = DEFAULT_LOGO_FOLDER_ID;
+    $brandManualId = DEFAULT_BRAND_MANUAL_ID;
+
+    // Primera pasada: detectar carpetas globales de logo, manual y doctoras
+    foreach ($rawRows as $r) {
+        $rawFotoCell = $r['Link a carpeta de fotos'] ?? ($r['Elegir una foto dentro de este link'] ?? '');
+        $rawLogoCell = $r['Link a carpeta donde elegir el logo'] ?? '';
+        $rawManualCell = $r['Link a manual de marca'] ?? '';
+        $explicitDra = trim($r['DRA'] ?? '');
+
+        $parsedDoc = extractDoctorAndUrl($rawFotoCell, $explicitDra);
+        $docName = $parsedDoc['dra'];
+        $docFolderId = $parsedDoc['folder_id'];
+
+        // Caso especial Fila 4 del Sheet: pusieron la carpeta de Luciana en la columna de al lado
+        $logoCandidateId = extractDriveId($rawLogoCell);
+        if ($explicitDra !== '' && strcasecmp($explicitDra, 'Jovany') !== 0 && $logoCandidateId && $logoCandidateId !== DEFAULT_LOGO_FOLDER_ID) {
+            $docFolderId = $logoCandidateId;
+            $parsedDoc['url'] = $rawLogoCell;
+            $parsedDoc['folder_id'] = $logoCandidateId;
+        } elseif ($logoCandidateId === DEFAULT_LOGO_FOLDER_ID) {
+            $logoFolderId = $logoCandidateId;
+        }
+
+        $manualCandidateId = extractDriveId($rawManualCell);
+        if ($manualCandidateId) {
+            $brandManualId = $manualCandidateId;
+        }
+
+        if ($docFolderId) {
+            $key = $docFolderId;
+            if (!isset($doctorCatalog[$key])) {
+                $doctorCatalog[$key] = [
+                    'folder_id' => $docFolderId,
+                    'dra' => $docName,
+                    'label' => "Dra. {$docName} (" . substr($docFolderId, 0, 6) . "...)",
+                    'url' => "https://drive.google.com/drive/folders/{$docFolderId}"
+                ];
+            }
+        }
+    }
+
+    // Segunda pasada: construir filas normalizadas
+    $rows = [];
+    foreach ($rawRows as $r) {
+        $n = trim($r['N°'] ?? '');
+        $guion = $r['GUION'] ?? '';
+        $titulo = $r['TÍTULO / PORTADA'] ?? '';
+        $slides = parseGuionSlides($guion, $titulo);
+
+        $rawFotoCell = $r['Link a carpeta de fotos'] ?? ($r['Elegir una foto dentro de este link'] ?? '');
+        $rawLogoCell = $r['Link a carpeta donde elegir el logo'] ?? '';
+        $rawManualCell = $r['Link a manual de marca'] ?? '';
+        $explicitDra = trim($r['DRA'] ?? '');
+
+        $parsedDoc = extractDoctorAndUrl($rawFotoCell, $explicitDra);
+        $logoCandidateId = extractDriveId($rawLogoCell);
+        if ($explicitDra !== '' && strcasecmp($explicitDra, 'Jovany') !== 0 && $logoCandidateId && $logoCandidateId !== DEFAULT_LOGO_FOLDER_ID) {
+            $parsedDoc['folder_id'] = $logoCandidateId;
+            $parsedDoc['url'] = $rawLogoCell;
+        }
+
+        $rows[] = [
+            'n' => $n,
+            'tema' => $r['TEMA'] ?? '',
+            'titulo' => $titulo,
+            'dra' => $parsedDoc['dra'],
+            'guion' => $guion,
+            'subtitulos' => $r['SUBTÍTULOS / PALABRAS CLAVE'] ?? '',
+            'instagram_caption' => $r['INSTAGRAM'] ?? '',
+            'estado' => $r['ESTADO'] ?? '',
+            'slides_count' => count($slides),
+            'slides_parsed' => $slides,
+            'photo_folder_id' => $parsedDoc['folder_id'],
+            'photo_folder_url' => $parsedDoc['url'],
+            'logo_folder_id' => $logoFolderId,
+            'brand_manual_id' => extractDriveId($rawManualCell) ?: $brandManualId,
+            'full_data' => $r
+        ];
+    }
+
+    return [
+        'rows' => $rows,
+        'headers' => array_keys($rawRows[0]),
+        'doctor_catalog' => array_values($doctorCatalog),
+        'default_logo_folder_id' => $logoFolderId,
+        'default_brand_manual_id' => $brandManualId
+    ];
+}
+
 $action = $_GET['action'] ?? '';
+
+// --------------------------------------------------------------------------
+// 0. PROXY DE MINIATURAS E IMÁGENES DE GOOGLE DRIVE (EVITA BLOQUEOS DE CORS/EXIF)
+// --------------------------------------------------------------------------
+if ($action === 'proxy_drive_image') {
+    $fileId = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['id'] ?? '');
+    $sz = preg_replace('/[^a-zA-Z0-9]/', '', $_GET['sz'] ?? 'w400');
+    if (!$fileId) {
+        http_response_code(400);
+        exit;
+    }
+
+    $cfg = getConfig($configFile);
+    $driveKey = $cfg['google_drive_api_key'] ?? '';
+
+    $thumbFile = $tempRefsDir . "/thumb_{$fileId}_{$sz}.jpg";
+    if (!file_exists($thumbFile) || (time() - filemtime($thumbFile)) > 3600) {
+        downloadDriveImageFresh($fileId, $thumbFile, $driveKey, $sz);
+    }
+
+    if (file_exists($thumbFile) && filesize($thumbFile) > 0) {
+        $info = @getimagesize($thumbFile);
+        $mime = $info['mime'] ?? 'image/jpeg';
+        header('Content-Type: ' . $mime);
+        header('Cache-Control: public, max-age=3600');
+        readfile($thumbFile);
+        exit;
+    }
+
+    http_response_code(404);
+    exit;
+}
 
 // --------------------------------------------------------------------------
 // 1. OBTENER CONFIGURACIÓN
@@ -275,7 +753,7 @@ if ($action === 'get_config') {
     $cfg = getConfig($configFile);
     $key = $cfg['openai_api_key'] ?? '';
     $maskedKey = (strlen($key) > 12) ? substr($key, 0, 7) . '...' . substr($key, -4) : $key;
-    $driveKey = $cfg['google_drive_api_key'] ?? 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo';
+    $driveKey = $cfg['google_drive_api_key'] ?? '';
     $maskedDriveKey = (strlen($driveKey) > 12) ? substr($driveKey, 0, 7) . '...' . substr($driveKey, -4) : $driveKey;
     echo json_encode([
         'status' => 'ok',
@@ -284,8 +762,9 @@ if ($action === 'get_config') {
         'google_drive_api_key' => $driveKey,
         'masked_drive_key' => $maskedDriveKey,
         'selected_model' => $cfg['selected_model'] ?? 'gpt-image-2.5-sunburst',
-        'sheet_url' => $cfg['sheet_url'] ?? '',
-        'generation_mode' => $cfg['generation_mode'] ?? 'edits'
+        'director_model' => $cfg['director_model'] ?? 'gpt-4o',
+        'sheet_url' => $cfg['sheet_url'] ?? DEFAULT_SHEET_URL,
+        'stamp_logo_overlay' => !empty($cfg['stamp_logo_overlay'])
     ]);
     exit;
 }
@@ -303,23 +782,22 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($input['openai_api_key'])) $cfg['openai_api_key'] = trim($input['openai_api_key']);
     if (isset($input['google_drive_api_key'])) $cfg['google_drive_api_key'] = trim($input['google_drive_api_key']);
     if (isset($input['selected_model'])) $cfg['selected_model'] = trim($input['selected_model']);
+    if (isset($input['director_model'])) $cfg['director_model'] = trim($input['director_model']);
     if (isset($input['sheet_url'])) $cfg['sheet_url'] = trim($input['sheet_url']);
-    if (isset($input['generation_mode'])) $cfg['generation_mode'] = trim($input['generation_mode']);
+    if (isset($input['stamp_logo_overlay'])) $cfg['stamp_logo_overlay'] = (bool)$input['stamp_logo_overlay'];
     saveConfig($configFile, $cfg);
     echo json_encode(['status' => 'ok', 'message' => 'Configuración guardada exitosamente']);
     exit;
 }
 
 // --------------------------------------------------------------------------
-// 3. GESTIÓN DE PLANTILLAS DE PROMPT (NO HARDCODED)
+// 3. GESTIÓN DE PLANTILLAS DE PROMPT
 // --------------------------------------------------------------------------
 if ($action === 'get_templates') {
-    $masterTpl = getMasterTemplate($masterTemplateFile);
-    $slideTpl = getSlideTemplate($slideTemplateFile);
     echo json_encode([
         'status' => 'ok',
-        'master_template' => $masterTpl,
-        'slide_template' => $slideTpl,
+        'master_template' => getMasterTemplate($masterTemplateFile),
+        'slide_template' => getSlideTemplate($slideTemplateFile),
         'files' => [
             'master' => 'data/prompt_master_template.txt',
             'slide' => 'data/slide_prompt_template.txt'
@@ -340,7 +818,7 @@ if ($action === 'save_templates' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($input['slide_template'])) {
         file_put_contents($slideTemplateFile, $input['slide_template']);
     }
-    echo json_encode(['status' => 'ok', 'message' => 'Plantillas guardadas en archivos de texto exitosamente']);
+    echo json_encode(['status' => 'ok', 'message' => 'Plantillas guardadas exitosamente']);
     exit;
 }
 
@@ -349,7 +827,7 @@ if ($action === 'reset_templates' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     file_put_contents($slideTemplateFile, getDefaultSlideTemplate());
     echo json_encode([
         'status' => 'ok',
-        'message' => 'Plantillas restauradas a sus valores por defecto',
+        'message' => 'Plantillas restauradas a sus valores originales',
         'master_template' => getDefaultMasterTemplate(),
         'slide_template' => getDefaultSlideTemplate()
     ]);
@@ -363,7 +841,7 @@ if ($action === 'get_models') {
     $cfg = getConfig($configFile);
     $apiKey = $cfg['openai_api_key'] ?? '';
     if (!$apiKey) {
-        echo json_encode(['status' => 'error', 'message' => 'API Key no configurada']);
+        echo json_encode(['status' => 'error', 'message' => 'API Key de OpenAI no configurada']);
         exit;
     }
 
@@ -371,7 +849,7 @@ if ($action === 'get_models') {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . $apiKey,
-        'User-Agent: TecnoGenStudio/1.0'
+        'User-Agent: TecnoGenStudio/2.0'
     ]);
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     $response = curl_exec($ch);
@@ -407,6 +885,13 @@ if ($action === 'get_models') {
         return false;
     }));
 
+    // Asegurar que gpt-image-2.5-sunburst y gpt-image-1 estén siempre visibles como opción rápida
+    foreach (['gpt-image-2.5-sunburst', 'gpt-image-1'] as $preset) {
+        if (!in_array($preset, $imageModels, true)) {
+            array_unshift($imageModels, $preset);
+        }
+    }
+
     echo json_encode([
         'status' => 'ok',
         'image_models' => $imageModels,
@@ -417,445 +902,691 @@ if ($action === 'get_models') {
 }
 
 // --------------------------------------------------------------------------
-// 5. OBTENER FILAS DEL GOOGLE SHEET
+// 5. OBTENER FILAS DEL GOOGLE SHEET Y CATÁLOGO DE CARPETAS DE DRIVE
 // --------------------------------------------------------------------------
 if ($action === 'get_sheet_rows') {
     $cfg = getConfig($configFile);
-    $sheetUrl = $cfg['sheet_url'] ?? '';
-    if (!$sheetUrl) {
-        echo json_encode(['status' => 'error', 'message' => 'URL de Google Sheet no configurada']);
+    $sheetUrl = $cfg['sheet_url'] ?: DEFAULT_SHEET_URL;
+    $sheetData = fetchSheetDataAndCatalog($sheetUrl);
+
+    if (isset($sheetData['error'])) {
+        echo json_encode(['status' => 'error', 'message' => $sheetData['error']]);
         exit;
-    }
-
-    $ch = curl_init($sheetUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
-    $csvContent = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode !== 200 || !$csvContent) {
-        echo json_encode(['status' => 'error', 'message' => 'No se pudo descargar el Google Sheet (HTTP ' . $httpCode . ')']);
-        exit;
-    }
-
-    $rawRows = parseCsvRows($csvContent);
-    if (empty($rawRows)) {
-        echo json_encode(['status' => 'error', 'message' => 'Archivo CSV vacío o sin filas válidas']);
-        exit;
-    }
-
-    $headers = array_keys($rawRows[0]);
-    $rows = [];
-    foreach ($rawRows as $row) {
-        $guion = $row['GUION'] ?? '';
-        $slideCount = preg_match_all('/(?:^\s*\d+\.|\bSlide\s+\d+)/mi', $guion, $matches);
-        if ($slideCount === 0 && !empty($guion)) {
-            $slideCount = count(array_filter(explode("\n", $guion)));
-        }
-
-        $rows[] = [
-            'n' => $row['N°'] ?? '',
-            'tema' => $row['TEMA'] ?? '',
-            'titulo' => $row['TÍTULO / PORTADA'] ?? '',
-            'dra' => $row['DRA'] ?? '',
-            'estado' => $row['ESTADO'] ?? '',
-            'slides_count' => $slideCount ?: 1,
-            'full_data' => $row
-        ];
     }
 
     echo json_encode([
         'status' => 'ok',
-        'total' => count($rows),
-        'headers' => $headers,
-        'rows' => $rows
+        'total' => count($sheetData['rows']),
+        'headers' => $sheetData['headers'],
+        'rows' => $sheetData['rows'],
+        'doctor_catalog' => $sheetData['doctor_catalog'],
+        'default_logo_folder_id' => $sheetData['default_logo_folder_id'],
+        'default_brand_manual_id' => $sheetData['default_brand_manual_id']
     ]);
     exit;
 }
 
 // --------------------------------------------------------------------------
-// 6. GENERAR PROMPT PARA UNA FILA (APLICANDO LA PLANTILLA EXTERNA)
+// 6. LISTAR IMÁGENES DE CUALQUIER CARPETA DE GOOGLE DRIVE EN VIVO
 // --------------------------------------------------------------------------
-if ($action === 'get_row_prompt') {
-    $nTarget = trim($_GET['n'] ?? '');
-    if ($nTarget === '') {
-        echo json_encode(['status' => 'error', 'message' => 'Debe indicar el N° de fila']);
+if ($action === 'list_drive_folder') {
+    $folderInput = trim($_GET['folder'] ?? '');
+    $folderId = extractDriveId($folderInput);
+    if (!$folderId) {
+        echo json_encode(['status' => 'error', 'message' => 'ID o URL de carpeta de Google Drive inválido']);
         exit;
     }
 
     $cfg = getConfig($configFile);
-    $sheetUrl = $cfg['sheet_url'] ?? '';
-
-    $ch = curl_init($sheetUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
-    $csvContent = curl_exec($ch);
-    curl_close($ch);
-
-    $rawRows = parseCsvRows($csvContent);
-    $targetRow = null;
-    foreach ($rawRows as $row) {
-        if (trim($row['N°'] ?? '') === $nTarget) {
-            $targetRow = $row;
-            break;
-        }
-    }
-
-    if (!$targetRow) {
-        echo json_encode(['status' => 'error', 'message' => 'No se encontró la fila N° ' . $nTarget]);
-        exit;
-    }
-
-    $guion = $targetRow['GUION'] ?? '';
-    $slideCount = preg_match_all('/(?:^\s*\d+\.|\bSlide\s+\d+)/mi', $guion, $matches);
-    if ($slideCount === 0 && !empty($guion)) {
-        $slideCount = count(array_filter(explode("\n", $guion)));
-    }
-    $slideCount = $slideCount ?: 1;
-
-    $linkFotos = $targetRow['Link a carpeta de fotos'] ?? ($targetRow['Elegir una foto dentro de este link'] ?? '');
-    $linkLogo = $targetRow['Link a carpeta donde elegir el logo'] ?? '';
-    $linkManual = $targetRow['Link a manual de marca'] ?? '';
-    $dra = !empty($targetRow['DRA']) ? $targetRow['DRA'] : 'Jovany';
-
-    // ----------------------------------------------------------------------
-    // RESOLUCIÓN DE ACTIVOS DE GOOGLE DRIVE (FOTO DOCTORA, MANUAL, LOGO)
-    // ----------------------------------------------------------------------
-    $driveApiKey = $cfg['google_drive_api_key'] ?? 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo';
-    $cacheDir = $baseDir . '/data/drive_cache';
-    if (!is_dir($cacheDir)) @mkdir($cacheDir, 0775, true);
-
-    $folderFotosId = extractDriveId($linkFotos);
-    $folderLogosId = extractDriveId($linkLogo);
-    $manualId = extractDriveId($linkManual);
-
-    $availablePhotos = [];
-    $selectedPhoto = null;
-    $availableLogos = [];
-    $selectedLogo = null;
-    $brandManualInfo = null;
-
-    // 1. Fotos de la doctora desde Drive
-    if ($folderFotosId && $driveApiKey) {
-        $drivePhotos = fetchDriveFilesList($folderFotosId, $driveApiKey, 'image/');
-        foreach ($drivePhotos as $dp) {
-            $availablePhotos[] = [
-                'id' => $dp['id'],
-                'name' => $dp['name'],
-                'thumbnail' => $dp['thumbnailLink'] ?? "https://drive.google.com/thumbnail?id={$dp['id']}&sz=w320"
-            ];
-        }
-
-        // Chequear foto previamente seleccionada o auto-seleccionar la primera relevante
-        $selectionFile = $cacheDir . "/fila_{$nTarget}_selected_photo.json";
-        $selectedId = null;
-        if (file_exists($selectionFile)) {
-            $saved = json_decode(file_get_contents($selectionFile), true);
-            $selectedId = $saved['id'] ?? null;
-        }
-
-        if (!$selectedId && !empty($availablePhotos)) {
-            $selectedId = $availablePhotos[0]['id'];
-        }
-
-        foreach ($availablePhotos as &$p) {
-            if ($p['id'] === $selectedId) {
-                $p['is_selected'] = true;
-                $selectedPhoto = $p;
-            } else {
-                $p['is_selected'] = false;
-            }
-        }
-        unset($p);
-
-        // Descargar y preparar la foto seleccionada localmente en 1024x1024
-        if ($selectedPhoto) {
-            $localRaw = $cacheDir . "/raw_{$selectedPhoto['id']}.jpg";
-            $localPrep = $cacheDir . "/fila_{$nTarget}_doctor_selected.png";
-            if (!file_exists($localPrep)) {
-                if (!file_exists($localRaw)) {
-                    downloadDriveFile($selectedPhoto['id'], $localRaw, $driveApiKey);
-                }
-                if (file_exists($localRaw)) {
-                    prepareReferencePhoto($localRaw, $localPrep);
-                }
-            }
-        }
-    }
-
-    // 2. Logos oficiales de la marca desde Drive
-    if ($folderLogosId && $driveApiKey) {
-        $driveLogos = fetchDriveFilesList($folderLogosId, $driveApiKey, 'image/');
-        foreach ($driveLogos as $dl) {
-            $availableLogos[] = [
-                'id' => $dl['id'],
-                'name' => $dl['name'],
-                'thumbnail' => $dl['thumbnailLink'] ?? "https://drive.google.com/thumbnail?id={$dl['id']}&sz=w320"
-            ];
-        }
-        if (!empty($availableLogos)) {
-            foreach ($availableLogos as $lg) {
-                if (stripos($lg['name'], 'vertical') !== false && stripos($lg['name'], 'blanco') !== false) {
-                    $selectedLogo = $lg;
-                    break;
-                }
-            }
-            if (!$selectedLogo) {
-                foreach ($availableLogos as $lg) {
-                    if (stripos($lg['name'], 'blanco') !== false) {
-                        $selectedLogo = $lg;
-                        break;
-                    }
-                }
-            }
-            if (!$selectedLogo) $selectedLogo = $availableLogos[0];
-            $localLogo = $cacheDir . "/fila_{$nTarget}_logo.png";
-            if (!file_exists($localLogo)) {
-                downloadDriveFile($selectedLogo['id'], $localLogo, $driveApiKey);
-            }
-        }
-    }
-
-    // 3. Manual de Marca desde Drive
-    if ($manualId && $driveApiKey) {
-        $meta = getDriveFileMetadata($manualId, $driveApiKey);
-        $localManual = $cacheDir . "/brand_manual_{$nTarget}_{$manualId}.png";
-        if (!file_exists($localManual)) {
-            downloadDriveFile($manualId, $localManual, $driveApiKey);
-        }
-        $brandManualInfo = [
-            'id' => $manualId,
-            'name' => $meta['name'] ?? 'BRAND_BOARD_JM.png',
-            'thumbnail' => $meta['thumbnailLink'] ?? "https://drive.google.com/thumbnail?id={$manualId}&sz=w400"
-        ];
-    }
-
-    // Mapeo completo de variables para el template con los archivos reales seleccionados
-    $vars = [
-        'N' => $targetRow['N°'] ?? '',
-        'TEMA' => $targetRow['TEMA'] ?? '',
-        'TITULO' => $targetRow['TÍTULO / PORTADA'] ?? '',
-        'GUION' => $guion,
-        'SUBTITULOS' => $targetRow['SUBTÍTULOS / PALABRAS CLAVE'] ?? '',
-        'DRA' => $dra,
-        'FOTO_DOCTORA' => $selectedPhoto['name'] ?? 'foto_madre_1024.png',
-        'MANUAL_MARCA' => $brandManualInfo['name'] ?? 'BRAND_BOARD_JM.png',
-        'LOGO_MARCA' => $selectedLogo['name'] ?? 'JM_vertical_blanco.png',
-        'LINK_FOTOS' => $linkFotos,
-        'LINK_LOGOS' => $linkLogo,
-        'LINK_MANUAL' => $linkManual,
-        'ESTADO' => $targetRow['ESTADO'] ?? '',
-        'CANTIDAD_SLIDES' => $slideCount,
-        'SHEET_URL' => $sheetUrl
-    ];
-
-    // Permitir cualquier otra columna del Sheet como variable dinámica
-    foreach ($targetRow as $k => $v) {
-        $safeKey = preg_replace('/[^A-Za-z0-9_]/', '_', strtoupper($k));
-        if (!isset($vars[$safeKey])) {
-            $vars[$safeKey] = $v;
-        }
-    }
-
-    // Leemos la plantilla desde el archivo data/prompt_master_template.txt
-    $masterTemplate = getMasterTemplate($masterTemplateFile);
-    $prompt = renderTemplate($masterTemplate, $vars);
+    $driveKey = $cfg['google_drive_api_key'] ?? '';
+    $files = fetchDriveFilesList($folderId, $driveKey, true);
 
     echo json_encode([
         'status' => 'ok',
-        'row' => $targetRow,
-        'vars' => $vars,
-        'template_file' => 'data/prompt_master_template.txt',
-        'prompt' => $prompt,
-        'assets' => [
-            'photos' => $availablePhotos,
-            'selected_photo' => $selectedPhoto,
-            'logos' => $availableLogos,
-            'selected_logo' => $selectedLogo,
-            'brand_manual' => $brandManualInfo
+        'folder_id' => $folderId,
+        'count' => count($files),
+        'files' => $files
+    ]);
+    exit;
+}
+
+// --------------------------------------------------------------------------
+// 7. SUBIR ACTIVOS PROPIOS DESDE LA COMPUTADORA (MODO CHATGPT / VERSIÓN A)
+// --------------------------------------------------------------------------
+if ($action === 'upload_asset' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $assetType = preg_replace('/[^a-z_]/', '', $_POST['type'] ?? 'photo'); // photo | logo | manual
+    if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        echo json_encode(['status' => 'error', 'message' => 'No se recibió un archivo válido']);
+        exit;
+    }
+
+    $tmpName = $_FILES['file']['tmp_name'];
+    $origName = basename($_FILES['file']['name']);
+    $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $origName);
+    $uniqueId = $assetType . '_' . time() . '_' . substr(md5($origName . mt_rand()), 0, 6);
+    $destPng = $uploadsDir . '/' . $uniqueId . '.png';
+
+    if (!normalizeReferenceImage($tmpName, $destPng, 1600)) {
+        // Si no se pudo procesar con GD, copiar directo si es imagen
+        $info = @getimagesize($tmpName);
+        if (!$info) {
+            echo json_encode(['status' => 'error', 'message' => 'El archivo subido no es una imagen válida (use JPG, PNG o WEBP)']);
+            exit;
+        }
+        move_uploaded_file($tmpName, $destPng);
+    }
+
+    // Copiar también una miniatura pública accesible para previsualizar en UI
+    $publicUploadsDir = __DIR__ . '/output/uploads';
+    if (!is_dir($publicUploadsDir)) @mkdir($publicUploadsDir, 0775, true);
+    $publicPath = $publicUploadsDir . '/' . $uniqueId . '.png';
+    @copy($destPng, $publicPath);
+
+    echo json_encode([
+        'status' => 'ok',
+        'asset' => [
+            'id' => $uniqueId,
+            'name' => $origName,
+            'source' => 'upload',
+            'type' => $assetType,
+            'local_path' => 'data/uploads/' . $uniqueId . '.png',
+            'thumbnail' => 'output/uploads/' . $uniqueId . '.png',
+            'highres_preview' => 'output/uploads/' . $uniqueId . '.png'
         ]
     ]);
     exit;
 }
 
 // --------------------------------------------------------------------------
-// 7. SELECCIONAR FOTO DE LA DOCTORA PARA LA FILA
+// 8. CARGAR CONTEXTO DE UNA FILA DEL SHEET (O INICIALIZAR RECURSOS DE DRIVE)
+//    ¡SIN GUARDAR NI FORZAR NINGUNA "FOTO MADRE" EN EL SERVIDOR!
 // --------------------------------------------------------------------------
-if ($action === 'select_row_photo') {
-    $input = json_decode(file_get_contents('php://input'), true) ?: [];
-    $n = trim($input['n'] ?? $_GET['n'] ?? '');
-    $photoId = trim($input['photo_id'] ?? $_GET['photo_id'] ?? '');
-    $photoName = trim($input['photo_name'] ?? $_GET['photo_name'] ?? '');
+if ($action === 'get_row_prompt' || $action === 'get_row_context') {
+    $nTarget = trim($_GET['n'] ?? '1');
+    $customPhotoFolder = trim($_GET['photo_folder'] ?? '');
 
-    if (!$n || !$photoId) {
-        echo json_encode(['status' => 'error', 'message' => 'Faltan parámetros']);
+    $cfg = getConfig($configFile);
+    $sheetUrl = $cfg['sheet_url'] ?: DEFAULT_SHEET_URL;
+    $driveApiKey = $cfg['google_drive_api_key'] ?? '';
+
+    $sheetData = fetchSheetDataAndCatalog($sheetUrl);
+    if (isset($sheetData['error'])) {
+        echo json_encode(['status' => 'error', 'message' => $sheetData['error']]);
         exit;
     }
 
-    $cfg = getConfig($configFile);
-    $driveApiKey = $cfg['google_drive_api_key'] ?? 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo';
-    $cacheDir = $baseDir . '/data/drive_cache';
-    if (!is_dir($cacheDir)) @mkdir($cacheDir, 0775, true);
-
-    $localRaw = $cacheDir . "/raw_{$photoId}.jpg";
-    $localPrep = $cacheDir . "/fila_{$n}_doctor_selected.png";
-
-    if (!file_exists($localRaw)) {
-        downloadDriveFile($photoId, $localRaw, $driveApiKey);
-    }
-    if (file_exists($localRaw)) {
-        prepareReferencePhoto($localRaw, $localPrep);
+    $targetRowObj = null;
+    foreach ($sheetData['rows'] as $rObj) {
+        if ((string)$rObj['n'] === (string)$nTarget) {
+            $targetRowObj = $rObj;
+            break;
+        }
     }
 
-    file_put_contents($cacheDir . "/fila_{$n}_selected_photo.json", json_encode([
-        'id' => $photoId,
-        'name' => $photoName,
-        'timestamp' => time()
-    ]));
+    if (!$targetRowObj) {
+        echo json_encode(['status' => 'error', 'message' => 'No se encontró la fila N° ' . $nTarget]);
+        exit;
+    }
+
+    $folderFotosId = $customPhotoFolder ? extractDriveId($customPhotoFolder) : $targetRowObj['photo_folder_id'];
+    $folderLogosId = $targetRowObj['logo_folder_id'] ?: DEFAULT_LOGO_FOLDER_ID;
+    $manualId = $targetRowObj['brand_manual_id'] ?: DEFAULT_BRAND_MANUAL_ID;
+
+    // 1. Listar fotos disponibles en la carpeta de Drive de la doctora (sin pre-guardar foto madre)
+    $availablePhotos = [];
+    if ($folderFotosId && $driveApiKey) {
+        $availablePhotos = fetchDriveFilesList($folderFotosId, $driveApiKey, true);
+    }
+
+    // 2. Listar logos disponibles (Drive + locales en assets/)
+    $availableLogos = [
+        [
+            'id' => 'local_blanco',
+            'name' => 'Logo JM Vertical Blanco (Local)',
+            'source' => 'local',
+            'local_path' => 'assets/logo_jm_vertical_blanco.png',
+            'thumbnail' => 'api.php?action=local_asset&file=logo_jm_vertical_blanco.png'
+        ],
+        [
+            'id' => 'local_azul',
+            'name' => 'Logo JM Vertical Azul (Local)',
+            'source' => 'local',
+            'local_path' => 'assets/logo_jm_vertical_azul.png',
+            'thumbnail' => 'api.php?action=local_asset&file=logo_jm_vertical_azul.png'
+        ]
+    ];
+    if ($folderLogosId && $driveApiKey) {
+        $driveLogos = fetchDriveFilesList($folderLogosId, $driveApiKey, true);
+        foreach ($driveLogos as $dl) {
+            $availableLogos[] = $dl;
+        }
+    }
+
+    // 3. Manual de Marca
+    $brandManualInfo = [
+        'id' => $manualId ?: 'local_brand_board',
+        'name' => 'BRAND_BOARD_JM.png',
+        'source' => $manualId ? 'drive' : 'local',
+        'thumbnail' => $manualId
+            ? ('api.php?action=proxy_drive_image&id=' . urlencode($manualId) . '&sz=w400')
+            : 'api.php?action=local_asset&file=BRAND_BOARD_JM.png'
+    ];
+
+    $slides = $targetRowObj['slides_parsed'];
+    $slideCount = count($slides);
+
+    $vars = [
+        'N' => $targetRowObj['n'],
+        'TEMA' => $targetRowObj['tema'],
+        'TITULO' => $targetRowObj['titulo'],
+        'GUION' => $targetRowObj['guion'],
+        'SUBTITULOS' => $targetRowObj['subtitulos'],
+        'DRA' => $targetRowObj['dra'],
+        'ESTADO' => $targetRowObj['estado'],
+        'CANTIDAD_SLIDES' => $slideCount
+    ];
+
+    $masterTemplate = getMasterTemplate($masterTemplateFile);
+    $slideTemplate = getSlideTemplate($slideTemplateFile);
+    $masterPrompt = renderTemplate($masterTemplate, $vars);
+
+    // Armar escaleta inicial variada slide por slide
+    $slidePlan = buildVariedSlidePlan($slides, [
+        'dra' => $targetRowObj['dra'],
+        'tema' => $targetRowObj['tema'],
+        'titulo' => $targetRowObj['titulo'],
+        'subtitulos' => $targetRowObj['subtitulos']
+    ], $slideTemplate);
 
     echo json_encode([
         'status' => 'ok',
-        'message' => 'Foto de la doctora seleccionada y preparada',
-        'photo_id' => $photoId,
-        'photo_name' => $photoName,
-        'local_path' => 'data/drive_cache/' . basename($localPrep)
+        'row' => $targetRowObj['full_data'],
+        'row_summary' => [
+            'n' => $targetRowObj['n'],
+            'tema' => $targetRowObj['tema'],
+            'titulo' => $targetRowObj['titulo'],
+            'dra' => $targetRowObj['dra'],
+            'guion' => $targetRowObj['guion'],
+            'subtitulos' => $targetRowObj['subtitulos'],
+            'instagram_caption' => $targetRowObj['instagram_caption'],
+            'slides_count' => $slideCount,
+            'photo_folder_id' => $folderFotosId
+        ],
+        'vars' => $vars,
+        'prompt' => $masterPrompt,
+        'slide_plan' => $slidePlan,
+        'doctor_catalog' => $sheetData['doctor_catalog'],
+        'assets' => [
+            'photos' => $availablePhotos,
+            'logos' => $availableLogos,
+            'brand_manual' => $brandManualInfo
+        ]
     ]);
     exit;
 }
 
+// Servir activos locales de la carpeta /assets de forma segura
+if ($action === 'local_asset') {
+    $file = basename($_GET['file'] ?? '');
+    $path = $baseDir . '/assets/' . $file;
+    if ($file && file_exists($path)) {
+        $info = @getimagesize($path);
+        header('Content-Type: ' . ($info['mime'] ?? 'image/png'));
+        readfile($path);
+        exit;
+    }
+    http_response_code(404);
+    exit;
+}
+
 // --------------------------------------------------------------------------
-// 8. ENVIAR A PRODUCIR (LLAMADO AL API DE OPENAI USANDO LA PLANTILLA DE SLIDES)
+// 9. DIRECTOR DE ARTE IA: PLANIFICAR / REFINAR ESCALETA DE SLIDES (COMO CHATGPT)
 // --------------------------------------------------------------------------
-if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
-    if (!$input) {
-        echo json_encode(['status' => 'error', 'message' => 'Payload JSON inválido']);
+if ($action === 'plan_carousel' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $guion = trim($input['guion'] ?? '');
+    $tema = trim($input['tema'] ?? 'Odontología Integral');
+    $titulo = trim($input['titulo'] ?? '');
+    $dra = trim($input['dra'] ?? 'Jovany');
+    $subtitulos = trim($input['subtitulos'] ?? '');
+    $masterPrompt = trim($input['master_prompt'] ?? '');
+    $userInstruction = trim($input['user_instruction'] ?? '');
+    $useAiDirector = !empty($input['use_ai_director']);
+
+    $slides = parseGuionSlides($guion, $titulo ?: $tema);
+    $slideTemplate = getSlideTemplate($slideTemplateFile);
+    $basePlan = buildVariedSlidePlan($slides, [
+        'dra' => $dra,
+        'tema' => $tema,
+        'titulo' => $titulo,
+        'subtitulos' => $subtitulos
+    ], $slideTemplate);
+
+    if (!$useAiDirector) {
+        echo json_encode([
+            'status' => 'ok',
+            'mode' => 'cinematic_rules',
+            'total_slides' => count($basePlan),
+            'slide_plan' => $basePlan
+        ]);
         exit;
     }
 
     $cfg = getConfig($configFile);
     $apiKey = $cfg['openai_api_key'] ?? '';
+    $directorModel = $cfg['director_model'] ?? 'gpt-4o';
+
     if (!$apiKey) {
-        echo json_encode(['status' => 'error', 'message' => 'API Key no configurada']);
+        echo json_encode([
+            'status' => 'ok',
+            'mode' => 'fallback_no_key',
+            'total_slides' => count($basePlan),
+            'slide_plan' => $basePlan
+        ]);
         exit;
     }
 
-    $rowNum = $input['row_num'] ?? '1';
-    $model = $input['model'] ?? ($cfg['selected_model'] ?? 'gpt-image-2.5-sunburst');
-    $editedPrompt = $input['edited_prompt'] ?? '';
-    $rowData = $input['row_data'] ?? [];
+    $totalSlides = count($slides);
+    $systemMessage = "Sos el Director de Arte de JM Odontología Integral (igual que el cerebro de ChatGPT cuando planifica una secuencia de imágenes coherente para un carrusel de Instagram).\n"
+        . "Tu misión es diseñar la escaleta visual de exactamente {$totalSlides} slides individuales en formato 4:5 (1080x1350).\n"
+        . "REGLAS CRÍTICAS:\n"
+        . "1. Cada slide debe tener una puesta en escena, ángulo de cámara (shot_type) y postura DIFERENTE para que el carrusel sea dinámico y JAMÁS repita la misma pose estática de la foto de referencia.\n"
+        . "2. La foto de referencia de la Dra. {$dra} se usa SOLO para mantener su rostro e identidad real, pero el modelo de imagen debe crear una escena y pose 100% nueva en cada slide.\n"
+        . "3. Algunos slides intermedios pueden ser planos demostrativos (mostrando un elemento clínico, modelo dental, pantalla) o planos detalle si el texto lo amerita.\n"
+        . "4. Devolvé ÚNICAMENTE un objeto JSON válido con la clave 'slides' que contenga un array de {$totalSlides} objetos con las claves:\n"
+        . "   - 'num' (entero 1..{$totalSlides})\n"
+        . "   - 'role' ('Portada', 'Desarrollo', o 'Cierre / CTA')\n"
+        . "   - 'text' (el texto exacto en español que va escrito en la imagen del slide)\n"
+        . "   - 'shot_type' (descripción detallada del plano cinematográfico, pose nueva de la Dra. {$dra}, acción e iluminación)\n"
+        . "   - 'include_doctor' (boolean: true si aparece la doctora, false si es un plano detalle/macro sin persona)\n"
+        . "   - 'prompt' (el prompt completo, rico y específico para enviar al generador de imágenes sunburst para ESTE único slide, incluyendo el texto exacto entre comillas, la descripción de escena nueva, la instrucción de usar la foto adjunta solo por su rostro sin copiar la pose, y la paleta de marca #16345F, #7DD3FC, #FFFFFF).";
 
-    $folderName = 'carrusel_N' . $rowNum . '_' . time();
-    $targetDir = $outputDir . '/' . $folderName;
-    @mkdir($targetDir, 0775, true);
+    $userMessage = "DATOS DEL CARRUSEL:\n"
+        . "- Tema: {$tema}\n"
+        . "- Título: {$titulo}\n"
+        . "- Doctora protagonista: Dra. {$dra}\n"
+        . "- Palabras clave: {$subtitulos}\n\n"
+        . "GUION DESGLOSADO ({$totalSlides} slides):\n" . json_encode($slides, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n"
+        . ($masterPrompt ? "DIRECTIVAS GENERALES DEL USUARIO:\n{$masterPrompt}\n\n" : "")
+        . ($userInstruction ? "PEDIDO ESPECIAL EN EL HILO DE CHAT:\n{$userInstruction}\n\n" : "");
 
-    file_put_contents($targetDir . '/prompt_utilizado.txt', $editedPrompt);
-    file_put_contents($targetDir . '/row_data.json', json_encode($rowData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    $payload = json_encode([
+        'model' => $directorModel,
+        'response_format' => ['type' => 'json_object'],
+        'messages' => [
+            ['role' => 'system', 'content' => $systemMessage],
+            ['role' => 'user', 'content' => $userMessage]
+        ],
+        'temperature' => 0.7
+    ]);
 
-    // 1. Extraer los slides directamente del prompt que el usuario editó en pantalla
-    $guionBlock = '';
-    if (preg_match('/GUION COMPLETO SLIDE POR SLIDE:\s*\n(.*?)(?=\n[A-ZÁÉÍÓÚÑ\s]{4,}:|\z)/si', $editedPrompt, $gm)) {
-        $guionBlock = $gm[1];
-    } else {
-        $guionBlock = $editedPrompt;
-    }
+    $ch = curl_init('https://api.openai.com/v1/chat/completions');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $apiKey,
+        'Content-Type: application/json'
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+    $res = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
 
-    $slides = [];
-    $lines = explode("\n", $guionBlock);
-    foreach ($lines as $line) {
-        $l = trim($line);
-        if (!$l) continue;
-        if (preg_match('/^(\d+)[\.\:\-\)]\s*(.*)$/', $l, $m)) {
-            $slides[] = [
-                'num' => (int)$m[1],
-                'text' => trim($m[2], " \t\n\r\0\x0B\"'")
-            ];
+    if ($httpCode === 200 && $res) {
+        $data = json_decode($res, true);
+        $content = $data['choices'][0]['message']['content'] ?? '';
+        $parsedJson = json_decode($content, true);
+        if (!empty($parsedJson['slides']) && is_array($parsedJson['slides'])) {
+            $aiPlan = [];
+            foreach ($parsedJson['slides'] as $idx => $s) {
+                $aiPlan[] = [
+                    'num' => $idx + 1,
+                    'role' => $s['role'] ?? ($idx === 0 ? 'Portada' : 'Desarrollo'),
+                    'text' => $s['text'] ?? ($slides[$idx]['text'] ?? ''),
+                    'shot_type' => $s['shot_type'] ?? ($basePlan[$idx]['shot_type'] ?? ''),
+                    'include_doctor' => isset($s['include_doctor']) ? (bool)$s['include_doctor'] : true,
+                    'assigned_photo_index' => -1,
+                    'prompt' => $s['prompt'] ?? ($basePlan[$idx]['prompt'] ?? '')
+                ];
+            }
+            echo json_encode([
+                'status' => 'ok',
+                'mode' => 'ai_director',
+                'director_model' => $directorModel,
+                'total_slides' => count($aiPlan),
+                'slide_plan' => $aiPlan
+            ]);
+            exit;
         }
     }
 
-    // Fallback: si no se detectó numeración en el prompt editado, buscar en rowData
-    if (empty($slides)) {
-        $rawGuion = $rowData['GUION'] ?? '';
-        $rawLines = explode("\n", $rawGuion);
-        foreach ($rawLines as $line) {
-            $l = trim($line);
-            if (!$l) continue;
-            if (preg_match('/^(\d+)[\.\:\-\)]\s*(.*)$/', $l, $m)) {
-                $slides[] = [
-                    'num' => (int)$m[1],
-                    'text' => trim($m[2], " \t\n\r\0\x0B\"'")
-                ];
+    // Fallback seguro a la escaleta cinematográfica si el modelo de chat no respondió JSON
+    echo json_encode([
+        'status' => 'ok',
+        'mode' => 'cinematic_rules_fallback',
+        'total_slides' => count($basePlan),
+        'slide_plan' => $basePlan
+    ]);
+    exit;
+}
+
+// --------------------------------------------------------------------------
+// 10. HILO DE CHAT (REFINAR UN SLIDE O EL CARRUSEL CONVERSACIONALMENTE)
+// --------------------------------------------------------------------------
+if ($action === 'chat_refine' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $message = trim($input['message'] ?? '');
+    $targetSlide = $input['target_slide'] ?? 'all'; // 'all', 'add_new', o número de slide 1..N
+    $currentPlan = $input['slide_plan'] ?? [];
+    $dra = trim($input['dra'] ?? 'Jovany');
+    $tema = trim($input['tema'] ?? '');
+
+    if (!$message || empty($currentPlan)) {
+        echo json_encode(['status' => 'error', 'message' => 'Falta el mensaje o la escaleta actual']);
+        exit;
+    }
+
+    $cfg = getConfig($configFile);
+    $apiKey = $cfg['openai_api_key'] ?? '';
+    $directorModel = $cfg['director_model'] ?? 'gpt-4o';
+
+    // Si pide agregar un slide nuevo
+    if ($targetSlide === 'add_new') {
+        $newNum = count($currentPlan) + 1;
+        $slideTemplate = getSlideTemplate($slideTemplateFile);
+        $newSlide = buildVariedSlidePlan([
+            ['num' => $newNum, 'role' => 'Cierre / Extra', 'text' => $message]
+        ], ['dra' => $dra, 'tema' => $tema, 'titulo' => '', 'subtitulos' => ''], $slideTemplate)[0];
+        $newSlide['num'] = $newNum;
+        $currentPlan[] = $newSlide;
+
+        echo json_encode([
+            'status' => 'ok',
+            'reply' => "Se agregó el Slide {$newNum} a la secuencia. Ya podés generarlo.",
+            'slide_plan' => $currentPlan,
+            'modified_slides' => [$newNum]
+        ]);
+        exit;
+    }
+
+    // Si hay API key, usar el LLM para refinar inteligentemente el/los slides pedidos
+    if ($apiKey) {
+        $sys = "Sos el Director de Arte de un carrusel de Instagram para JM Odontología Integral (Dra. {$dra}).\n"
+            . "El usuario te envía una corrección en el hilo de chat (igual que en ChatGPT).\n"
+            . "Recibís la escaleta actual ('current_plan') y a qué slide apunta ('target_slide': puede ser un número de slide específico o 'all').\n"
+            . "Debés modificar únicamente el/los slides solicitados aplicando el cambio de escena, pose, texto o estilo pedido, manteniendo las reglas anti-sesgo (no copiar pose estática de la foto de referencia, formato vertical 4:5 individual).\n"
+            . "Devolvé un JSON válido con:\n"
+            . "- 'reply': breve respuesta en español confirmando qué ajustaste.\n"
+            . "- 'modified_slides': array de enteros con los números de slides que modificaste (ej. [3]).\n"
+            . "- 'slides': el array completo actualizado de slides.";
+
+        $usr = "TARGET SLIDE: {$targetSlide}\n"
+            . "INSTRUCCIÓN DEL USUARIO: {$message}\n\n"
+            . "ESCALETA ACTUAL:\n" . json_encode($currentPlan, JSON_UNESCAPED_UNICODE);
+
+        $ch = curl_init('https://api.openai.com/v1/chat/completions');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+            'model' => $directorModel,
+            'response_format' => ['type' => 'json_object'],
+            'messages' => [
+                ['role' => 'system', 'content' => $sys],
+                ['role' => 'user', 'content' => $usr]
+            ],
+            'temperature' => 0.6
+        ]));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $apiKey,
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 35);
+        $res = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $res) {
+            $data = json_decode($res, true);
+            $parsed = json_decode($data['choices'][0]['message']['content'] ?? '', true);
+            if (!empty($parsed['slides']) && is_array($parsed['slides'])) {
+                echo json_encode([
+                    'status' => 'ok',
+                    'reply' => $parsed['reply'] ?? 'Escaleta actualizada según tu indicación.',
+                    'slide_plan' => $parsed['slides'],
+                    'modified_slides' => $parsed['modified_slides'] ?? ($targetSlide === 'all' ? range(1, count($parsed['slides'])) : [(int)$targetSlide])
+                ]);
+                exit;
             }
         }
     }
-    if (empty($slides)) {
-        $slides[] = ['num' => 1, 'text' => $rowData['TÍTULO / PORTADA'] ?? 'Portada'];
+
+    // Fallback directo si no se pudo usar LLM: anexar la directiva de corrección directamente al prompt del slide
+    $modified = [];
+    foreach ($currentPlan as &$s) {
+        if ($targetSlide === 'all' || (int)$s['num'] === (int)$targetSlide) {
+            $s['shot_type'] .= " | Corrección solicitada: " . $message;
+            $s['prompt'] .= "\n\nAJUSTE PRIORITARIO SOLICITADO POR EL USUARIO:\n" . $message;
+            $modified[] = (int)$s['num'];
+        }
+    }
+    unset($s);
+
+    echo json_encode([
+        'status' => 'ok',
+        'reply' => 'Se aplicó tu instrucción a ' . (count($modified) === 1 ? "el Slide {$modified[0]}" : "los slides seleccionados") . '.',
+        'slide_plan' => $currentPlan,
+        'modified_slides' => $modified
+    ]);
+    exit;
+}
+
+// --------------------------------------------------------------------------
+// 11. INICIALIZAR SESIÓN DE PRODUCCIÓN DE CARRUSEL
+// --------------------------------------------------------------------------
+if ($action === 'init_carousel_session' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $rowNum = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['row_num'] ?? 'libre'));
+    $existingFolder = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['folder'] ?? ''));
+
+    if ($existingFolder && is_dir($outputDir . '/' . $existingFolder)) {
+        $folderName = $existingFolder;
+    } else {
+        $folderName = 'carrusel_N' . ($rowNum ?: 'libre') . '_' . time();
     }
 
-    // 2. Extraer directivas de arte, fotografía y estilo del prompt editado por el usuario
-    $artDirection = $editedPrompt;
-    if (!empty($guionBlock)) {
-        $artDirection = str_replace("GUION COMPLETO SLIDE POR SLIDE:\n" . $guionBlock, '', $artDirection);
-        $artDirection = str_replace($guionBlock, '', $artDirection);
-    }
-    $artDirection = trim(preg_replace('/\n{3,}/', "\n\n", $artDirection));
-
-    $fallbackSlideTemplate = getSlideTemplate($slideTemplateFile);
-
-    $totalSlides = count($slides);
-    $results = [];
-    $errors = [];
-    $promptsSent = [];
-
-    // Foto madre de la doctora seleccionada desde Google Drive para esta fila
-    $fotoMadrePath = $baseDir . "/data/drive_cache/fila_{$rowNum}_doctor_selected.png";
-    if (!file_exists($fotoMadrePath)) {
-        $fotoMadrePath = $baseDir . '/assets/foto_madre_1024.png';
+    $targetDir = $outputDir . '/' . $folderName;
+    if (!is_dir($targetDir)) {
+        @mkdir($targetDir, 0775, true);
     }
 
-    foreach ($slides as $idx => $s) {
-        $slideNum = $idx + 1;
-        $slideFilename = sprintf('slide_%02d.png', $slideNum);
+    if (!empty($input['master_prompt'])) {
+        file_put_contents($targetDir . '/prompt_utilizado.txt', $input['master_prompt']);
+    }
+    if (!empty($input['row_data'])) {
+        file_put_contents($targetDir . '/row_data.json', json_encode($input['row_data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+    if (!empty($input['slide_plan'])) {
+        file_put_contents($targetDir . '/slide_plan.json', json_encode($input['slide_plan'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
 
-        // Construir el prompt específico usando TODO el texto y modificaciones que el usuario tiene en pantalla
-        if (!empty($artDirection)) {
-            $slidePrompt = "Professional photograph for Instagram Carousel - Slide {$slideNum} of {$totalSlides}:\n"
-                . "SLIDE CONTENT: {$s['text']}\n\n"
-                . "ART DIRECTION AND VISUAL GUIDELINES (apply strictly from user):\n"
-                . $artDirection;
-        } else {
-            $slideVars = [
-                'SLIDE_NUM' => $slideNum,
-                'TOTAL_SLIDES' => $totalSlides,
-                'SLIDE_TEXT' => $s['text'],
-                'DRA' => !empty($rowData['DRA']) ? $rowData['DRA'] : 'Jovany',
-                'TEMA' => $rowData['TEMA'] ?? '',
-                'TITULO' => $rowData['TÍTULO / PORTADA'] ?? '',
-                'SUBTITULOS' => $rowData['SUBTÍTULOS / PALABRAS CLAVE'] ?? ''
-            ];
-            $slidePrompt = renderTemplate($fallbackSlideTemplate, $slideVars);
+    echo json_encode([
+        'status' => 'ok',
+        'folder' => $folderName
+    ]);
+    exit;
+}
+
+// --------------------------------------------------------------------------
+// 12. GENERAR UN SLIDE INDIVIDUAL CON SUNBURST / OPENAI IMAGE API
+//     (CON REFERENCIAS REALES DINÁMICAS, SIN "FOTO MADRE" PEGADA EN SERVIDOR)
+// --------------------------------------------------------------------------
+if ($action === 'generate_slide' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $cfg = getConfig($configFile);
+    $apiKey = $cfg['openai_api_key'] ?? '';
+    $driveKey = $cfg['google_drive_api_key'] ?? '';
+
+    if (!$apiKey) {
+        echo json_encode(['status' => 'error', 'message' => 'API Key de OpenAI no configurada. Ve a la pestaña Configuración.']);
+        exit;
+    }
+
+    $folder = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['folder'] ?? ''));
+    if (!$folder) {
+        $folder = 'carrusel_libre_' . time();
+    }
+    $targetDir = $outputDir . '/' . $folder;
+    if (!is_dir($targetDir)) {
+        @mkdir($targetDir, 0775, true);
+    }
+
+    $slideNum = max(1, (int)($input['slide_num'] ?? 1));
+    $totalSlides = max(1, (int)($input['total_slides'] ?? 1));
+    $slidePrompt = trim((string)($input['prompt'] ?? ''));
+    $model = trim((string)($input['model'] ?? ($cfg['selected_model'] ?? 'gpt-image-2.5-sunburst')));
+    $includeDoctor = isset($input['include_doctor']) ? (bool)$input['include_doctor'] : true;
+    $stampLogo = isset($input['stamp_logo']) ? (bool)$input['stamp_logo'] : !empty($cfg['stamp_logo_overlay']);
+
+    // Activos seleccionados explícitamente por el usuario en la interfaz para este slide
+    $doctorPhotoAsset = $input['doctor_photo'] ?? null; // ['id'=>..., 'source'=>'drive'|'upload', 'name'=>...]
+    $logoAsset = $input['logo_asset'] ?? null;          // ['id'=>..., 'source'=>'drive'|'local'|'upload', 'name'=>...]
+    $brandManualAsset = $input['brand_manual'] ?? null;
+
+    $slideFilename = sprintf('slide_%02d.png', $slideNum);
+    file_put_contents($targetDir . "/slide_{$slideNum}_prompt.txt", $slidePrompt);
+
+    // 1. Preparar en un archivo temporal efímero la foto de la doctora elegida (¡NUNCA caché fijo de foto madre!)
+    $tempFilesToClean = [];
+    $preparedDoctorPath = null;
+    $doctorPhotoLabel = 'Sin foto de doctora (Escena / Detalle)';
+
+    if ($includeDoctor && is_array($doctorPhotoAsset) && !empty($doctorPhotoAsset['id'])) {
+        $srcType = $doctorPhotoAsset['source'] ?? 'drive';
+        $assetId = $doctorPhotoAsset['id'];
+        $doctorPhotoLabel = $doctorPhotoAsset['name'] ?? $assetId;
+
+        $tmpRaw = $tempRefsDir . '/raw_doc_' . uniqid() . '.img';
+        $tmpPng = $tempRefsDir . '/prep_doc_' . uniqid() . '.png';
+        $tempFilesToClean[] = $tmpRaw;
+        $tempFilesToClean[] = $tmpPng;
+
+        if ($srcType === 'upload' && !empty($doctorPhotoAsset['local_path'])) {
+            $candidate = $baseDir . '/' . ltrim($doctorPhotoAsset['local_path'], '/');
+            if (file_exists($candidate)) {
+                normalizeReferenceImage($candidate, $tmpPng, 1536);
+            }
+        } elseif ($srcType === 'drive') {
+            if (downloadDriveImageFresh($assetId, $tmpRaw, $driveKey, 'w1600')) {
+                normalizeReferenceImage($tmpRaw, $tmpPng, 1536);
+            }
         }
 
-        // Guardar el prompt exacto enviado para este slide
-        file_put_contents($targetDir . "/slide_{$slideNum}_prompt.txt", $slidePrompt);
-        $promptsSent["slide_{$slideNum}"] = $slidePrompt;
+        if (file_exists($tmpPng) && filesize($tmpPng) > 0) {
+            $preparedDoctorPath = $tmpPng;
+        }
+    }
 
-        $success = false;
-        // Modo Edits si sunburst y foto madre disponible
-        if (file_exists($fotoMadrePath) && strpos($model, 'sunburst') !== false) {
-            $cfile = new CURLFile($fotoMadrePath, 'image/png', 'foto_madre.png');
+    // 2. Preparar el logo seleccionado (si se eligió uno)
+    $preparedLogoPath = null;
+    $logoLabel = 'Ninguno';
+    if (is_array($logoAsset) && !empty($logoAsset['id']) && $logoAsset['id'] !== 'none') {
+        $lSource = $logoAsset['source'] ?? 'local';
+        $lId = $logoAsset['id'];
+        $logoLabel = $logoAsset['name'] ?? $lId;
+
+        $tmpLogoRaw = $tempRefsDir . '/raw_logo_' . uniqid() . '.img';
+        $tmpLogoPng = $tempRefsDir . '/prep_logo_' . uniqid() . '.png';
+        $tempFilesToClean[] = $tmpLogoRaw;
+        $tempFilesToClean[] = $tmpLogoPng;
+
+        if ($lSource === 'local' && !empty($logoAsset['local_path'])) {
+            $candidate = $baseDir . '/' . ltrim($logoAsset['local_path'], '/');
+            if (file_exists($candidate)) {
+                normalizeReferenceImage($candidate, $tmpLogoPng, 1024);
+            }
+        } elseif ($lSource === 'upload' && !empty($logoAsset['local_path'])) {
+            $candidate = $baseDir . '/' . ltrim($logoAsset['local_path'], '/');
+            if (file_exists($candidate)) {
+                normalizeReferenceImage($candidate, $tmpLogoPng, 1024);
+            }
+        } elseif ($lSource === 'drive') {
+            if (downloadDriveImageFresh($lId, $tmpLogoRaw, $driveKey, 'w1200')) {
+                normalizeReferenceImage($tmpLogoRaw, $tmpLogoPng, 1024);
+            }
+        }
+
+        if (file_exists($tmpLogoPng) && filesize($tmpLogoPng) > 0) {
+            $preparedLogoPath = $tmpLogoPng;
+        }
+    }
+
+    // 3. Llamar a OpenAI Image API
+    $rawSlideOut = $tempRefsDir . '/out_raw_' . uniqid() . '.png';
+    $tempFilesToClean[] = $rawSlideOut;
+
+    $success = false;
+    $endpointUsed = '';
+    $modelUsed = $model;
+    $apiDiagnostics = [];
+
+    // Helper para extraer imagen de respuesta de OpenAI
+    $extractOpenAiImage = function($resBody, $httpCode, $outFile) use (&$apiDiagnostics) {
+        if ($httpCode !== 200 || !$resBody) {
+            $errJson = @json_decode($resBody, true);
+            $errMsg = $errJson['error']['message'] ?? substr((string)$resBody, 0, 220);
+            $apiDiagnostics[] = "HTTP {$httpCode}: {$errMsg}";
+            return false;
+        }
+        $apiData = json_decode($resBody, true);
+        if (isset($apiData['data'][0])) {
+            $item = $apiData['data'][0];
+            if (!empty($item['b64_json'])) {
+                file_put_contents($outFile, base64_decode($item['b64_json']));
+                return file_exists($outFile) && filesize($outFile) > 0;
+            } elseif (!empty($item['url'])) {
+                $imgContent = @file_get_contents($item['url']);
+                if ($imgContent) {
+                    file_put_contents($outFile, $imgContent);
+                    return file_exists($outFile) && filesize($outFile) > 0;
+                }
+            }
+        }
+        $apiDiagnostics[] = "Respuesta 200 sin imagen en data[0]";
+        return false;
+    };
+
+    // SI TENEMOS IMAGEN DE REFERENCIA DE LA DOCTORA (O LOGO) -> USAR /v1/images/edits
+    if ($preparedDoctorPath || $preparedLogoPath) {
+        $primaryRefPath = $preparedDoctorPath ?: $preparedLogoPath;
+
+        // Intentamos primero con el modelo elegido y tamaño vertical 1024x1536 (soportado por gpt-image / sunburst)
+        $editAttempts = [
+            ['model' => $model, 'size' => '1024x1536', 'multi' => true],
+            ['model' => $model, 'size' => '1024x1024', 'multi' => false]
+        ];
+        // Si el usuario tiene puesto gpt-image-2.5-sunburst pero su organización de OpenAI lo expone como gpt-image-1
+        if ($model !== 'gpt-image-1') {
+            $editAttempts[] = ['model' => 'gpt-image-1', 'size' => '1024x1536', 'multi' => true];
+            $editAttempts[] = ['model' => 'gpt-image-1', 'size' => '1024x1024', 'multi' => false];
+        }
+
+        foreach ($editAttempts as $att) {
+            if ($success) break;
+
             $postFields = [
-                'model' => $model,
-                'image' => $cfile,
+                'model' => $att['model'],
                 'prompt' => $slidePrompt,
                 'n' => 1,
-                'size' => '1024x1024'
+                'size' => $att['size']
             ];
+
+            if ($att['multi'] && $preparedDoctorPath && $preparedLogoPath) {
+                $postFields['image[0]'] = new CURLFile($preparedDoctorPath, 'image/png', 'doctor_reference.png');
+                $postFields['image[1]'] = new CURLFile($preparedLogoPath, 'image/png', 'brand_logo.png');
+            } else {
+                $postFields['image'] = new CURLFile($primaryRefPath, 'image/png', 'reference.png');
+            }
 
             $ch = curl_init('https://api.openai.com/v1/images/edits');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -864,35 +1595,37 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Authorization: Bearer ' . $apiKey
             ]);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 90);
             $res = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            $apiData = json_decode($res, true);
-            if (isset($apiData['data'][0])) {
-                $item = $apiData['data'][0];
-                if (!empty($item['b64_json'])) {
-                    file_put_contents($targetDir . '/' . $slideFilename, base64_decode($item['b64_json']));
-                    $results[] = 'output/' . $folderName . '/' . $slideFilename;
-                    $success = true;
-                } elseif (!empty($item['url'])) {
-                    $imgContent = @file_get_contents($item['url']);
-                    if ($imgContent) {
-                        file_put_contents($targetDir . '/' . $slideFilename, $imgContent);
-                        $results[] = 'output/' . $folderName . '/' . $slideFilename;
-                        $success = true;
-                    }
-                }
+            if ($extractOpenAiImage($res, $httpCode, $rawSlideOut)) {
+                $success = true;
+                $endpointUsed = '/v1/images/edits (' . $att['size'] . ')';
+                $modelUsed = $att['model'];
+                break;
             }
         }
+    }
 
-        // Si no se usó edits o falló, usar generations como fallback
-        if (!$success) {
+    // SI EL SLIDE NO LLEVA DOCTORA O SI EL MODELO SOLO SOPORTA GENERATIONS
+    if (!$success) {
+        $genAttempts = [
+            ['model' => $model, 'size' => '1024x1536'],
+            ['model' => $model, 'size' => '1024x1024'],
+            ['model' => 'gpt-image-1', 'size' => '1024x1536'],
+            ['model' => 'dall-e-3', 'size' => '1024x1792']
+        ];
+
+        foreach ($genAttempts as $att) {
+            if ($success) break;
+
             $postJson = json_encode([
-                'model' => (strpos($model, 'sunburst') !== false || strpos($model, 'dall') !== false) ? $model : 'dall-e-3',
+                'model' => $att['model'],
                 'prompt' => $slidePrompt,
                 'n' => 1,
-                'size' => '1024x1024'
+                'size' => $att['size']
             ]);
 
             $ch = curl_init('https://api.openai.com/v1/images/generations');
@@ -903,48 +1636,61 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Authorization: Bearer ' . $apiKey,
                 'Content-Type: application/json'
             ]);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 90);
             $res = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            $apiData = json_decode($res, true);
-            if (isset($apiData['data'][0])) {
-                $item = $apiData['data'][0];
-                if (!empty($item['b64_json'])) {
-                    file_put_contents($targetDir . '/' . $slideFilename, base64_decode($item['b64_json']));
-                    $results[] = 'output/' . $folderName . '/' . $slideFilename;
-                    $success = true;
-                } elseif (!empty($item['url'])) {
-                    $imgContent = @file_get_contents($item['url']);
-                    if ($imgContent) {
-                        file_put_contents($targetDir . '/' . $slideFilename, $imgContent);
-                        $results[] = 'output/' . $folderName . '/' . $slideFilename;
-                        $success = true;
-                    }
-                }
+            if ($extractOpenAiImage($res, $httpCode, $rawSlideOut)) {
+                $success = true;
+                $endpointUsed = '/v1/images/generations (' . $att['size'] . ')';
+                $modelUsed = $att['model'];
+                break;
             }
-        }
-
-        if (!$success) {
-            $errors[] = "Slide {$slideNum}: no se pudo generar.";
         }
     }
 
+    // Finalizar a 1080x1350 (4:5) y limpiar temporales
+    $finalSlidePath = $targetDir . '/' . $slideFilename;
+    if ($success && file_exists($rawSlideOut)) {
+        if (!finalizeSlideImage4x5($rawSlideOut, $finalSlidePath, $stampLogo ? $preparedLogoPath : null)) {
+            @copy($rawSlideOut, $finalSlidePath);
+        }
+    }
+
+    foreach ($tempFilesToClean as $tf) {
+        if (file_exists($tf)) @unlink($tf);
+    }
+
+    if (!$success || !file_exists($finalSlidePath)) {
+        echo json_encode([
+            'status' => 'error',
+            'slide_num' => $slideNum,
+            'message' => 'No se pudo generar el Slide ' . $slideNum . '. Detalle OpenAI: ' . implode(' | ', $apiDiagnostics),
+            'diagnostics' => $apiDiagnostics
+        ]);
+        exit;
+    }
+
+    $cacheBuster = time();
     echo json_encode([
         'status' => 'ok',
-        'message' => 'Producción completada',
-        'folder' => $folderName,
+        'slide_num' => $slideNum,
         'total_slides' => $totalSlides,
-        'generated_count' => count($results),
-        'images' => $results,
-        'prompts_sent' => $promptsSent,
-        'errors' => $errors
+        'folder' => $folder,
+        'image_url' => 'output/' . $folder . '/' . $slideFilename . '?v=' . $cacheBuster,
+        'clean_image_url' => 'output/' . $folder . '/' . $slideFilename,
+        'model_used' => $modelUsed,
+        'endpoint_used' => $endpointUsed,
+        'doctor_photo_used' => $doctorPhotoLabel,
+        'logo_used' => $logoLabel,
+        'prompt_sent' => $slidePrompt
     ]);
     exit;
 }
 
 // --------------------------------------------------------------------------
-// 8. HISTORIAL DE PRODUCCIONES
+// 13. HISTORIAL DE PRODUCCIONES
 // --------------------------------------------------------------------------
 if ($action === 'get_history') {
     $history = [];
@@ -986,7 +1732,7 @@ if ($action === 'get_history') {
 }
 
 // --------------------------------------------------------------------------
-// 9. DESCARGAR TODOS LOS SLIDES EN ARCHIVO ZIP
+// 14. DESCARGAR TODOS LOS SLIDES EN ARCHIVO ZIP
 // --------------------------------------------------------------------------
 if ($action === 'download_zip') {
     $folder = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['folder'] ?? '');

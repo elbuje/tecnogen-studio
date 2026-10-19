@@ -67,3 +67,5 @@ output/
 public/output/
 carrusel_fila*/
 data/drive_cache/
+data/uploads/
+data/temp_refs/

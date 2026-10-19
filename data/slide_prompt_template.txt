@@ -1,6 +1,14 @@
-High-end professional cinematic photograph for Instagram carousel slide {{SLIDE_NUM}} of {{TOTAL_SLIDES}}.
-Topic: {{TEMA}}.
-Content to visualize: {{SLIDE_TEXT}}.
-Scene and subject: Female dentist Dra. {{DRA}} in modern, bright, premium dental clinic with clean Scandinavian architectural design.
-Natural, authentic posture and spontaneous body language. Warm, empathetic expression with direct eye contact to camera lens or natural professional focus.
-High-end editorial aesthetic, soft balanced lighting, ample clean negative space. Colors: Relax Blue (#16345F), Sky Pulse (#7DD3FC), pristine clinical whites. Highly detailed, photorealistic 4k.
+Pieza editorial individual para carrusel de Instagram (Formato vertical 4:5, 1080x1350 px) — Slide {{SLIDE_NUM}} de {{TOTAL_SLIDES}} ({{SLIDE_ROLE}}).
+Marca: JM Odontología Integral. Tema: {{TEMA}}.
+
+TEXTO EDITORIAL A RENDERIZAR EN ESTE SLIDE (exacto, en español, tipografía sans-serif moderna, nítida y de alto contraste):
+"{{SLIDE_TEXT}}"
+{{NAV_INDICATOR}}
+
+PUESTA EN ESCENA Y DIRECCIÓN DE FOTOGRAFÍA PARA ESTE SLIDE:
+- Plano y encuadre asignado: {{SHOT_TYPE}}
+- Protagonista e Identidad: {{DOCTOR_INSTRUCTION}}
+- Ambiente: Consultorio odontológico premium de diseño escandinavo moderno, luminoso, limpio y cálido, con profundidad de campo cinematográfica real (fotografía hiperrealista 8k, iluminación suave natural).
+- Paleta cromática de marca: Azul institucional Relax Blue (#16345F), acentos Sky Pulse (#7DD3FC), blanco clínico (#FFFFFF) y gris suave (#F2F2F2).
+- Marca y Logo: {{LOGO_INSTRUCTION}}
+- Restricción estricta: Generar UNA SOLA escena continua a pantalla completa para este slide individual (prohibido dividir en grillas, collages o múltiples recuadros).
