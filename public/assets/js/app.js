@@ -432,6 +432,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                 `).join('')}
                             </div>
                         </div>
+                        ${data.prompts_sent ? `
+                            <div style="margin-top: 1.5rem;">
+                                <details style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem;">
+                                    <summary style="cursor: pointer; color: var(--primary); font-size: 0.85rem; font-weight: 600;">
+                                        📜 Ver los prompts exactos enviados a OpenAI para cada slide (${Object.keys(data.prompts_sent).length} slides)
+                                    </summary>
+                                    <div style="margin-top: 0.75rem; font-family: monospace; font-size: 0.78rem; max-height: 280px; overflow-y: auto;">
+                                        ${Object.entries(data.prompts_sent).map(([k, p]) => `
+                                            <div style="margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                                <strong style="color: #38bdf8;">${k.toUpperCase()}:</strong>
+                                                <pre style="white-space: pre-wrap; color: #cbd5e1; margin-top: 0.25rem;">${escapeHtml(p)}</pre>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </details>
+                            </div>
+                        ` : ''}
                     `;
 
                     // Attach gesture listeners to the preview card

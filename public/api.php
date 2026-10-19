@@ -478,29 +478,60 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     file_put_contents($targetDir . '/prompt_utilizado.txt', $editedPrompt);
     file_put_contents($targetDir . '/row_data.json', json_encode($rowData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-    // Parsear slides desde el guion
-    $guion = $rowData['GUION'] ?? '';
-    $lines = explode("\n", $guion);
+    // 1. Extraer los slides directamente del prompt que el usuario editó en pantalla
+    $guionBlock = '';
+    if (preg_match('/GUION COMPLETO SLIDE POR SLIDE:\s*\n(.*?)(?=\n[A-ZÁÉÍÓÚÑ\s]{4,}:|\z)/si', $editedPrompt, $gm)) {
+        $guionBlock = $gm[1];
+    } else {
+        $guionBlock = $editedPrompt;
+    }
+
     $slides = [];
-    $sIdx = 1;
+    $lines = explode("\n", $guionBlock);
     foreach ($lines as $line) {
         $l = trim($line);
         if (!$l) continue;
-        if (preg_match('/^(\d+)\.\s*(.*)$/', $l, $m)) {
-            $slides[] = ['num' => (int)$m[1], 'text' => trim($m[2], " \t\n\r\0\x0B\"'")];
-            $sIdx = (int)$m[1] + 1;
-        } else {
-            $slides[] = ['num' => $sIdx, 'text' => trim($l, " \t\n\r\0\x0B\"'")];
-            $sIdx++;
+        if (preg_match('/^(\d+)[\.\:\-\)]\s*(.*)$/', $l, $m)) {
+            $slides[] = [
+                'num' => (int)$m[1],
+                'text' => trim($m[2], " \t\n\r\0\x0B\"'")
+            ];
+        }
+    }
+
+    // Fallback: si no se detectó numeración en el prompt editado, buscar en rowData
+    if (empty($slides)) {
+        $rawGuion = $rowData['GUION'] ?? '';
+        $rawLines = explode("\n", $rawGuion);
+        foreach ($rawLines as $line) {
+            $l = trim($line);
+            if (!$l) continue;
+            if (preg_match('/^(\d+)[\.\:\-\)]\s*(.*)$/', $l, $m)) {
+                $slides[] = [
+                    'num' => (int)$m[1],
+                    'text' => trim($m[2], " \t\n\r\0\x0B\"'")
+                ];
+            }
         }
     }
     if (empty($slides)) {
         $slides[] = ['num' => 1, 'text' => $rowData['TÍTULO / PORTADA'] ?? 'Portada'];
     }
 
+    // 2. Extraer directivas de arte, fotografía y estilo del prompt editado por el usuario
+    $artDirection = $editedPrompt;
+    if (!empty($guionBlock)) {
+        $artDirection = str_replace("GUION COMPLETO SLIDE POR SLIDE:\n" . $guionBlock, '', $artDirection);
+        $artDirection = str_replace($guionBlock, '', $artDirection);
+    }
+    $artDirection = trim(preg_replace('/\n{3,}/', "\n\n", $artDirection));
+
+    $fallbackSlideTemplate = getSlideTemplate($slideTemplateFile);
+
     $totalSlides = count($slides);
     $results = [];
     $errors = [];
+    $promptsSent = [];
 
     // Foto madre si existe en servidor para consistencia facial
     $fotoMadrePath = $baseDir . '/carrusel_fila2/foto_madre_1024.png';
@@ -508,25 +539,32 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $fotoMadrePath = $baseDir . '/carrusel_fila4/foto_madre_1024.png';
     }
 
-    // Leemos la plantilla de prompt por slide desde el archivo externo
-    $slideTemplate = getSlideTemplate($slideTemplateFile);
-
     foreach ($slides as $idx => $s) {
         $slideNum = $idx + 1;
         $slideFilename = sprintf('slide_%02d.png', $slideNum);
 
-        $slideVars = [
-            'SLIDE_NUM' => $slideNum,
-            'TOTAL_SLIDES' => $totalSlides,
-            'SLIDE_TEXT' => $s['text'],
-            'DRA' => !empty($rowData['DRA']) ? $rowData['DRA'] : 'Jovany',
-            'TEMA' => $rowData['TEMA'] ?? '',
-            'TITULO' => $rowData['TÍTULO / PORTADA'] ?? '',
-            'SUBTITULOS' => $rowData['SUBTÍTULOS / PALABRAS CLAVE'] ?? ''
-        ];
+        // Construir el prompt específico usando TODO el texto y modificaciones que el usuario tiene en pantalla
+        if (!empty($artDirection)) {
+            $slidePrompt = "Professional photograph for Instagram Carousel - Slide {$slideNum} of {$totalSlides}:\n"
+                . "SLIDE CONTENT: {$s['text']}\n\n"
+                . "ART DIRECTION AND VISUAL GUIDELINES (apply strictly from user):\n"
+                . $artDirection;
+        } else {
+            $slideVars = [
+                'SLIDE_NUM' => $slideNum,
+                'TOTAL_SLIDES' => $totalSlides,
+                'SLIDE_TEXT' => $s['text'],
+                'DRA' => !empty($rowData['DRA']) ? $rowData['DRA'] : 'Jovany',
+                'TEMA' => $rowData['TEMA'] ?? '',
+                'TITULO' => $rowData['TÍTULO / PORTADA'] ?? '',
+                'SUBTITULOS' => $rowData['SUBTÍTULOS / PALABRAS CLAVE'] ?? ''
+            ];
+            $slidePrompt = renderTemplate($fallbackSlideTemplate, $slideVars);
+        }
 
-        // Construir el prompt del slide usando la plantilla externa
-        $slidePrompt = renderTemplate($slideTemplate, $slideVars);
+        // Guardar el prompt exacto enviado para este slide
+        file_put_contents($targetDir . "/slide_{$slideNum}_prompt.txt", $slidePrompt);
+        $promptsSent["slide_{$slideNum}"] = $slidePrompt;
 
         $success = false;
         // Modo Edits si sunburst y foto madre disponible
@@ -620,6 +658,7 @@ if ($action === 'produce' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'total_slides' => $totalSlides,
         'generated_count' => count($results),
         'images' => $results,
+        'prompts_sent' => $promptsSent,
         'errors' => $errors
     ]);
     exit;
