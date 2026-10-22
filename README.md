@@ -1,3 +1,5 @@
 # TecnoGen Studio
 
-Sitio base limpio con soporte para despliegue estático y SSL en producción (`https://studio.tecnogen.ar`).
+Sitio base limpio y reseteado para nuevo desarrollo.
+Dominio de producción: `https://studio.tecnogen.ar`
+Puerto asignado en Dev: `8018`
