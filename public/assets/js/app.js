@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!inputUploadLogo.files || !inputUploadLogo.files[0]) return;
             const file = inputUploadLogo.files[0];
 
-            activeLogoPreview.innerHTML = `<span style="font-size:0.74rem; color:#38bdf8;">⏳ Subiendo logo...</span>`;
+            activeLogoPreview.innerHTML = `<span style="font-size:0.74rem; color:#0052E0; font-weight:600;">⏳ Subiendo logo...</span>`;
             try {
                 const data = await uploadSingleAsset(file, 'logo', true);
                 if (data.status === 'ok' && data.asset) {
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!inputUploadSubject.files || !inputUploadSubject.files.length) return;
             const files = Array.from(inputUploadSubject.files);
 
-            activeSubjectsPreview.innerHTML = `<span style="font-size:0.74rem; color:#38bdf8;">⏳ Procesando y subiendo foto...</span>`;
+            activeSubjectsPreview.innerHTML = `<span style="font-size:0.74rem; color:#0052E0; font-weight:600;">⏳ Procesando y subiendo foto...</span>`;
             for (const file of files) {
                 try {
                     const data = await uploadSingleAsset(file, 'subject', false);
@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>📝 Redactando textos y armando la narrativa de la imagen...</span>
                 </div>
             </div>
-            <p style="font-size:0.88rem; color:#94a3b8;">
+            <p style="font-size:0.88rem; color:#475569;">
                 Analizando tu idea${state.logoAsset ? ', tu logo' : ''}${state.subjectAssets.length ? ' y tu personaje/producto' : ''} para preparar los textos de cada red y el guion narrativo de la escena...
             </p>
         `;
@@ -697,11 +697,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="narrative-design-box">
                 <div class="narrative-title">
                     <span>🎬 Narrativa de la Imagen (Guion de Escena)</span>
-                    <span style="font-size:0.74rem; color:#94a3b8; font-weight:500;">Podés editar el titular o la narrativa antes de crear la pieza gráfica</span>
+                    <span style="font-size:0.74rem; color:#64748b; font-weight:500;">Podés editar el titular o la narrativa antes de crear la pieza gráfica</span>
                 </div>
 
                 ${vd.scene_summary ? `
-                    <p style="font-size:0.82rem; color:#cbd5e1; margin-bottom:0.85rem; line-height:1.45;">
+                    <p style="font-size:0.84rem; color:#334155; margin-bottom:0.85rem; line-height:1.45;">
                         <strong>Idea de la escena:</strong> ${escapeHtml(vd.scene_summary)}
                     </p>
                 ` : ''}
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div class="step2-trigger-bar">
-                    <div style="font-size:0.76rem; color:#94a3b8;">
+                    <div style="font-size:0.76rem; color:#64748b;">
                         ${state.logoAsset ? '🏷️ Logo incluido' : 'Sin logo'}
                         ${state.subjectAssets.length ? ` · 👤/📦 ${state.subjectAssets.length} imagen(es) incluida(s)` : ''}
                     </div>
@@ -784,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>🎨 Diseñando pieza gráfica...</span>
                 </div>
             </div>
-            <p style="font-size:0.88rem; color:#94a3b8;">
+            <p style="font-size:0.88rem; color:#475569;">
                 Generando la imagen final${state.logoAsset ? ' integrando tu Logo' : ''}${state.subjectAssets.length ? ' y tu Personaje/Producto' : ''}. Esto puede demorar unos segundos...
             </p>
         `;

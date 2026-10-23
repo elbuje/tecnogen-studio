@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecnoGen Studio — Creador de Posts e Historias</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=3.1.<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
+    <title>TecnoGen Studio — Plataforma de Contenido con IA</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=3.2.<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -15,8 +15,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-top">
             <div class="brand-header">
-                <div class="brand-name">TecnoGen Studio</div>
-                <div class="brand-desc">Creador de Contenido Social Media</div>
+                <img src="assets/img/logo-tecnogen-studio.jpg" alt="TecnoGen Studio — Plataforma de contenido con IA" class="brand-logo-img">
             </div>
 
             <button id="btn-new-post" type="button" class="btn-new-chat">
@@ -54,8 +53,10 @@
 
             <!-- Pantalla de Bienvenida (Visible al iniciar un nuevo post) -->
             <div id="welcome-screen" class="welcome-screen">
-                <div class="welcome-badge">✨ Estudio de Creación Social Media</div>
-                <h1>¿Qué post o historia vamos a crear hoy?</h1>
+                <div class="welcome-logo-wrap">
+                    <img src="assets/img/logo-tecnogen-studio.jpg" alt="TecnoGen Studio" class="welcome-logo-img">
+                </div>
+                <h1>¿Qué <span class="brand-highlight">post o historia</span> vamos a crear hoy?</h1>
                 <p>Subí tu <strong>Logo</strong>, agregá si querés un <strong>Personaje o Producto</strong>, elegí las redes y contame tu idea abajo.</p>
 
                 <div class="steps-explainer-grid">
@@ -191,12 +192,12 @@
                 </select>
             </div>
 
-            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1rem 0;">
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 1rem 0;">
 
             <!-- PROMPT PASO 1: DIRECTOR CREATIVO -->
             <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                    <label for="input-prompt-director" style="margin-bottom: 0; color: #38bdf8; font-weight: 700;">
+                    <label for="input-prompt-director" style="margin-bottom: 0; color: #0052E0; font-weight: 700;">
                         🧠 Prompt de Sistema — Director Creativo (Paso 1: Copies y Concepto Narrativo)
                     </label>
                 </div>
@@ -206,7 +207,7 @@
             <!-- PROMPT PASO 2: DISEÑADOR EXPERTO PARA IA -->
             <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                    <label for="input-prompt-designer" style="margin-bottom: 0; color: #a5b4fc; font-weight: 700;">
+                    <label for="input-prompt-designer" style="margin-bottom: 0; color: #041638; font-weight: 700;">
                         🎨 Prompt de Sistema — Diseñador Experto para IA (Paso 2: Creación de la Imagen)
                     </label>
                 </div>
@@ -214,7 +215,7 @@
             </div>
 
             <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #e2e8f0;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #1e293b; font-weight: 600;">
                     <input type="checkbox" id="chk-stamp-logo" style="width: auto;">
                     Estampar también el archivo PNG del logo en esquina al finalizar la imagen
                 </label>
@@ -231,6 +232,6 @@
         </div>
     </div>
 
-    <script src="assets/js/app.js?v=3.1.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
+    <script src="assets/js/app.js?v=3.2.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
 </body>
 </html>
