@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TecnoGen Studio — Plataforma de Contenido con IA</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=3.2.<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=3.3.<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -51,13 +51,13 @@
         <!-- Hilo de Conversación y Resultados -->
         <main class="chat-viewport" id="chat-viewport">
 
-            <!-- Pantalla de Bienvenida (Visible al iniciar un nuevo post) -->
+            <!-- Cabecera y Tarjetas (ubicadas arriba y suben junto con el scroll al chatear) -->
             <div id="welcome-screen" class="welcome-screen">
                 <div class="welcome-logo-wrap">
                     <img src="assets/img/logo-tecnogen-studio.jpg" alt="TecnoGen Studio" class="welcome-logo-img">
                 </div>
                 <h1>¿Qué <span class="brand-highlight">post o historia</span> vamos a crear hoy?</h1>
-                <p>Subí tu <strong>Logo</strong>, agregá si querés un <strong>Personaje o Producto</strong>, elegí las redes y contame tu idea abajo.</p>
+                <p>Subí tu <strong>Logo</strong>, agregá si querés un <strong>Personaje o Producto</strong>, elegí las redes y escribí tu idea abajo.</p>
 
                 <div class="steps-explainer-grid">
                     <div class="step-card">
@@ -82,7 +82,7 @@
         <section class="composer-wrapper">
             <div class="composer-box">
 
-                <!-- FILA 1: Selección de Redes + Post o Historia + Modo de Ejecución -->
+                <!-- FILA 1 (UNA SOLA LÍNEA): Selección de Redes + Post/Historia + Auto-imagen -->
                 <div class="composer-controls-row">
                     <!-- Redes Sociales -->
                     <div class="control-group">
@@ -90,8 +90,8 @@
                         <button type="button" id="btn-net-all" class="chip-select active" title="Seleccionar todas las redes">
                             🌐 Todas
                         </button>
-                        <button type="button" class="chip-select net-btn active" data-net="ig">📸 Instagram</button>
-                        <button type="button" class="chip-select net-btn active" data-net="fb">📘 Facebook</button>
+                        <button type="button" class="chip-select net-btn active" data-net="ig">📸 IG</button>
+                        <button type="button" class="chip-select net-btn active" data-net="fb">📘 FB</button>
                         <button type="button" class="chip-select net-btn active" data-net="tiktok">🎵 TikTok</button>
                         <button type="button" class="chip-select net-btn active" data-net="linkedin">💼 LinkedIn</button>
                     </div>
@@ -99,7 +99,7 @@
                     <div class="controls-right-group">
                         <!-- Tipo de Publicación: Post o Historia -->
                         <div class="control-group">
-                            <span class="control-label">Ubicación:</span>
+                            <span class="control-label">Formato:</span>
                             <div class="segmented-switch">
                                 <button type="button" id="btn-place-post" class="seg-btn active" data-placement="post">
                                     🖼️ Post
@@ -113,7 +113,7 @@
                         <!-- Modo Automático -->
                         <label class="auto-step-toggle" title="Si está activado, genera los textos y la imagen de forma continua">
                             <input type="checkbox" id="chk-auto-step2" checked>
-                            <span>⚡ Crear imagen automáticamente</span>
+                            <span>⚡ Auto-crear imagen</span>
                         </label>
                     </div>
                 </div>
@@ -141,9 +141,9 @@
                     </div>
                 </div>
 
-                <!-- FILA 3: Textarea del Prompt + Botón Enviar -->
+                <!-- FILA 3: Área amplia para escribir la idea + Botón Enviar -->
                 <div class="composer-input-row">
-                    <textarea id="prompt-input" rows="2" placeholder="Escribí la idea de lo que querés reflejar en el posteo (o pedí ajustes sobre el diseño actual)..."></textarea>
+                    <textarea id="prompt-input" class="composer-textarea" rows="3" placeholder="Escribí acá la idea de lo que querés reflejar en tu posteo o historia (o pedí cualquier cambio sobre el diseño actual)..."></textarea>
                     <button id="btn-send-prompt" type="button" class="btn-send-chat" title="Enviar idea">
                         <span>Enviar</span>
                         <span class="send-arrow">↑</span>
@@ -232,6 +232,6 @@
         </div>
     </div>
 
-    <script src="assets/js/app.js?v=3.2.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
+    <script src="assets/js/app.js?v=3.3.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
 </body>
 </html>

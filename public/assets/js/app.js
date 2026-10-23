@@ -120,10 +120,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (welcomeScreen) {
             welcomeScreen.style.display = 'block';
+            welcomeScreen.classList.remove('in-chat');
+        }
+        if (chatViewport) {
+            chatViewport.scrollTop = 0;
         }
         if (promptInput) {
             promptInput.value = '';
-            promptInput.placeholder = 'Escribí la idea de lo que querés reflejar en el posteo (o pedí ajustes sobre el diseño actual)...';
+            promptInput.placeholder = 'Escribí acá la idea de lo que querés reflejar en tu posteo o historia (o pedí cualquier cambio sobre el diseño actual)...';
             promptInput.focus();
         }
         highlightActiveHistoryItem();
@@ -517,7 +521,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnSendPrompt) btnSendPrompt.disabled = true;
         if (promptInput) promptInput.value = '';
 
-        if (welcomeScreen) welcomeScreen.style.display = 'none';
+        if (welcomeScreen) {
+            welcomeScreen.style.display = 'block';
+            welcomeScreen.classList.add('in-chat');
+        }
         if (threadContainer) threadContainer.style.display = 'flex';
 
         // 1. Mostrar burbuja del pedido del usuario en el hilo
@@ -982,7 +989,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSubjectPreviews();
 
             if (currentPostTitle) currentPostTitle.textContent = p.title || 'Publicación';
-            if (welcomeScreen) welcomeScreen.style.display = 'none';
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'block';
+                welcomeScreen.classList.add('in-chat');
+            }
             if (threadContainer) {
                 threadContainer.innerHTML = '';
                 threadContainer.style.display = 'flex';
