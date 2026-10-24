@@ -42,7 +42,7 @@ function getDefaultPrompts() {
             . "2. La NARRATIVA DE LA IMAGEN:\n"
             . "   - Definir el titular corto y potente en español que llevará la pieza gráfica.\n"
             . "   - Redactar en forma narrativa y detallada la escena visual, aplicando la Identidad de Marca / Paleta de Colores indicada.\n"
-            . "   - IDENTIFICACIÓN POR NOMBRE DE ARCHIVO: Siempre que haya fotos adjuntas de personajes, productos o fondos (por ejemplo: personaje1.jpg, personaje2.jpg, fondo.jpg), mencioná explícitamente el nombre exacto de cada archivo dentro de la narrativa visual para indicar qué rol cumple cada foto en la escena (ej.: \"En el escenario de fondo.jpg, la persona de personaje1.jpg saluda a la persona de personaje2.jpg...\").",
+            . "   - IDENTIFICACIÓN POR NOMBRE DE ARCHIVO: Siempre que haya fotos adjuntas de personajes, productos o fondos (por ejemplo: xxxx.jpg, yyyy.jpg, zzzz.jpg), mencioná explícitamente el nombre exacto de cada archivo dentro de la narrativa visual para indicar qué rol cumple cada foto en la escena (ej.: \"En el escenario de zzzz.jpg, la persona de xxxx.jpg saluda a la persona de yyyy.jpg...\").",
 
         'prompt_disenador_ia' =>
             "Actuás como un Diseñador Gráfico Editorial Senior y Director de Arte Fotográfico especializado en piezas para redes sociales.\n"
@@ -51,7 +51,7 @@ function getDefaultPrompts() {
             . "2. IDENTIDAD DE MARCA Y PALETA DE COLORES: Aplicá estrictamente la definición de marca y la paleta de colores indicada (tanto en textos/acentos gráficos como en la ambientación cromática de la pieza).\n"
             . "3. INTEGRACIÓN DE LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición sin deformarlo.\n"
             . "4. COMPOSICIÓN DE PERSONAJES, PRODUCTOS Y FONDOS POR NOMBRE DE ARCHIVO:\n"
-            . "   - Respetá la correspondencia exacta de cada archivo de imagen adjunto según su nombre real (ej. personaje1.jpg, personaje2.jpg, fondo.jpg).\n"
+            . "   - Respetá la correspondencia exacta de cada archivo de imagen adjunto según su nombre real (ej. xxxx.jpg, yyyy.jpg, zzzz.jpg).\n"
             . "   - Mantené estrictamente los rasgos faciales reales, fisonomía, expresión e identidad de cada persona o producto de su foto respectiva, integrándolos de forma fotorrealista dentro de la escena o foto de fondo indicada, con iluminación, perspectiva y proporciones naturales.\n"
             . "5. DISEÑO EDITORIAL Y TIPOGRAFÍA: Integrá el titular principal en español con tipografía moderna, limpia, de alto contraste y excelente legibilidad."
     ];

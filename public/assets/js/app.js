@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (promptInput) {
             promptInput.value = '';
-            promptInput.placeholder = "Escribí acá la idea de lo que querés transmitir en la publicación (podés hacer clic arriba en los botones de tus fotos subidas para insertarlas como variables en tu texto)...";
+            promptInput.placeholder = "Escribí tu idea acá (podés mencionar o hacer clic en tus fotos, ej: 'la persona de xxxx.jpg saluda a yyyy.jpg en el fondo zzzz.jpg')...";
             promptInput.focus();
         }
         highlightActiveHistoryItem();
@@ -813,7 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.isBusy = false;
             if (btnSendPrompt) btnSendPrompt.disabled = false;
             if (promptInput) {
-                promptInput.placeholder = 'Pedí cualquier ajuste sobre los textos o la escena (podés hacer clic arriba en los botones de tus fotos subidas para insertarlas como variables)...';
+                promptInput.placeholder = 'Pedí cualquier ajuste sobre los textos o la escena (ej: "que xxxx.jpg salude a yyyy.jpg en el fondo zzzz.jpg" o "hacé el titular más corto")...';
             }
         }
     }
@@ -939,7 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div class="design-field-group" style="margin-bottom:0;">
-                    <label>Descripción narrativa de lo que se verá en la imagen (hacé clic en los botones de abajo para insertar el nombre de cada foto):</label>
+                    <label>Descripción narrativa de lo que se verá en la imagen (podés mencionar tus fotos como <code>xxxx.jpg</code>, <code>yyyy.jpg</code>):</label>
                     <div class="photo-vars-bar step1-photo-vars-container" style="display:none; margin-bottom:0.45rem;"></div>
                     <textarea class="design-textarea mono textarea-sunburst-prompt" rows="4">${escapeHtml(vd.sunburst_prompt || '')}</textarea>
                 </div>

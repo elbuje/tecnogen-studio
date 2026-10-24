@@ -72,7 +72,7 @@
                 <div class="steps-explainer-grid">
                     <div class="step-card">
                         <div class="step-title">📝 Textos + Narrativa de la Imagen</div>
-                        <div class="step-text">Redactamos los textos para cada red social y armamos el guion narrativo de la escena identificando cada imagen subida como variable por su nombre de archivo.</div>
+                        <div class="step-text">Redactamos los textos para cada red social y armamos el guion narrativo de la escena identificando cada foto por su nombre de archivo (ej. <code>xxxx.jpg</code>, <code>yyyy.jpg</code>).</div>
                     </div>
                     <div class="step-card">
                         <div class="step-title">🎨 Creación de la Pieza Gráfica</div>
@@ -175,7 +175,7 @@
 
                 <!-- FILA 3: Área amplia para escribir la idea + Botón Enviar -->
                 <div class="composer-input-row">
-                    <textarea id="prompt-input" class="composer-textarea" rows="3" placeholder="Escribí acá la idea de lo que querés transmitir en la publicación (podés hacer clic arriba en los botones de tus fotos subidas para insertarlas como variables en tu texto)..."></textarea>
+                    <textarea id="prompt-input" class="composer-textarea" rows="3" placeholder="Escribí tu idea acá (podés mencionar o hacer clic en tus fotos, ej: 'la persona de xxxx.jpg saluda a yyyy.jpg en el fondo zzzz.jpg')..."></textarea>
                     <button id="btn-send-prompt" type="button" class="btn-send-chat" title="Enviar idea">
                         <span>Enviar</span>
                         <span class="send-arrow">↑</span>
