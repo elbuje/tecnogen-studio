@@ -6,8 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPostId: null,
         networks: ['ig', 'fb', 'tiktok', 'linkedin'],
         placement: 'post', // 'post' (4:5 automático) | 'story' (9:16 automático)
-        logoAsset: null,
-        subjectAssets: [], // Sin foto madre fija: inicia limpio en cada nueva publicación
+        brandAsset: null,  // Apartado 1: Imagen de paleta de colores / manual de marca
+        brandText: '',     // Apartado 1: Definición textual de marca / colores
+        logoAsset: null,   // Apartado 2: Logo
+        subjectAssets: [], // Apartado 3: Personajes, Productos y Fondos (inicia limpio en cada nuevo post)
         lastPlan: null,
         selectedImageModel: 'gpt-image-2.5-sunburst-2026-09-08',
         selectedTextModel: 'gpt-4o',
@@ -29,7 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
     const btnNewPost = document.getElementById('btn-new-post');
     const postsHistoryList = document.getElementById('posts-history-list');
+    const btnClearAllPosts = document.getElementById('btn-clear-all-posts');
     const currentPostTitle = document.getElementById('current-post-title');
+    const btnDeleteActivePost = document.getElementById('btn-delete-active-post');
     const lblActiveModel = document.getElementById('lbl-active-model');
 
     const chatViewport = document.getElementById('chat-viewport');
@@ -43,10 +47,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPlaceStory = document.getElementById('btn-place-story');
     const chkAutoStep2 = document.getElementById('chk-auto-step2');
 
+    // Apartado 1: Marca / Paleta
+    const inputUploadBrand = document.getElementById('input-upload-brand');
+    const inputBrandText = document.getElementById('input-brand-text');
+    const activeBrandPreview = document.getElementById('active-brand-preview');
+
+    // Apartado 2: Logo
     const inputUploadLogo = document.getElementById('input-upload-logo');
     const activeLogoPreview = document.getElementById('active-logo-preview');
+
+    // Apartado 3: Personajes, Productos y Fondos
     const inputUploadSubject = document.getElementById('input-upload-subject');
     const activeSubjectsPreview = document.getElementById('active-subjects-preview');
+
+    // Barra de Variables de Fotos en el Composer
+    const composerPhotoVarsBar = document.getElementById('composer-photo-vars-bar');
+    const composerPhotoVarsList = document.getElementById('composer-photo-vars-list');
 
     const promptInput = document.getElementById('prompt-input');
     const btnSendPrompt = document.getElementById('btn-send-prompt');
@@ -91,6 +107,112 @@ document.addEventListener('DOMContentLoaded', () => {
         alertConfig.style.display = 'block';
     }
 
+    /**
+     * Inserta el nombre de una foto como variable (ej: "anthony.jpg") exactamente donde está el cursor
+     */
+    function insertVariableAtCursor(textareaEl, varName) {
+        if (!textareaEl || !varName) return;
+        const start = textareaEl.selectionStart ?? textareaEl.value.length;
+        const end = textareaEl.selectionEnd ?? textareaEl.value.length;
+        const val = textareaEl.value;
+        const before = val.substring(0, start);
+        const after = val.substring(end);
+        const needSpaceBefore = before.length > 0 && !/\s$/.test(before);
+        const needSpaceAfter = after.length > 0 && !/^\s/.test(after);
+        const insertStr = (needSpaceBefore ? ' ' : '') + varName + (needSpaceAfter ? ' ' : '');
+
+        textareaEl.value = before + insertStr + after;
+        const newPos = before.length + insertStr.length;
+        textareaEl.focus();
+        textareaEl.setSelectionRange(newPos, newPos);
+    }
+
+    /**
+     * Devuelve todas las fotos disponibles actualmente para usar como variables en el texto
+     */
+    function getAvailablePhotoVariables() {
+        const list = [];
+        (state.subjectAssets || []).forEach(sa => {
+            if (sa && sa.name) {
+                list.push({ name: sa.name, preview_url: sa.preview_url, role: 'Foto' });
+            }
+        });
+        if (state.logoAsset && state.logoAsset.name) {
+            list.push({ name: state.logoAsset.name, preview_url: state.logoAsset.preview_url, role: 'Logo' });
+        }
+        if (state.brandAsset && state.brandAsset.name) {
+            list.push({ name: state.brandAsset.name, preview_url: state.brandAsset.preview_url, role: 'Paleta' });
+        }
+        return list;
+    }
+
+    function renderComposerPhotoVariablesBar() {
+        if (!composerPhotoVarsBar || !composerPhotoVarsList) return;
+        const vars = getAvailablePhotoVariables();
+        if (vars.length === 0) {
+            composerPhotoVarsBar.style.display = 'none';
+            composerPhotoVarsList.innerHTML = '';
+            return;
+        }
+        composerPhotoVarsBar.style.display = 'flex';
+        composerPhotoVarsList.innerHTML = vars.map((v, idx) => `
+            <button type="button" class="photo-var-btn" data-var-idx="${idx}" title="Clic para insertar '${escapeHtml(v.name)}' donde está el cursor">
+                <img src="${escapeHtml(v.preview_url)}" alt="">
+                <span>➕ ${escapeHtml(v.name)}</span>
+            </button>
+        `).join('');
+
+        composerPhotoVarsList.querySelectorAll('.photo-var-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-var-idx'), 10);
+                const item = vars[idx];
+                if (item && promptInput) {
+                    insertVariableAtCursor(promptInput, item.name);
+                }
+            });
+        });
+
+        // También actualizar las barras de variables de cualquier tarjeta Paso 1 abierta en el hilo
+        if (threadContainer) {
+            threadContainer.querySelectorAll('.step1-photo-vars-container').forEach(container => {
+                renderStep1PhotoVariablesInto(container);
+            });
+        }
+    }
+
+    function renderStep1PhotoVariablesInto(containerEl) {
+        if (!containerEl) return;
+        const card = containerEl.closest('.step1-card');
+        const targetTextarea = card ? card.querySelector('.textarea-sunburst-prompt') : null;
+        const vars = getAvailablePhotoVariables();
+        if (vars.length === 0 || !targetTextarea) {
+            containerEl.style.display = 'none';
+            containerEl.innerHTML = '';
+            return;
+        }
+        containerEl.style.display = 'flex';
+        containerEl.innerHTML = `
+            <span class="photo-vars-label">📌 Variables de fotos (clic para insertar en la narrativa):</span>
+            <div class="photo-vars-list">
+                ${vars.map((v, idx) => `
+                    <button type="button" class="photo-var-btn" data-var-idx="${idx}" title="Clic para insertar '${escapeHtml(v.name)}' en la descripción de la imagen">
+                        <img src="${escapeHtml(v.preview_url)}" alt="">
+                        <span>➕ ${escapeHtml(v.name)}</span>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+        containerEl.querySelectorAll('.photo-var-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-var-idx'), 10);
+                const item = vars[idx];
+                if (item && targetTextarea) {
+                    insertVariableAtCursor(targetTextarea, item.name);
+                }
+            });
+        });
+    }
+
     // =========================================================================
     // 1. SIDEBAR Y NAVEGACIÓN
     // =========================================================================
@@ -106,14 +228,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function syncActiveThreadButtons() {
+        if (btnDeleteActivePost) {
+            btnDeleteActivePost.style.display = state.currentPostId ? 'inline-flex' : 'none';
+        }
+    }
+
     function startNewPostSession() {
         state.currentPostId = null;
         state.lastPlan = null;
-        // Limpiamos personajes/productos previos para evitar sesgos entre posteos
+        // Limpiamos personajes/productos/fondos previos para evitar sesgos entre posteos
         state.subjectAssets = [];
         renderSubjectPreviews();
 
         if (currentPostTitle) currentPostTitle.textContent = 'Nueva Publicación';
+        syncActiveThreadButtons();
         if (threadContainer) {
             threadContainer.innerHTML = '';
             threadContainer.style.display = 'none';
@@ -127,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (promptInput) {
             promptInput.value = '';
-            promptInput.placeholder = 'Escribí acá la idea de lo que querés reflejar en tu posteo o historia (o pedí cualquier cambio sobre el diseño actual)...';
+            promptInput.placeholder = "Escribí tu idea acá (podés mencionar o hacer clic en tus fotos, ej: 'la persona que enseña anthony.jpg saluda al alumno pedro.jpg en el fondo aula.jpg')...";
             promptInput.focus();
         }
         highlightActiveHistoryItem();
@@ -163,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const allSelected = state.networks.length === 4;
             if (allSelected) {
-                // Si estaban todas activas y hace clic en una red específica, selecciona solo esa red
                 state.networks = [net];
             } else if (state.networks.includes(net)) {
                 if (state.networks.length > 1) {
@@ -190,12 +318,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 3. SUBIDA DE LOGO Y PERSONAJE / PRODUCTO
+    // 3. LOS 3 APARTADOS: 1. MARCA/PALETA · 2. LOGO · 3. PERSONAJES/PRODUCTOS/FONDOS
     // =========================================================================
+    function renderBrandPreview() {
+        if (!activeBrandPreview) return;
+        if (!state.brandAsset) {
+            activeBrandPreview.innerHTML = '';
+            renderComposerPhotoVariablesBar();
+            return;
+        }
+        activeBrandPreview.innerHTML = `
+            <div class="attached-chip" title="Imagen de Marca/Paleta: ${escapeHtml(state.brandAsset.name)}">
+                <img src="${escapeHtml(state.brandAsset.preview_url)}?t=${Date.now()}" alt="Marca">
+                <span>${escapeHtml(state.brandAsset.name)}</span>
+                <button type="button" id="btn-clear-brand" title="Quitar imagen de paleta">✕</button>
+            </div>
+        `;
+        const btnClearBrand = document.getElementById('btn-clear-brand');
+        if (btnClearBrand) {
+            btnClearBrand.addEventListener('click', async () => {
+                state.brandAsset = null;
+                renderBrandPreview();
+                try {
+                    await fetch('api.php?action=save_config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ default_brand_asset: null })
+                    });
+                } catch (e) {}
+            });
+        }
+        renderComposerPhotoVariablesBar();
+    }
+
+    if (inputBrandText) {
+        inputBrandText.addEventListener('change', async () => {
+            state.brandText = inputBrandText.value.trim();
+            try {
+                await fetch('api.php?action=save_config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ default_brand_text: state.brandText })
+                });
+            } catch (e) {}
+        });
+        inputBrandText.addEventListener('input', () => {
+            state.brandText = inputBrandText.value.trim();
+        });
+    }
+
     function renderLogoPreview() {
         if (!activeLogoPreview) return;
         if (!state.logoAsset) {
-            activeLogoPreview.innerHTML = `<span style="font-size:0.73rem; color:#64748b;">Sin logo</span>`;
+            activeLogoPreview.innerHTML = `<span style="font-size:0.71rem; color:#64748b;">Sin logo</span>`;
+            renderComposerPhotoVariablesBar();
             return;
         }
         activeLogoPreview.innerHTML = `
@@ -219,16 +395,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (e) {}
             });
         }
+        renderComposerPhotoVariablesBar();
     }
 
     function renderSubjectPreviews() {
         if (!activeSubjectsPreview) return;
         if (!state.subjectAssets.length) {
-            activeSubjectsPreview.innerHTML = `<span style="font-size:0.73rem; color:#64748b;">Opcional (ninguno subido)</span>`;
+            activeSubjectsPreview.innerHTML = `<span style="font-size:0.71rem; color:#64748b;">Subí fotos (ej: anthony.jpg, pedro.jpg, fondo.jpg)</span>`;
+            renderComposerPhotoVariablesBar();
             return;
         }
         activeSubjectsPreview.innerHTML = state.subjectAssets.map((item, idx) => `
-            <div class="attached-chip" title="Personaje / Producto: ${escapeHtml(item.name)}">
+            <div class="attached-chip" title="Foto adjunta: ${escapeHtml(item.name)}">
                 <img src="${escapeHtml(item.preview_url)}?t=${Date.now()}" alt="Ref">
                 <span>${escapeHtml(item.name)}</span>
                 <button type="button" class="btn-remove-subject" data-idx="${idx}" title="Quitar">✕</button>
@@ -242,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderSubjectPreviews();
             });
         });
+        renderComposerPhotoVariablesBar();
     }
 
     /**
@@ -289,7 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function uploadSingleAsset(file, assetType, saveDefault = false) {
-        // Intentar optimizar en navegador (evita el límite de 2MB de PHP por completo)
         const optimizedDataUrl = await fileToOptimizedDataUrl(file, 1600, assetType === 'logo');
 
         if (optimizedDataUrl) {
@@ -306,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return await res.json();
         }
 
-        // Fallback por FormData directo (ej. archivos HEIC que el navegador no renderice en canvas)
         const fd = new FormData();
         fd.append('type', assetType);
         if (saveDefault) fd.append('save_default', '1');
@@ -315,12 +492,33 @@ document.addEventListener('DOMContentLoaded', () => {
         return await res.json();
     }
 
+    if (inputUploadBrand) {
+        inputUploadBrand.addEventListener('change', async () => {
+            if (!inputUploadBrand.files || !inputUploadBrand.files[0]) return;
+            const file = inputUploadBrand.files[0];
+
+            activeBrandPreview.innerHTML = `<span style="font-size:0.72rem; color:#0052E0; font-weight:600;">⏳ Subiendo paleta...</span>`;
+            try {
+                const data = await uploadSingleAsset(file, 'brand', true);
+                if (data.status === 'ok' && data.asset) {
+                    state.brandAsset = data.asset;
+                } else {
+                    alert(data.message || 'Error al subir imagen de marca/paleta');
+                }
+            } catch (err) {
+                alert('Error de red al subir paleta: ' + err.message);
+            }
+            inputUploadBrand.value = '';
+            renderBrandPreview();
+        });
+    }
+
     if (inputUploadLogo) {
         inputUploadLogo.addEventListener('change', async () => {
             if (!inputUploadLogo.files || !inputUploadLogo.files[0]) return;
             const file = inputUploadLogo.files[0];
 
-            activeLogoPreview.innerHTML = `<span style="font-size:0.74rem; color:#0052E0; font-weight:600;">⏳ Subiendo logo...</span>`;
+            activeLogoPreview.innerHTML = `<span style="font-size:0.72rem; color:#0052E0; font-weight:600;">⏳ Subiendo logo...</span>`;
             try {
                 const data = await uploadSingleAsset(file, 'logo', true);
                 if (data.status === 'ok' && data.asset) {
@@ -341,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!inputUploadSubject.files || !inputUploadSubject.files.length) return;
             const files = Array.from(inputUploadSubject.files);
 
-            activeSubjectsPreview.innerHTML = `<span style="font-size:0.74rem; color:#0052E0; font-weight:600;">⏳ Procesando y subiendo foto...</span>`;
+            activeSubjectsPreview.innerHTML = `<span style="font-size:0.72rem; color:#0052E0; font-weight:600;">⏳ Procesando y subiendo foto(s)...</span>`;
             for (const file of files) {
                 try {
                     const data = await uploadSingleAsset(file, 'subject', false);
@@ -390,9 +588,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectModel.value = state.selectedImageModel;
                 }
 
+                if (data.default_brand_asset && data.default_brand_asset.preview_url) {
+                    state.brandAsset = data.default_brand_asset;
+                }
+                state.brandText = data.default_brand_text || '';
+                if (inputBrandText) {
+                    inputBrandText.value = state.brandText;
+                }
+
                 if (data.default_logo && data.default_logo.preview_url) {
                     state.logoAsset = data.default_logo;
                 }
+                renderBrandPreview();
                 renderLogoPreview();
                 renderSubjectPreviews();
             }
@@ -532,6 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
             prompt: promptText,
             networks: [...state.networks],
             placement: state.placement,
+            brandAsset: state.brandAsset,
+            brandText: state.brandText,
             logoAsset: state.logoAsset,
             subjectAssets: [...state.subjectAssets]
         });
@@ -546,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <p style="font-size:0.88rem; color:#475569;">
-                Analizando tu idea${state.logoAsset ? ', tu logo' : ''}${state.subjectAssets.length ? ' y tu personaje/producto' : ''} para preparar los textos de cada red y el guion narrativo de la escena...
+                Analizando tu idea${(state.brandAsset || state.brandText) ? ', tu marca/paleta' : ''}${state.logoAsset ? ', tu logo' : ''}${state.subjectAssets.length ? ' y tus fotos (' + state.subjectAssets.map(s => s.name).join(', ') + ')' : ''} para preparar los textos de cada red y el guion narrativo de la escena...
             </p>
         `;
         threadContainer.appendChild(loadingStep1El);
@@ -561,6 +770,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     prompt: promptText,
                     networks: state.networks,
                     placement: state.placement,
+                    brand_asset: state.brandAsset,
+                    brand_text: state.brandText,
                     logo_asset: state.logoAsset,
                     subject_assets: state.subjectAssets,
                     text_model: state.selectedTextModel,
@@ -579,6 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             state.currentPostId = data.post_id;
             state.lastPlan = data.plan;
+            syncActiveThreadButtons();
             if (currentPostTitle && data.plan.title) {
                 currentPostTitle.textContent = data.plan.title;
             }
@@ -607,12 +819,12 @@ document.addEventListener('DOMContentLoaded', () => {
             state.isBusy = false;
             if (btnSendPrompt) btnSendPrompt.disabled = false;
             if (promptInput) {
-                promptInput.placeholder = 'Pedí cualquier ajuste sobre los textos o la escena (ej: "cambiá el fondo a un consultorio moderno" o "hacé el titular más corto")...';
+                promptInput.placeholder = 'Pedí cualquier ajuste sobre los textos o la escena (ej: "que anthony.jpg salude a pedro.jpg en el fondo aula.jpg" o "hacé el titular más corto")...';
             }
         }
     }
 
-    function appendUserTurnCard({ prompt, networks, placement, logoAsset, subjectAssets }) {
+    function appendUserTurnCard({ prompt, networks, placement, brandAsset, brandText, logoAsset, subjectAssets }) {
         const card = document.createElement('div');
         card.className = 'user-turn-card';
 
@@ -620,13 +832,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const netBadges = (networks || []).map(n => NETWORK_META[n]?.short || n).join(' · ');
 
         let assetsHtml = '';
-        if (logoAsset || (subjectAssets && subjectAssets.length)) {
+        if (brandAsset || brandText || logoAsset || (subjectAssets && subjectAssets.length)) {
             const pills = [];
+            if (brandAsset) {
+                pills.push(`
+                    <div class="user-asset-pill">
+                        <img src="${escapeHtml(brandAsset.preview_url)}" alt="Marca">
+                        <span>1️⃣ Marca: ${escapeHtml(brandAsset.name)}</span>
+                    </div>
+                `);
+            } else if (brandText) {
+                pills.push(`
+                    <div class="user-asset-pill">
+                        <span>1️⃣ Paleta: ${escapeHtml(brandText)}</span>
+                    </div>
+                `);
+            }
             if (logoAsset) {
                 pills.push(`
                     <div class="user-asset-pill">
                         <img src="${escapeHtml(logoAsset.preview_url)}" alt="Logo">
-                        <span>🏷️ Logo: ${escapeHtml(logoAsset.name)}</span>
+                        <span>2️⃣ Logo: ${escapeHtml(logoAsset.name)}</span>
                     </div>
                 `);
             }
@@ -634,7 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pills.push(`
                     <div class="user-asset-pill">
                         <img src="${escapeHtml(sa.preview_url)}" alt="Ref">
-                        <span>👤/📦 ${escapeHtml(sa.name)}</span>
+                        <span>3️⃣ ${escapeHtml(sa.name)}</span>
                     </div>
                 `);
             });
@@ -704,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="narrative-design-box">
                 <div class="narrative-title">
                     <span>🎬 Narrativa de la Imagen (Guion de Escena)</span>
-                    <span style="font-size:0.74rem; color:#64748b; font-weight:500;">Podés editar el titular o la narrativa antes de crear la pieza gráfica</span>
+                    <span style="font-size:0.74rem; color:#64748b; font-weight:500;">Podés editar el titular o insertar variables de tus fotos antes de crear la pieza gráfica</span>
                 </div>
 
                 ${vd.scene_summary ? `
@@ -719,14 +945,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div class="design-field-group" style="margin-bottom:0;">
-                    <label>Descripción narrativa de lo que se verá en la imagen:</label>
+                    <label>Descripción narrativa de lo que se verá en la imagen (podés mencionar tus fotos como <code>anthony.jpg</code>, <code>pedro.jpg</code>):</label>
+                    <div class="photo-vars-bar step1-photo-vars-container" style="display:none; margin-bottom:0.45rem;"></div>
                     <textarea class="design-textarea mono textarea-sunburst-prompt" rows="4">${escapeHtml(vd.sunburst_prompt || '')}</textarea>
                 </div>
 
                 <div class="step2-trigger-bar">
                     <div style="font-size:0.76rem; color:#64748b;">
-                        ${state.logoAsset ? '🏷️ Logo incluido' : 'Sin logo'}
-                        ${state.subjectAssets.length ? ` · 👤/📦 ${state.subjectAssets.length} imagen(es) incluida(s)` : ''}
+                        ${(state.brandAsset || state.brandText) ? '1️⃣ Marca/Paleta activa · ' : ''}
+                        ${state.logoAsset ? '2️⃣ Logo incluido' : 'Sin logo'}
+                        ${state.subjectAssets.length ? ` · 3️⃣ ${state.subjectAssets.length} foto(s): ${escapeHtml(state.subjectAssets.map(s => s.name).join(', '))}` : ''}
                     </div>
                     <button type="button" class="btn-sunburst-create">
                         <span>🎨 Crear Pieza Gráfica</span>
@@ -753,6 +981,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnCreate = card.querySelector('.btn-sunburst-create');
         const headlineInput = card.querySelector('.input-headline-image');
         const promptTextarea = card.querySelector('.textarea-sunburst-prompt');
+        const step1VarsContainer = card.querySelector('.step1-photo-vars-container');
+
+        if (step1VarsContainer && promptTextarea) {
+            renderStep1PhotoVariablesInto(step1VarsContainer, promptTextarea);
+        }
 
         if (btnCreate) {
             btnCreate.addEventListener('click', async () => {
@@ -792,7 +1025,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <p style="font-size:0.88rem; color:#475569;">
-                Generando la imagen final${state.logoAsset ? ' integrando tu Logo' : ''}${state.subjectAssets.length ? ' y tu Personaje/Producto' : ''}. Esto puede demorar unos segundos...
+                Generando la imagen final${(state.brandAsset || state.brandText) ? ' aplicando tu Marca/Paleta' : ''}${state.logoAsset ? ', integrando tu Logo' : ''}${state.subjectAssets.length ? ' y tus fotos (' + escapeHtml(state.subjectAssets.map(s => s.name).join(', ')) + ')' : ''}. Esto puede demorar unos segundos...
             </p>
         `;
         threadContainer.appendChild(loadingStep2El);
@@ -811,6 +1044,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     force_new_variant: !!forceNewVariant,
                     placement: state.placement,
                     model: state.selectedImageModel,
+                    brand_asset: state.brandAsset,
+                    brand_text: state.brandText,
                     logo_asset: state.logoAsset,
                     subject_assets: state.subjectAssets,
                     stamp_logo: state.stampLogoOverlay
@@ -899,14 +1134,72 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 7. HISTORIAL LATERAL DE PUBLICACIONES
+    // 7. HISTORIAL LATERAL Y BORRADO COMPLETO DE CONVERSACIONES / HILOS
     // =========================================================================
+    async function deleteThreadById(pid) {
+        if (!pid) return;
+        if (!confirm('¿Eliminar esta conversación/hilo y borrar todas sus imágenes y archivos del servidor?')) {
+            return;
+        }
+        try {
+            const res = await fetch('api.php?action=delete_post', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_id: pid })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                if (state.currentPostId === pid) {
+                    startNewPostSession();
+                }
+                await loadPostsHistory();
+            } else {
+                alert(data.message || 'No se pudo eliminar el hilo.');
+            }
+        } catch (err) {
+            alert('Error de red al eliminar el hilo: ' + err.message);
+        }
+    }
+
+    if (btnDeleteActivePost) {
+        btnDeleteActivePost.addEventListener('click', async () => {
+            if (!state.currentPostId) return;
+            await deleteThreadById(state.currentPostId);
+        });
+    }
+
+    if (btnClearAllPosts) {
+        btnClearAllPosts.addEventListener('click', async () => {
+            if (!confirm('¿Eliminar TODAS las conversaciones/hilos guardadas y borrar todos sus archivos del servidor?')) {
+                return;
+            }
+            try {
+                const res = await fetch('api.php?action=delete_all_posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    startNewPostSession();
+                    await loadPostsHistory();
+                }
+            } catch (err) {
+                alert('Error al vaciar el historial: ' + err.message);
+            }
+        });
+    }
+
     async function loadPostsHistory() {
         if (!postsHistoryList) return;
         try {
             const res = await fetch('api.php?action=list_posts');
             const data = await res.json();
             if (data.status !== 'ok' || !Array.isArray(data.posts)) return;
+
+            if (btnClearAllPosts) {
+                btnClearAllPosts.style.display = data.posts.length > 0 ? 'inline-block' : 'none';
+            }
 
             if (data.posts.length === 0) {
                 postsHistoryList.innerHTML = `<div style="font-size:0.78rem; color:#64748b; padding:0.5rem;">Todavía no hay publicaciones guardadas.</div>`;
@@ -929,7 +1222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="history-sub">${escapeHtml(badge)} · ${escapeHtml(p.updated_at || '')}</div>
                             </div>
                         </div>
-                        <button type="button" class="btn-del-history" data-del-id="${escapeHtml(p.post_id)}" title="Eliminar">✕</button>
+                        <button type="button" class="btn-del-history" data-del-id="${escapeHtml(p.post_id)}" title="Eliminar hilo y borrar todo del servidor">🗑️</button>
                     </div>
                 `;
             }).join('');
@@ -946,16 +1239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     const pid = btn.getAttribute('data-del-id');
-                    if (!pid || !confirm('¿Eliminar esta publicación del historial?')) return;
-                    await fetch('api.php?action=delete_post', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ post_id: pid })
-                    });
-                    if (state.currentPostId === pid) {
-                        startNewPostSession();
-                    }
-                    await loadPostsHistory();
+                    if (pid) await deleteThreadById(pid);
                 });
             });
         } catch (err) {
@@ -979,12 +1263,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const p = data.post;
             state.currentPostId = p.post_id;
             state.lastPlan = p;
+            syncActiveThreadButtons();
             state.networks = Array.isArray(p.networks) && p.networks.length ? p.networks : ['ig', 'fb', 'tiktok', 'linkedin'];
             syncNetworkButtonsUI();
             setPlacement(p.placement || 'post');
 
-            if (p.logo_asset) state.logoAsset = p.logo_asset;
+            if ('brand_asset' in p) {
+                state.brandAsset = p.brand_asset || null;
+            }
+            if ('brand_text' in p) {
+                state.brandText = typeof p.brand_text === 'string' ? p.brand_text : '';
+                if (inputBrandText) inputBrandText.value = state.brandText;
+            }
+            if ('logo_asset' in p) {
+                state.logoAsset = p.logo_asset || null;
+            }
             state.subjectAssets = Array.isArray(p.subject_assets) ? p.subject_assets : [];
+            renderBrandPreview();
             renderLogoPreview();
             renderSubjectPreviews();
 
@@ -1005,6 +1300,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         prompt: turn.user_prompt || '',
                         networks: turn.networks || state.networks,
                         placement: turn.placement || state.placement,
+                        brandAsset: state.brandAsset,
+                        brandText: state.brandText,
                         logoAsset: state.logoAsset,
                         subjectAssets: state.subjectAssets
                     });
@@ -1036,6 +1333,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         prompt: p.last_idea,
                         networks: state.networks,
                         placement: state.placement,
+                        brandAsset: state.brandAsset,
+                        brandText: state.brandText,
                         logoAsset: state.logoAsset,
                         subjectAssets: state.subjectAssets
                     });

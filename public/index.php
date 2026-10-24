@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TecnoGen Studio — Plataforma de Contenido con IA</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=3.3.<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=3.5.<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -24,7 +24,12 @@
         </div>
 
         <div class="sidebar-history-section">
-            <div class="sidebar-section-label">Publicaciones Recientes</div>
+            <div class="sidebar-section-header">
+                <span class="sidebar-section-label">Publicaciones Recientes</span>
+                <button id="btn-clear-all-posts" type="button" class="btn-clear-all" title="Eliminar todas las conversaciones y sus archivos del servidor" style="display: none;">
+                    🗑️ Borrar todo
+                </button>
+            </div>
             <div id="posts-history-list" class="history-list">
                 <!-- Se carga dinámicamente -->
             </div>
@@ -46,6 +51,11 @@
                 <button id="btn-toggle-sidebar" type="button" class="btn-icon-only" title="Mostrar/Ocultar barra lateral">☰</button>
                 <span class="topbar-title" id="current-post-title">Nueva Publicación</span>
             </div>
+            <div class="topbar-right">
+                <button id="btn-delete-active-post" type="button" class="btn-delete-thread" style="display: none;" title="Eliminar este hilo y todos sus archivos del servidor">
+                    🗑️ Eliminar hilo
+                </button>
+            </div>
         </header>
 
         <!-- Hilo de Conversación y Resultados -->
@@ -57,16 +67,16 @@
                     <img src="assets/img/logo-tecnogen-studio.jpg" alt="TecnoGen Studio" class="welcome-logo-img">
                 </div>
                 <h1>¿Qué <span class="brand-highlight">post o historia</span> vamos a crear hoy?</h1>
-                <p>Subí tu <strong>Logo</strong>, agregá si querés un <strong>Personaje o Producto</strong>, elegí las redes y escribí tu idea abajo.</p>
+                <p>Definí tu <strong>1. Marca / Paleta</strong>, subí tu <strong>2. Logo</strong> y tus <strong>3. Personajes, Productos o Fondos</strong>, y escribí tu idea abajo.</p>
 
                 <div class="steps-explainer-grid">
                     <div class="step-card">
                         <div class="step-title">📝 Textos + Narrativa de la Imagen</div>
-                        <div class="step-text">Redactamos los textos listos para publicar en cada red social que elijas y armamos el guion narrativo de lo que va a mostrar la imagen.</div>
+                        <div class="step-text">Redactamos los textos para cada red social y armamos el guion narrativo de la escena identificando cada foto por su nombre de archivo (ej. <code>anthony.jpg</code>, <code>pedro.jpg</code>).</div>
                     </div>
                     <div class="step-card">
                         <div class="step-title">🎨 Creación de la Pieza Gráfica</div>
-                        <div class="step-text">Con esa narrativa visual, tu logo y tu personaje o producto, generamos la pieza gráfica final lista para descargar como Post o Historia.</div>
+                        <div class="step-text">Con tu paleta de colores, tu logo y tus fotos de personajes, productos o fondos, generamos la pieza gráfica final lista para descargar.</div>
                     </div>
                 </div>
             </div>
@@ -118,32 +128,61 @@
                     </div>
                 </div>
 
-                <!-- FILA 2: Subida de Logo y Personaje/Producto (Con miniaturas activas) -->
-                <div class="composer-assets-row">
-                    <!-- Subir Logo -->
-                    <div class="asset-upload-slot">
-                        <label class="btn-upload-chip" for="input-upload-logo">
-                            <span>🏷️ + Subir Logo</span>
-                            <input type="file" id="input-upload-logo" accept="image/*" style="display: none;">
-                        </label>
+                <!-- FILA 2: LOS 3 APARTADOS DE RECURSOS (1. Marca/Paleta · 2. Logo · 3. Personajes, Productos y Fondos) -->
+                <div class="composer-assets-row three-sections-row">
+                    <!-- APARTADO 1: Marca / Paleta de Colores -->
+                    <div class="asset-section-box">
+                        <div class="asset-section-head">
+                            <span class="asset-section-num">1. Marca / Paleta</span>
+                            <label class="btn-upload-chip compact-chip" for="input-upload-brand" title="Subir imagen de paleta de colores o manual de marca">
+                                <span>🎨 + Paleta/Img</span>
+                                <input type="file" id="input-upload-brand" accept="image/*" style="display: none;">
+                            </label>
+                        </div>
+                        <div class="brand-inputs-inline">
+                            <input type="text" id="input-brand-text" class="brand-palette-input" placeholder="Colores/estilo (ej: Azul #0052E0 y blanco)...">
+                            <div id="active-brand-preview" class="attached-items-row"></div>
+                        </div>
+                    </div>
+
+                    <div class="divider-vertical"></div>
+
+                    <!-- APARTADO 2: Logo -->
+                    <div class="asset-section-box">
+                        <div class="asset-section-head">
+                            <span class="asset-section-num">2. Logo</span>
+                            <label class="btn-upload-chip compact-chip" for="input-upload-logo">
+                                <span>🏷️ + Subir Logo</span>
+                                <input type="file" id="input-upload-logo" accept="image/*" style="display: none;">
+                            </label>
+                        </div>
                         <div id="active-logo-preview" class="attached-items-row"></div>
                     </div>
 
                     <div class="divider-vertical"></div>
 
-                    <!-- Subir Personaje o Producto -->
-                    <div class="asset-upload-slot" style="flex: 1;">
-                        <label class="btn-upload-chip" for="input-upload-subject">
-                            <span>👤/📦 + Subir Personaje o Producto</span>
-                            <input type="file" id="input-upload-subject" accept="image/*" multiple style="display: none;">
-                        </label>
+                    <!-- APARTADO 3: Personajes, Productos y Fondos -->
+                    <div class="asset-section-box" style="flex: 1.4;">
+                        <div class="asset-section-head">
+                            <span class="asset-section-num">3. Personajes, Productos y Fondos</span>
+                            <label class="btn-upload-chip compact-chip" for="input-upload-subject">
+                                <span>👤/📦/🏞️ + Subir Fotos</span>
+                                <input type="file" id="input-upload-subject" accept="image/*" multiple style="display: none;">
+                            </label>
+                        </div>
                         <div id="active-subjects-preview" class="attached-items-row"></div>
                     </div>
                 </div>
 
+                <!-- BARRA DE VARIABLES DE FOTOS (Click para insertar el nombre del archivo en la idea) -->
+                <div id="composer-photo-vars-bar" class="photo-vars-bar" style="display: none;">
+                    <span class="photo-vars-label">📌 Insertar foto como variable en tu texto:</span>
+                    <div id="composer-photo-vars-list" class="photo-vars-list"></div>
+                </div>
+
                 <!-- FILA 3: Área amplia para escribir la idea + Botón Enviar -->
                 <div class="composer-input-row">
-                    <textarea id="prompt-input" class="composer-textarea" rows="3" placeholder="Escribí acá la idea de lo que querés reflejar en tu posteo o historia (o pedí cualquier cambio sobre el diseño actual)..."></textarea>
+                    <textarea id="prompt-input" class="composer-textarea" rows="3" placeholder="Escribí tu idea acá (podés mencionar o hacer clic en tus fotos, ej: 'la persona que enseña anthony.jpg saluda al alumno pedro.jpg en el fondo aula.jpg')..."></textarea>
                     <button id="btn-send-prompt" type="button" class="btn-send-chat" title="Enviar idea">
                         <span>Enviar</span>
                         <span class="send-arrow">↑</span>
@@ -232,6 +271,6 @@
         </div>
     </div>
 
-    <script src="assets/js/app.js?v=3.3.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
+    <script src="assets/js/app.js?v=3.5.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
 </body>
 </html>

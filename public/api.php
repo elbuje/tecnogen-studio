@@ -33,17 +33,27 @@ function getDefaultPrompts() {
     return [
         'prompt_director_creativo' =>
             "Actuás como un Director Creativo Publicitario y Estratega de Contenidos para Redes Sociales.\n"
-            . "Tu objetivo es analizar la idea del usuario (junto con el logo y el profesional, personaje o producto adjuntos, si los hay) y desarrollar:\n"
+            . "Tu objetivo es analizar la idea del usuario junto con los 3 apartados de recursos si están presentes:\n"
+            . "1) Definición de Marca / Paleta de Colores,\n"
+            . "2) Logo de la marca,\n"
+            . "3) Fotos de Personajes, Productos y/o Fondos (escenarios fotográficos).\n\n"
+            . "Debés desarrollar:\n"
             . "1. Los COPIES publicitarios adaptados al estilo, tono y extensión de cada red social seleccionada, con ganchos atractivos, estructura clara y llamado a la acción.\n"
-            . "2. La NARRATIVA DE LA IMAGEN: definir el titular corto y potente en español que llevará la pieza y describir en forma narrativa la escena visual (qué debe transmitir la imagen, cómo debe verse el profesional o producto en contexto real y qué atmósfera o entorno acompaña la idea).",
+            . "2. La NARRATIVA DE LA IMAGEN:\n"
+            . "   - Definir el titular corto y potente en español que llevará la pieza gráfica.\n"
+            . "   - Redactar en forma narrativa y detallada la escena visual, aplicando la Identidad de Marca / Paleta de Colores indicada.\n"
+            . "   - IDENTIFICACIÓN POR NOMBRE DE ARCHIVO: Siempre que haya fotos adjuntas de personajes, productos o fondos (por ejemplo: anthony.jpg, pedro.jpg, fondo_aula.jpg), mencioná explícitamente el nombre exacto de cada archivo dentro de la narrativa visual para indicar qué rol cumple cada foto en la escena (ej.: \"En el escenario de fondo_aula.jpg, la persona que está enseñando anthony.jpg saluda al alumno pedro.jpg...\").",
 
         'prompt_disenador_ia' =>
             "Actuás como un Diseñador Gráfico Editorial Senior y Director de Arte Fotográfico especializado en piezas para redes sociales.\n"
             . "DIRECTRICES DE DISEÑO:\n"
             . "1. PIEZA ÚNICA: Creá una sola pieza gráfica publicitaria unificada y coherente. No dividas la imagen en cuadros, grillas, viñetas ni collages.\n"
-            . "2. FIDELIDAD DE PERSONAJE / PROFESIONAL O PRODUCTO: Si se adjunta foto de un profesional, personaje o producto, mantené estrictamente sus rasgos faciales reales, identidad, fisonomía o empaque original, integrándolo de forma fotorrealista en una escena, pose, ángulo e iluminación natural acorde a la narrativa del posteo.\n"
-            . "3. INTEGRACIÓN DE MARCA Y LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición respetando la identidad visual y colores de la marca.\n"
-            . "4. DISEÑO EDITORIAL Y TIPOGRAFÍA: Integrá el titular principal en español con tipografía moderna, limpia, de alto contraste y excelente legibilidad."
+            . "2. IDENTIDAD DE MARCA Y PALETA DE COLORES: Aplicá estrictamente la definición de marca y la paleta de colores indicada (tanto en textos/acentos gráficos como en la ambientación cromática de la pieza).\n"
+            . "3. INTEGRACIÓN DE LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición sin deformarlo.\n"
+            . "4. COMPOSICIÓN DE PERSONAJES, PRODUCTOS Y FONDOS POR NOMBRE DE ARCHIVO:\n"
+            . "   - Respetá la correspondencia exacta de cada archivo de imagen adjunto según su nombre (ej. anthony.jpg, pedro.jpg, escena_fondo.jpg).\n"
+            . "   - Mantené estrictamente los rasgos faciales reales, fisonomía, expresión e identidad de cada persona o producto de su foto respectiva, integrándolos de forma fotorrealista dentro de la escena o foto de fondo indicada, con iluminación, perspectiva y proporciones naturales.\n"
+            . "5. DISEÑO EDITORIAL Y TIPOGRAFÍA: Integrá el titular principal en español con tipografía moderna, limpia, de alto contraste y excelente legibilidad."
     ];
 }
 
@@ -59,6 +69,8 @@ function getConfig($configFile) {
         'google_drive_api_key' => 'AIzaSyDwuvpt_Dhrf8uZgF-DHPQPXn_Mr4piVMo',
         'stamp_logo_overlay' => false,
         'default_logo' => null,
+        'default_brand_asset' => null,
+        'default_brand_text' => '',
         'prompt_director_creativo' => $defaultPrompts['prompt_director_creativo'],
         'prompt_disenador_ia' => $defaultPrompts['prompt_disenador_ia']
     ];
@@ -288,6 +300,8 @@ if ($action === 'get_config') {
         'text_model' => $cfg['text_model'] ?? 'gpt-4o',
         'stamp_logo_overlay' => !empty($cfg['stamp_logo_overlay']),
         'default_logo' => $cfg['default_logo'] ?? null,
+        'default_brand_asset' => $cfg['default_brand_asset'] ?? null,
+        'default_brand_text' => $cfg['default_brand_text'] ?? '',
         'prompt_director_creativo' => $cfg['prompt_director_creativo'] ?? $defaultPrompts['prompt_director_creativo'],
         'prompt_disenador_ia' => $cfg['prompt_disenador_ia'] ?? $defaultPrompts['prompt_disenador_ia'],
         'default_prompts' => $defaultPrompts
@@ -307,6 +321,8 @@ if ($action === 'save_config' && $reqMethod === 'POST') {
     if (isset($input['text_model'])) $cfg['text_model'] = trim($input['text_model']);
     if (isset($input['stamp_logo_overlay'])) $cfg['stamp_logo_overlay'] = (bool)$input['stamp_logo_overlay'];
     if (array_key_exists('default_logo', $input)) $cfg['default_logo'] = $input['default_logo'];
+    if (array_key_exists('default_brand_asset', $input)) $cfg['default_brand_asset'] = $input['default_brand_asset'];
+    if (array_key_exists('default_brand_text', $input)) $cfg['default_brand_text'] = trim((string)$input['default_brand_text']);
     if (isset($input['prompt_director_creativo'])) $cfg['prompt_director_creativo'] = trim($input['prompt_director_creativo']);
     if (isset($input['prompt_disenador_ia'])) $cfg['prompt_disenador_ia'] = trim($input['prompt_disenador_ia']);
     saveConfig($configFile, $cfg);
@@ -474,6 +490,10 @@ if ($action === 'upload_asset' && $reqMethod === 'POST') {
         $cfg = getConfig($configFile);
         $cfg['default_logo'] = $assetObj;
         saveConfig($configFile, $cfg);
+    } elseif ($assetType === 'brand' && $saveDefault) {
+        $cfg = getConfig($configFile);
+        $cfg['default_brand_asset'] = $assetObj;
+        saveConfig($configFile, $cfg);
     }
 
     echo json_encode([
@@ -496,7 +516,7 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
     if (!$apiKey) {
         echo json_encode([
             'status' => 'error',
-            'message' => 'Falta configurar tu OpenAI API Key. Hacé clic en "⚙️ Configurar API" abajo a la izquierda.'
+            'message' => 'Falta configurar tu OpenAI API Key. Hacé clic en "⚙️ Configuración" abajo a la izquierda.'
         ]);
         exit;
     }
@@ -516,8 +536,10 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         $networks = ['ig', 'fb', 'tiktok', 'linkedin'];
     }
     $placement = ($input['placement'] ?? 'post') === 'story' ? 'story' : 'post'; // 'post' | 'story'
-    $logoAsset = $input['logo_asset'] ?? null;
-    $subjectAssets = $input['subject_assets'] ?? []; // Array de fotos de personaje / producto
+    $brandAsset = array_key_exists('brand_asset', $input) ? $input['brand_asset'] : ($cfg['default_brand_asset'] ?? null);
+    $brandText = array_key_exists('brand_text', $input) ? trim((string)$input['brand_text']) : trim((string)($cfg['default_brand_text'] ?? ''));
+    $logoAsset = array_key_exists('logo_asset', $input) ? $input['logo_asset'] : ($cfg['default_logo'] ?? null);
+    $subjectAssets = $input['subject_assets'] ?? []; // Array de fotos de personaje / producto / fondo
     $previousState = $input['previous_state'] ?? null; // Si es una corrección en el mismo hilo
 
     if ($userPrompt === '') {
@@ -542,8 +564,16 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         }
     }
 
+    $hasBrandAsset = is_array($brandAsset) && !empty($brandAsset['local_path']);
     $hasLogo = is_array($logoAsset) && !empty($logoAsset['local_path']);
     $hasSubject = is_array($subjectAssets) && count($subjectAssets) > 0;
+
+    $subjectFileNames = [];
+    if ($hasSubject) {
+        foreach ($subjectAssets as $idx => $sa) {
+            $subjectFileNames[] = $sa['name'] ?? ('foto_' . ($idx + 1) . '.png');
+        }
+    }
 
     $postStateFile = $postFolder . '/post_state.json';
     $existingState = file_exists($postStateFile) ? (json_decode(file_get_contents($postStateFile), true) ?: []) : [];
@@ -552,12 +582,25 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
     $defaultPrompts = getDefaultPrompts();
     $directorPrompt = trim((string)($cfg['prompt_director_creativo'] ?? $defaultPrompts['prompt_director_creativo']));
 
+    $brandSummaryLine = 'NO ESPECIFICADA';
+    if ($brandText !== '' && $hasBrandAsset) {
+        $brandSummaryLine = "SÍ (Texto: \"{$brandText}\" + Imagen de Paleta/Marca: " . ($brandAsset['name'] ?? 'paleta.png') . ")";
+    } elseif ($brandText !== '') {
+        $brandSummaryLine = "SÍ (Definición: \"{$brandText}\")";
+    } elseif ($hasBrandAsset) {
+        $brandSummaryLine = "SÍ (Imagen de Paleta/Marca: " . ($brandAsset['name'] ?? 'paleta.png') . ")";
+    }
+
     $systemInstructions = $directorPrompt . "\n\n"
         . "CONTEXTO DE ESTA PUBLICACIÓN:\n"
         . "- Redes destino: " . implode(', ', $selectedNetworkNames) . "\n"
         . "- Ubicación / Formato: {$placementLabel}\n"
-        . "- ¿Subió Logo?: " . ($hasLogo ? "SÍ (Nombre: " . ($logoAsset['name'] ?? 'Logo') . ")" : "NO") . "\n"
-        . "- ¿Subió Personaje / Profesional o Producto?: " . ($hasSubject ? "SÍ (" . count($subjectAssets) . " imagen/es adjunta/s)" : "NO") . "\n"
+        . "- 1) Marca / Paleta de Colores: {$brandSummaryLine}\n"
+        . "- 2) ¿Subió Logo?: " . ($hasLogo ? "SÍ (Archivo: " . ($logoAsset['name'] ?? 'Logo') . ")" : "NO") . "\n"
+        . "- 3) ¿Subió Fotos de Personajes / Productos / Fondos?: " . ($hasSubject ? "SÍ (" . count($subjectAssets) . " archivo/s: " . implode(', ', $subjectFileNames) . ")" : "NO") . "\n"
+        . ($hasSubject
+            ? "- REGLA DE VARIABLES DE FOTOS: En el campo 'sunburst_prompt', referite siempre a cada personaje, producto o fondo usando su nombre exacto de archivo (" . implode(', ', $subjectFileNames) . ") tal como lo indicó el usuario o según lo que ves en cada foto adjunta.\n"
+            : "")
         . ($latestExistingImage
             ? "- ¿Ya existe una pieza gráfica creada en este hilo?: SÍ. Si el usuario está pidiendo corregir un texto, una letra, un color o un detalle puntual sobre la imagen ya generada, activá 'is_image_correction': true e indicá en 'edit_instruction' exactamente qué cambio puntual aplicar manteniendo idéntico el resto de la pieza.\n\n"
             : "\n")
@@ -575,18 +618,25 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         . "  \"visual_design\": {\n"
         . "    \"headline_in_image\": \"Texto exacto breve en español que irá escrito dentro del diseño gráfico\",\n"
         . "    \"scene_summary\": \"Resumen claro en español del concepto visual de la escena\",\n"
-        . "    \"sunburst_prompt\": \"Descripción narrativa y visual detallada de la escena para que el Diseñador Experto IA construya la pieza gráfica\",\n"
+        . "    \"sunburst_prompt\": \"Descripción narrativa y visual detallada de la escena (mencionando los nombres exactos de los archivos de fotos adjuntos como " . ($hasSubject ? implode(', ', $subjectFileNames) : 'nombre_foto.jpg') . " y aplicando la paleta de marca) para que el Diseñador Experto IA construya la pieza gráfica\",\n"
         . "    \"is_image_correction\": " . ($latestExistingImage ? "true" : "false") . ",\n"
         . "    \"edit_instruction\": \"Si es una corrección sobre la imagen ya creada, detallá exactamente qué modificar manteniendo intacto todo el resto del diseño\"\n"
         . "  }\n"
         . "}";
 
-    // Construir contenido multimodal para que el modelo de texto VEA el logo, el personaje/producto y la última imagen si es corrección
+    // Construir contenido multimodal para que el modelo de texto VEA la paleta/marca, el logo, los personajes/productos/fondos y la última imagen
     $userContentParts = [];
 
     $textBlock = "IDEA / PEDIDO DEL USUARIO:\n" . $userPrompt . "\n\n"
         . "REDES SOLICITADAS: " . implode(', ', $selectedNetworkNames) . "\n"
         . "TIPO DE PUBLICACIÓN: " . ($placement === 'story' ? 'Historia (Vertical 9:16)' : 'Post de Feed (Vertical 4:5)');
+
+    if ($brandText !== '') {
+        $textBlock .= "\nDEFINICIÓN DE MARCA / PALETA DE COLORES: " . $brandText;
+    }
+    if ($hasSubject) {
+        $textBlock .= "\nARCHIVOS DE FOTOS ADJUNTOS (Personajes / Productos / Fondos): " . implode(', ', $subjectFileNames);
+    }
 
     if ($previousState && !empty($previousState['visual_design'])) {
         $textBlock .= "\n\nESTADO ANTERIOR DEL POST (El usuario está pidiendo un ajuste o corrección sobre esta propuesta previa):\n"
@@ -617,37 +667,54 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         }
     }
 
-    // Adjuntar vista previa del Personaje / Producto al modelo de visión
-    if ($hasSubject) {
-        foreach ($subjectAssets as $idx => $sa) {
-            $localFile = $baseDir . '/' . ltrim($sa['local_path'] ?? '', '/');
-            $dataUri = createVisionDataUrl($localFile, 512);
-            if ($dataUri) {
-                $userContentParts[] = [
-                    'type' => 'text',
-                    'text' => "IMAGEN ADJUNTA — PERSONAJE O PRODUCTO (" . ($sa['name'] ?? ('Referencia ' . ($idx + 1))) . "):"
-                ];
-                $userContentParts[] = [
-                    'type' => 'image_url',
-                    'image_url' => ['url' => $dataUri, 'detail' => 'low']
-                ];
-            }
+    // 1. Adjuntar vista previa de la Imagen de Marca / Paleta de Colores al modelo de visión
+    if ($hasBrandAsset) {
+        $brandFile = $baseDir . '/' . ltrim($brandAsset['local_path'], '/');
+        $brandUri = createVisionDataUrl($brandFile, 512);
+        if ($brandUri) {
+            $userContentParts[] = [
+                'type' => 'text',
+                'text' => "APARTADO 1 — IMAGEN DE MARCA / PALETA DE COLORES (Archivo: " . ($brandAsset['name'] ?? 'paleta.png') . "):"
+            ];
+            $userContentParts[] = [
+                'type' => 'image_url',
+                'image_url' => ['url' => $brandUri, 'detail' => 'low']
+            ];
         }
     }
 
-    // Adjuntar vista previa del Logo al modelo de visión
+    // 2. Adjuntar vista previa del Logo al modelo de visión
     if ($hasLogo) {
         $logoFile = $baseDir . '/' . ltrim($logoAsset['local_path'], '/');
         $logoUri = createVisionDataUrl($logoFile, 512);
         if ($logoUri) {
             $userContentParts[] = [
                 'type' => 'text',
-                'text' => "IMAGEN ADJUNTA — LOGO DE LA MARCA (" . ($logoAsset['name'] ?? 'Logo') . "):"
+                'text' => "APARTADO 2 — LOGO DE LA MARCA (Archivo: " . ($logoAsset['name'] ?? 'logo.png') . "):"
             ];
             $userContentParts[] = [
                 'type' => 'image_url',
                 'image_url' => ['url' => $logoUri, 'detail' => 'low']
             ];
+        }
+    }
+
+    // 3. Adjuntar vista previa de cada Personaje / Producto / Fondo con su nombre exacto de archivo
+    if ($hasSubject) {
+        foreach ($subjectAssets as $idx => $sa) {
+            $localFile = $baseDir . '/' . ltrim($sa['local_path'] ?? '', '/');
+            $dataUri = createVisionDataUrl($localFile, 512);
+            if ($dataUri) {
+                $fName = $sa['name'] ?? ('foto_' . ($idx + 1) . '.png');
+                $userContentParts[] = [
+                    'type' => 'text',
+                    'text' => "APARTADO 3 — FOTO ADJUNTA DE PERSONAJE / PRODUCTO / FONDO — NOMBRE DE ARCHIVO: \"{$fName}\":"
+                ];
+                $userContentParts[] = [
+                    'type' => 'image_url',
+                    'image_url' => ['url' => $dataUri, 'detail' => 'low']
+                ];
+            }
         }
     }
 
@@ -702,6 +769,9 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         'user_prompt' => $userPrompt,
         'networks' => $networks,
         'placement' => $placement,
+        'brand_asset' => $brandAsset,
+        'brand_text' => $brandText,
+        'subject_assets' => $subjectAssets,
         'assistant_comment' => $plan['assistant_comment'] ?? '',
         'copies' => $plan['copies'] ?? [],
         'visual_design' => $plan['visual_design'],
@@ -715,6 +785,8 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         'last_idea' => $userPrompt,
         'networks' => $networks,
         'placement' => $placement,
+        'brand_asset' => $brandAsset,
+        'brand_text' => $brandText,
         'logo_asset' => $logoAsset,
         'subject_assets' => $subjectAssets,
         'assistant_comment' => $plan['assistant_comment'] ?? '',
@@ -773,7 +845,9 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     if ($model === 'gpt-image-2.5-sunburst') {
         $model = 'gpt-image-2.5-sunburst-2026-09-08';
     }
-    $logoAsset = $input['logo_asset'] ?? null;
+    $brandAsset = array_key_exists('brand_asset', $input) ? $input['brand_asset'] : ($existingState['brand_asset'] ?? ($cfg['default_brand_asset'] ?? null));
+    $brandText = array_key_exists('brand_text', $input) ? trim((string)$input['brand_text']) : trim((string)($existingState['brand_text'] ?? ($cfg['default_brand_text'] ?? '')));
+    $logoAsset = array_key_exists('logo_asset', $input) ? $input['logo_asset'] : ($existingState['logo_asset'] ?? null);
     $subjectAssets = $input['subject_assets'] ?? [];
     $stampLogo = isset($input['stamp_logo']) ? (bool)$input['stamp_logo'] : !empty($cfg['stamp_logo_overlay']);
 
@@ -797,37 +871,27 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     $referenceNames = [];
 
     if ($useExistingPieceAsBase) {
-        // MODO CORRECCIÓN COHERENTE: La imagen base [0] es la última pieza gráfica ya generada
-        $referenceFiles[] = ['path' => $latestImgFull, 'role' => 'base_piece', 'name' => basename($latestImgFull)];
+        $referenceFiles[] = [
+            'path' => $latestImgFull,
+            'role' => 'Pieza gráfica actual (base para corrección coherente)',
+            'name' => basename($latestImgFull)
+        ];
         $referenceNames[] = 'Pieza anterior para corrección coherente';
-
-        $finalPromptForSunburst = $designerMasterPrompt
-            . "\n\nMODO EDICIÓN COHERENTE SOBRE LA PIEZA EXISTENTE (IMAGEN ADJUNTA 1):\n"
-            . "Tomá como base exactamente la pieza gráfica ya generada que se adjunta como primera imagen. "
-            . "MANTENÉ IDÉNTICOS la composición, la foto/pose del profesional o producto, el fondo, la iluminación, el logo y el estilo visual general. "
-            . "Aplicá ÚNICAMENTE la siguiente modificación solicitada:\n"
-            . ($editInstruction !== '' ? $editInstruction : $sunburstPrompt)
-            . "\n\nTEXTO / TITULAR EXACTO QUE DEBE QUEDAR EN LA IMAGEN: \"{$headlineInImage}\""
-            . "\n\nDESCRIPCIÓN COMPLETA DE REFERENCIA DE LA PIEZA:\n" . $sunburstPrompt;
-    } else {
-        // MODO CREACIÓN: Construir el prompt final uniendo el Prompt del Diseñador Experto IA + Escena del Paso 1 + Titular
-        $finalPromptForSunburst = $designerMasterPrompt
-            . "\n\n" . $placementRule
-            . "\n\nDISEÑO Y ESCENA A CREAR:\n" . $sunburstPrompt;
-
-        if ($headlineInImage !== '' && stripos($sunburstPrompt, $headlineInImage) === false) {
-            $finalPromptForSunburst .= "\n\nTEXTO PRINCIPAL A INTEGRAR EN EL DISEÑO GRÁFICO: \"{$headlineInImage}\"";
-        }
     }
 
-    // Recolectar archivos de referencia reales (Personaje/Producto + Logo)
+    // Recolectar archivos de referencia reales (Personajes/Productos/Fondos + Logo + Paleta de Marca)
     if (is_array($subjectAssets)) {
         foreach ($subjectAssets as $sa) {
             if (!empty($sa['local_path'])) {
                 $fullPath = $baseDir . '/' . ltrim($sa['local_path'], '/');
                 if (file_exists($fullPath)) {
-                    $referenceFiles[] = ['path' => $fullPath, 'role' => 'subject', 'name' => $sa['name'] ?? 'subject.png'];
-                    $referenceNames[] = 'Personaje/Producto: ' . ($sa['name'] ?? 'imagen');
+                    $fName = $sa['name'] ?? 'subject.png';
+                    $referenceFiles[] = [
+                        'path' => $fullPath,
+                        'role' => 'Personaje / Producto / Escenario de Foto',
+                        'name' => $fName
+                    ];
+                    $referenceNames[] = 'Foto: ' . $fName;
                 }
             }
         }
@@ -838,8 +902,70 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
         $candidateLogo = $baseDir . '/' . ltrim($logoAsset['local_path'], '/');
         if (file_exists($candidateLogo)) {
             $logoFullPath = $candidateLogo;
-            $referenceFiles[] = ['path' => $candidateLogo, 'role' => 'logo', 'name' => $logoAsset['name'] ?? 'logo.png'];
-            $referenceNames[] = 'Logo: ' . ($logoAsset['name'] ?? 'logo');
+            $fName = $logoAsset['name'] ?? 'logo.png';
+            $referenceFiles[] = [
+                'path' => $candidateLogo,
+                'role' => 'Logotipo oficial de la marca',
+                'name' => $fName
+            ];
+            $referenceNames[] = 'Logo: ' . $fName;
+        }
+    }
+
+    if (is_array($brandAsset) && !empty($brandAsset['local_path'])) {
+        $candidateBrand = $baseDir . '/' . ltrim($brandAsset['local_path'], '/');
+        if (file_exists($candidateBrand)) {
+            $fName = $brandAsset['name'] ?? 'paleta_marca.png';
+            $referenceFiles[] = [
+                'path' => $candidateBrand,
+                'role' => 'Referencia de Identidad de Marca / Paleta de Colores',
+                'name' => $fName
+            ];
+            $referenceNames[] = 'Marca/Paleta: ' . $fName;
+        }
+    }
+
+    // Construir el MAPA DE ARCHIVOS ADJUNTOS para que cuando la narrativa mencione "anthony.jpg" o "pedro.jpg",
+    // el modelo de imagen sepa exactamente cuál imagen adjunta corresponde a cada nombre de archivo.
+    $referenceMapBlock = '';
+    if (!empty($referenceFiles)) {
+        $mapLines = [];
+        foreach ($referenceFiles as $idx => $rf) {
+            $num = $idx + 1;
+            $mapLines[] = "- IMAGEN ADJUNTA #{$num} (image[{$idx}]): Archivo \"{$rf['name']}\" — Rol: {$rf['role']}";
+        }
+        $referenceMapBlock = "\n\nMAPA EXACTO DE IMÁGENES ADJUNTAS POR NOMBRE DE ARCHIVO:\n"
+            . implode("\n", $mapLines)
+            . "\n(Cuando la descripción mencione el nombre de un archivo como \"" . ($referenceFiles[0]['name'] ?? 'foto.jpg') . "\", usá exactamente la imagen correspondiente de esta lista respetando la identidad, rostro o escenario de esa foto).";
+    }
+
+    $brandDefinitionBlock = '';
+    if ($brandText !== '') {
+        $brandDefinitionBlock = "\n\nDEFINICIÓN DE MARCA Y PALETA DE COLORES A APLICAR:\n" . $brandText;
+    }
+
+    if ($useExistingPieceAsBase) {
+        // MODO CORRECCIÓN COHERENTE: La imagen base [0] es la última pieza gráfica ya generada
+        $finalPromptForSunburst = $designerMasterPrompt
+            . $brandDefinitionBlock
+            . $referenceMapBlock
+            . "\n\nMODO EDICIÓN COHERENTE SOBRE LA PIEZA EXISTENTE (IMAGEN ADJUNTA #1):\n"
+            . "Tomá como base exactamente la pieza gráfica ya generada que se adjunta como IMAGEN ADJUNTA #1. "
+            . "MANTENÉ IDÉNTICOS la composición, la foto/pose del profesional o producto, el fondo, la iluminación, el logo y el estilo visual general. "
+            . "Aplicá ÚNICAMENTE la siguiente modificación solicitada:\n"
+            . ($editInstruction !== '' ? $editInstruction : $sunburstPrompt)
+            . "\n\nTEXTO / TITULAR EXACTO QUE DEBE QUEDAR EN LA IMAGEN: \"{$headlineInImage}\""
+            . "\n\nDESCRIPCIÓN COMPLETA DE REFERENCIA DE LA PIEZA:\n" . $sunburstPrompt;
+    } else {
+        // MODO CREACIÓN: Construir el prompt final uniendo el Prompt del Diseñador Experto IA + Marca + Mapa de Archivos + Escena + Titular
+        $finalPromptForSunburst = $designerMasterPrompt
+            . "\n\n" . $placementRule
+            . $brandDefinitionBlock
+            . $referenceMapBlock
+            . "\n\nDISEÑO Y ESCENA A CREAR:\n" . $sunburstPrompt;
+
+        if ($headlineInImage !== '' && stripos($sunburstPrompt, $headlineInImage) === false) {
+            $finalPromptForSunburst .= "\n\nTEXTO PRINCIPAL A INTEGRAR EN EL DISEÑO GRÁFICO: \"{$headlineInImage}\"";
         }
     }
 
@@ -865,7 +991,7 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
             } elseif (!empty($item['url'])) {
                 $imgContent = @file_get_contents($item['url']);
                 if ($imgContent) {
-                    file_put_contents($outFile, $imgContent);
+                    file_put_contents($imgContent ? $outFile : $outFile, $imgContent);
                     return file_exists($outFile) && filesize($outFile) > 0;
                 }
             }
@@ -874,7 +1000,7 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
         return false;
     };
 
-    // SI EL USUARIO SUBIÓ PERSONAJE/PRODUCTO Y/O LOGO -> ENVIAR A /v1/images/edits
+    // SI EL USUARIO SUBIÓ ARCHIVOS DE REFERENCIA -> ENVIAR A /v1/images/edits
     if (!empty($referenceFiles)) {
         $editAttempts = [
             ['model' => $model, 'size' => '1024x1536', 'multi' => true],
@@ -897,11 +1023,13 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
 
             if ($att['multi'] && count($referenceFiles) > 1) {
                 foreach ($referenceFiles as $idx => $rf) {
-                    $postFields["image[{$idx}]"] = new CURLFile($rf['path'], 'image/png', "ref_{$idx}.png");
+                    $safeUploadName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $rf['name'] ?? "ref_{$idx}.png");
+                    $postFields["image[{$idx}]"] = new CURLFile($rf['path'], 'image/png', $safeUploadName);
                 }
             } else {
                 $primary = $referenceFiles[0];
-                $postFields['image'] = new CURLFile($primary['path'], 'image/png', 'reference.png');
+                $safeUploadName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $primary['name'] ?? 'reference.png');
+                $postFields['image'] = new CURLFile($primary['path'], 'image/png', $safeUploadName);
             }
 
             $ch = curl_init('https://api.openai.com/v1/images/edits');
@@ -986,11 +1114,15 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     $publicImgUrl = 'output/posts/' . $postId . '/' . $imgFilename;
     $dimensionsLabel = ($placement === 'story') ? '1080 × 1920 px (Historia 9:16)' : '1080 × 1350 px (Post 4:5)';
 
-    // Actualizar estado guardado del post
+    // Actualizar estado guardado del post (incluyendo si el usuario cambió marca/paleta o logo en este hilo)
     $postStateFile = $postFolder . '/post_state.json';
     $postRecord = file_exists($postStateFile) ? (json_decode(file_get_contents($postStateFile), true) ?: []) : ['post_id' => $postId];
     $postRecord['latest_image'] = $publicImgUrl;
     $postRecord['placement'] = $placement;
+    $postRecord['brand_asset'] = $brandAsset;
+    $postRecord['brand_text'] = $brandText;
+    $postRecord['logo_asset'] = $logoAsset;
+    $postRecord['subject_assets'] = $subjectAssets;
     if (!isset($postRecord['images']) || !is_array($postRecord['images'])) {
         $postRecord['images'] = [];
     }
@@ -1077,18 +1209,154 @@ if ($action === 'get_post') {
     exit;
 }
 
+/**
+ * Elimina recursivamente una carpeta y todo su contenido en el servidor
+ */
+function removeDirectoryRecursive($dirPath) {
+    if (!is_dir($dirPath)) return 0;
+    $deletedCount = 0;
+    $items = scandir($dirPath);
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') continue;
+        $full = $dirPath . '/' . $item;
+        if (is_dir($full)) {
+            $deletedCount += removeDirectoryRecursive($full);
+        } else {
+            if (@unlink($full)) {
+                $deletedCount++;
+            }
+        }
+    }
+    @rmdir($dirPath);
+    return $deletedCount;
+}
+
+/**
+ * Recopila las rutas relativas de archivos de personaje/producto asociados a un hilo
+ */
+function collectPostSubjectPaths(array $postData) {
+    $paths = [];
+    if (!empty($postData['subject_assets']) && is_array($postData['subject_assets'])) {
+        foreach ($postData['subject_assets'] as $sa) {
+            if (!empty($sa['local_path'])) {
+                $paths[] = $sa['local_path'];
+            }
+        }
+    }
+    if (!empty($postData['turns']) && is_array($postData['turns'])) {
+        foreach ($postData['turns'] as $turn) {
+            if (!empty($turn['subject_assets']) && is_array($turn['subject_assets'])) {
+                foreach ($turn['subject_assets'] as $sa) {
+                    if (!empty($sa['local_path'])) {
+                        $paths[] = $sa['local_path'];
+                    }
+                }
+            }
+        }
+    }
+    return array_values(array_unique($paths));
+}
+
 if ($action === 'delete_post' && $reqMethod === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
     $postId = preg_replace('/[^a-zA-Z0-9_-]/', '', $input['post_id'] ?? '');
-    $target = $postsDir . '/' . $postId;
-    if ($postId && is_dir($target)) {
-        foreach (glob($target . '/*') as $f) {
-            @unlink($f);
-        }
-        @rmdir($target);
+    if (!$postId) {
+        echo json_encode(['status' => 'error', 'message' => 'ID de hilo inválido']);
+        exit;
     }
-    echo json_encode(['status' => 'ok']);
+
+    $target = $postsDir . '/' . $postId;
+    $deletedFilesCount = 0;
+
+    if (is_dir($target)) {
+        // 1. Leer post_state.json antes de borrar para identificar fotos de personaje/producto subidas en este hilo
+        $stateFile = $target . '/post_state.json';
+        $subjectPathsToClean = [];
+        if (file_exists($stateFile)) {
+            $postData = json_decode(file_get_contents($stateFile), true);
+            if (is_array($postData)) {
+                $subjectPathsToClean = collectPostSubjectPaths($postData);
+            }
+        }
+
+        // 2. Verificar cuáles de esos archivos no están siendo usados por otro hilo activo
+        if (!empty($subjectPathsToClean) && is_dir($postsDir)) {
+            $usedByOtherPosts = [];
+            foreach (scandir($postsDir) as $d) {
+                if ($d === '.' || $d === '..' || $d === $postId) continue;
+                $otherStateFile = $postsDir . '/' . $d . '/post_state.json';
+                if (file_exists($otherStateFile)) {
+                    $otherData = json_decode(file_get_contents($otherStateFile), true);
+                    if (is_array($otherData)) {
+                        foreach (collectPostSubjectPaths($otherData) as $p) {
+                            $usedByOtherPosts[$p] = true;
+                        }
+                    }
+                }
+            }
+
+            foreach ($subjectPathsToClean as $relPath) {
+                if (isset($usedByOtherPosts[$relPath])) continue;
+                $baseName = basename($relPath);
+                if (strpos($baseName, 'subject_') === 0) {
+                    $fileInData = $uploadsDir . '/' . $baseName;
+                    $fileInPublic = $publicUploadsDir . '/' . $baseName;
+                    if (file_exists($fileInData) && @unlink($fileInData)) {
+                        $deletedFilesCount++;
+                    }
+                    if (file_exists($fileInPublic) && @unlink($fileInPublic)) {
+                        $deletedFilesCount++;
+                    }
+                }
+            }
+        }
+
+        // 3. Borrar toda la carpeta del hilo (post_state.json, todas las imágenes generadas, etc.)
+        $deletedFilesCount += removeDirectoryRecursive($target);
+    }
+
+    echo json_encode([
+        'status' => 'ok',
+        'deleted_post_id' => $postId,
+        'deleted_files_count' => $deletedFilesCount
+    ]);
+    exit;
+}
+
+if ($action === 'delete_all_posts' && $reqMethod === 'POST') {
+    $deletedThreads = 0;
+    $deletedFiles = 0;
+
+    if (is_dir($postsDir)) {
+        foreach (scandir($postsDir) as $d) {
+            if ($d === '.' || $d === '..') continue;
+            $fullDir = $postsDir . '/' . $d;
+            if (is_dir($fullDir)) {
+                $deletedFiles += removeDirectoryRecursive($fullDir);
+                $deletedThreads++;
+            }
+        }
+    }
+
+    // Limpiar también todas las fotos temporales de personajes/productos/fondos en data/uploads y public/output/uploads
+    foreach ([$uploadsDir, $publicUploadsDir] as $uDir) {
+        if (is_dir($uDir)) {
+            foreach (glob($uDir . '/subject_*') as $subFile) {
+                if (is_file($subFile) && @unlink($subFile)) {
+                    $deletedFiles++;
+                }
+            }
+        }
+    }
+
+    echo json_encode([
+        'status' => 'ok',
+        'deleted_threads' => $deletedThreads,
+        'deleted_files' => $deletedFiles
+    ]);
     exit;
 }
 
 echo json_encode(['status' => 'error', 'message' => 'Acción no reconocida']);
+
+
