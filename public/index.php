@@ -72,11 +72,11 @@
                 <div class="steps-explainer-grid">
                     <div class="step-card">
                         <div class="step-title">📝 Textos + Narrativa de la Imagen</div>
-                        <div class="step-text">Redactamos los textos para cada red social y armamos el guion narrativo de la escena identificando cada foto por su nombre de archivo (ej. <code>anthony.jpg</code>, <code>pedro.jpg</code>).</div>
+                        <div class="step-text">Redactamos los textos para cada red social y armamos el guion narrativo de la escena identificando cada imagen subida como variable por su nombre de archivo.</div>
                     </div>
                     <div class="step-card">
                         <div class="step-title">🎨 Creación de la Pieza Gráfica</div>
-                        <div class="step-text">Con tu paleta de colores, tu logo y tus fotos de personajes, productos o fondos, generamos la pieza gráfica final lista para descargar.</div>
+                        <div class="step-text">Con tu definición de marca/paleta, tu logo y tus fotos de personajes, productos o fondos, generamos la pieza gráfica final lista para descargar.</div>
                     </div>
                 </div>
             </div>
@@ -134,24 +134,19 @@
                     <div class="asset-section-box">
                         <div class="asset-section-head">
                             <span class="asset-section-num">1. Marca / Paleta</span>
-                            <label class="btn-upload-chip compact-chip" for="input-upload-brand" title="Subir imagen de paleta de colores o manual de marca">
-                                <span>🎨 + Paleta/Img</span>
+                            <label class="btn-upload-chip compact-chip" for="input-upload-brand" title="Subir imagen de definición de marca o paleta de colores">
+                                <span>🎨 + Subir Marca</span>
                                 <input type="file" id="input-upload-brand" accept="image/*" style="display: none;">
                             </label>
                         </div>
-                        <div class="brand-inputs-inline">
-                            <input type="text" id="input-brand-text" class="brand-palette-input" placeholder="Colores/estilo (ej: Azul #0052E0 y blanco)...">
-                            <div id="active-brand-preview" class="attached-items-row"></div>
-                        </div>
+                        <div id="active-brand-preview" class="attached-items-row"></div>
                     </div>
-
-                    <div class="divider-vertical"></div>
 
                     <!-- APARTADO 2: Logo -->
                     <div class="asset-section-box">
                         <div class="asset-section-head">
                             <span class="asset-section-num">2. Logo</span>
-                            <label class="btn-upload-chip compact-chip" for="input-upload-logo">
+                            <label class="btn-upload-chip compact-chip" for="input-upload-logo" title="Subir logotipo de la marca">
                                 <span>🏷️ + Subir Logo</span>
                                 <input type="file" id="input-upload-logo" accept="image/*" style="display: none;">
                             </label>
@@ -159,14 +154,12 @@
                         <div id="active-logo-preview" class="attached-items-row"></div>
                     </div>
 
-                    <div class="divider-vertical"></div>
-
                     <!-- APARTADO 3: Personajes, Productos y Fondos -->
-                    <div class="asset-section-box" style="flex: 1.4;">
+                    <div class="asset-section-box">
                         <div class="asset-section-head">
                             <span class="asset-section-num">3. Personajes, Productos y Fondos</span>
-                            <label class="btn-upload-chip compact-chip" for="input-upload-subject">
-                                <span>👤/📦/🏞️ + Subir Fotos</span>
+                            <label class="btn-upload-chip compact-chip" for="input-upload-subject" title="Subir fotos de personajes, productos o fondos">
+                                <span>📸 + Subir Fotos</span>
                                 <input type="file" id="input-upload-subject" accept="image/*" multiple style="display: none;">
                             </label>
                         </div>
@@ -176,13 +169,13 @@
 
                 <!-- BARRA DE VARIABLES DE FOTOS (Click para insertar el nombre del archivo en la idea) -->
                 <div id="composer-photo-vars-bar" class="photo-vars-bar" style="display: none;">
-                    <span class="photo-vars-label">📌 Insertar foto como variable en tu texto:</span>
+                    <span class="photo-vars-label">📌 Insertar imagen como variable en tu texto:</span>
                     <div id="composer-photo-vars-list" class="photo-vars-list"></div>
                 </div>
 
                 <!-- FILA 3: Área amplia para escribir la idea + Botón Enviar -->
                 <div class="composer-input-row">
-                    <textarea id="prompt-input" class="composer-textarea" rows="3" placeholder="Escribí tu idea acá (podés mencionar o hacer clic en tus fotos, ej: 'la persona que enseña anthony.jpg saluda al alumno pedro.jpg en el fondo aula.jpg')..."></textarea>
+                    <textarea id="prompt-input" class="composer-textarea" rows="3" placeholder="Escribí acá la idea de lo que querés transmitir en la publicación (podés hacer clic arriba en los botones de tus fotos subidas para insertarlas como variables en tu texto)..."></textarea>
                     <button id="btn-send-prompt" type="button" class="btn-send-chat" title="Enviar idea">
                         <span>Enviar</span>
                         <span class="send-arrow">↑</span>
@@ -207,7 +200,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div class="form-group">
                     <label for="input-api-key">OpenAI API Key:</label>
-                    <input type="password" id="input-api-key" placeholder="sk-proj-...">
+                    <input type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="new-password">
                 </div>
 
                 <div class="form-group">

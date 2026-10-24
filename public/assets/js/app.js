@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Devuelve todas las fotos disponibles actualmente para usar como variables en el texto
+     * Devuelve las fotos subidas en el apartado 3 (Personajes, Productos y Fondos) para usar como variables
      */
     function getAvailablePhotoVariables() {
         const list = [];
@@ -137,12 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 list.push({ name: sa.name, preview_url: sa.preview_url, role: 'Foto' });
             }
         });
-        if (state.logoAsset && state.logoAsset.name) {
-            list.push({ name: state.logoAsset.name, preview_url: state.logoAsset.preview_url, role: 'Logo' });
-        }
-        if (state.brandAsset && state.brandAsset.name) {
-            list.push({ name: state.brandAsset.name, preview_url: state.brandAsset.preview_url, role: 'Paleta' });
-        }
         return list;
     }
 
@@ -256,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (promptInput) {
             promptInput.value = '';
-            promptInput.placeholder = "Escribí tu idea acá (podés mencionar o hacer clic en tus fotos, ej: 'la persona que enseña anthony.jpg saluda al alumno pedro.jpg en el fondo aula.jpg')...";
+            promptInput.placeholder = "Escribí acá la idea de lo que querés transmitir en la publicación (podés hacer clic arriba en los botones de tus fotos subidas para insertarlas como variables en tu texto)...";
             promptInput.focus();
         }
         highlightActiveHistoryItem();
@@ -323,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderBrandPreview() {
         if (!activeBrandPreview) return;
         if (!state.brandAsset) {
-            activeBrandPreview.innerHTML = '';
+            activeBrandPreview.innerHTML = `<span style="font-size:0.71rem; color:#64748b;">Sin paleta / marca</span>`;
             renderComposerPhotoVariablesBar();
             return;
         }
@@ -401,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderSubjectPreviews() {
         if (!activeSubjectsPreview) return;
         if (!state.subjectAssets.length) {
-            activeSubjectsPreview.innerHTML = `<span style="font-size:0.71rem; color:#64748b;">Subí fotos (ej: anthony.jpg, pedro.jpg, fondo.jpg)</span>`;
+            activeSubjectsPreview.innerHTML = `<span style="font-size:0.71rem; color:#64748b;">Sin fotos cargadas</span>`;
             renderComposerPhotoVariablesBar();
             return;
         }
@@ -819,7 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.isBusy = false;
             if (btnSendPrompt) btnSendPrompt.disabled = false;
             if (promptInput) {
-                promptInput.placeholder = 'Pedí cualquier ajuste sobre los textos o la escena (ej: "que anthony.jpg salude a pedro.jpg en el fondo aula.jpg" o "hacé el titular más corto")...';
+                promptInput.placeholder = 'Pedí cualquier ajuste sobre los textos o la escena (podés hacer clic arriba en los botones de tus fotos subidas para insertarlas como variables)...';
             }
         }
     }
@@ -945,7 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div class="design-field-group" style="margin-bottom:0;">
-                    <label>Descripción narrativa de lo que se verá en la imagen (podés mencionar tus fotos como <code>anthony.jpg</code>, <code>pedro.jpg</code>):</label>
+                    <label>Descripción narrativa de lo que se verá en la imagen (hacé clic en los botones de abajo para insertar el nombre de cada foto):</label>
                     <div class="photo-vars-bar step1-photo-vars-container" style="display:none; margin-bottom:0.45rem;"></div>
                     <textarea class="design-textarea mono textarea-sunburst-prompt" rows="4">${escapeHtml(vd.sunburst_prompt || '')}</textarea>
                 </div>
