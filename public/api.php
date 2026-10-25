@@ -33,15 +33,15 @@ function getDefaultPrompts() {
     return [
         'prompt_director_creativo' =>
             "Actuás como un Director Creativo Publicitario y Estratega de Contenidos para Redes Sociales.\n"
-            . "Tu objetivo es analizar la idea del usuario junto con los 3 apartados de recursos si están presentes:\n"
-            . "1) Definición de Marca / Paleta de Colores,\n"
+            . "Tu objetivo es analizar la idea del usuario junto con los 3 apartados de recursos que el usuario haya subido:\n"
+            . "1) Marca / Paleta de Colores (imagen de paleta cromática / manual de marca subida por el usuario),\n"
             . "2) Logo de la marca,\n"
             . "3) Fotos de Personajes, Productos y/o Fondos (escenarios fotográficos).\n\n"
             . "Debés desarrollar:\n"
             . "1. Los COPIES publicitarios adaptados al estilo, tono y extensión de cada red social seleccionada, con ganchos atractivos, estructura clara y llamado a la acción.\n"
             . "2. La NARRATIVA DE LA IMAGEN:\n"
             . "   - Definir el titular corto y potente en español que llevará la pieza gráfica.\n"
-            . "   - Redactar en forma narrativa y detallada la escena visual, aplicando la Identidad de Marca / Paleta de Colores indicada.\n"
+            . "   - IMAGEN DE MARCA Y PALETA SUBIDA (APARTADO 1): Si el usuario subió una imagen en '1. Marca / Paleta', inspeccionala visualmente para extraer sus colores exactos (primarios, secundarios, fondos y acentos) y su estética, y describí explícitamente en la narrativa visual cómo aplicar esa paleta para que todas las piezas generadas mantengan la misma identidad e imagen de marca.\n"
             . "   - LIBERTAD DE POSICIONAMIENTO Y COMPOSICIÓN ESTÉTICA: Salvo que el usuario indique una ubicación puntual en su pedido, tenés total libertad creativa para posicionar a los personajes, productos, fondos, textos y elementos gráficos en cualquier lugar de la escena según la conveniencia estética de cada pieza a crear, cuidando que todos los bloques queden bien encuadrados, equilibrados, con aire respecto a los bordes y sin que ningún texto o elemento quede descuadrado o cortado.\n"
             . "   - IDENTIFICACIÓN POR NOMBRE DE ARCHIVO: Siempre que haya fotos adjuntas de personajes, productos o fondos (por ejemplo: xxxx.jpg, yyyy.jpg, zzzz.jpg), mencioná explícitamente el nombre exacto de cada archivo dentro de la narrativa visual para indicar qué rol cumple cada foto en la escena (ej.: \"En el escenario de zzzz.jpg, la persona de xxxx.jpg saluda a la persona de yyyy.jpg...\").",
 
@@ -49,7 +49,7 @@ function getDefaultPrompts() {
             "Actuás como un Diseñador Gráfico Editorial Senior y Director de Arte Fotográfico especializado en piezas para redes sociales.\n"
             . "DIRECTRICES DE DISEÑO:\n"
             . "1. PIEZA ÚNICA: Creá una sola pieza gráfica publicitaria unificada y coherente. No dividas la imagen en cuadros, grillas, viñetas ni collages.\n"
-            . "2. IDENTIDAD DE MARCA Y PALETA DE COLORES: Aplicá estrictamente la definición de marca y la paleta de colores indicada (tanto en textos/acentos gráficos como en la ambientación cromática de la pieza).\n"
+            . "2. IMAGEN DE MARCA Y PALETA DE COLORES SUBIDA (COHERENCIA DE MARCA): Si el usuario subió una imagen de Marca / Paleta de Colores, tomá obligatoriamente los colores exactos de esa paleta subida y aplicalos en toda la pieza gráfica (fondos, bloques gráficos, titulares destacados, botones, íconos y acentos visuales) para que todas las piezas creadas mantengan fielmente la misma línea e imagen de marca.\n"
             . "3. INTEGRACIÓN DE LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición sin deformarlo ni cortarlo en los bordes.\n"
             . "4. COMPOSICIÓN DE PERSONAJES, PRODUCTOS Y FONDOS POR NOMBRE DE ARCHIVO:\n"
             . "   - Respetá la correspondencia exacta de cada archivo de imagen adjunto según su nombre real (ej. xxxx.jpg, yyyy.jpg, zzzz.jpg).\n"
@@ -66,6 +66,7 @@ function getDefaultPrompts() {
 // --------------------------------------------------------------------------
 function getConfig($configFile) {
     $defaultPrompts = getDefaultPrompts();
+    $currentPromptsSchemaVersion = 5;
     $defaults = [
         'openai_api_key' => '',
         'selected_model' => 'gpt-image-2.5-sunburst-2026-09-08',
@@ -75,6 +76,7 @@ function getConfig($configFile) {
         'default_logo' => null,
         'default_brand_asset' => null,
         'default_brand_text' => '',
+        'prompts_schema_version' => $currentPromptsSchemaVersion,
         'prompt_director_creativo' => $defaultPrompts['prompt_director_creativo'],
         'prompt_disenador_ia' => $defaultPrompts['prompt_disenador_ia']
     ];
@@ -86,11 +88,19 @@ function getConfig($configFile) {
             if ($merged['selected_model'] === 'gpt-image-2.5-sunburst') {
                 $merged['selected_model'] = 'gpt-image-2.5-sunburst-2026-09-08';
             }
-            if (empty(trim((string)($merged['prompt_director_creativo'] ?? '')))) {
+            $savedVersion = (int)($json['prompts_schema_version'] ?? 0);
+            if ($savedVersion < $currentPromptsSchemaVersion) {
                 $merged['prompt_director_creativo'] = $defaultPrompts['prompt_director_creativo'];
-            }
-            if (empty(trim((string)($merged['prompt_disenador_ia'] ?? '')))) {
                 $merged['prompt_disenador_ia'] = $defaultPrompts['prompt_disenador_ia'];
+                $merged['prompts_schema_version'] = $currentPromptsSchemaVersion;
+                saveConfig($configFile, $merged);
+            } else {
+                if (empty(trim((string)($merged['prompt_director_creativo'] ?? '')))) {
+                    $merged['prompt_director_creativo'] = $defaultPrompts['prompt_director_creativo'];
+                }
+                if (empty(trim((string)($merged['prompt_disenador_ia'] ?? '')))) {
+                    $merged['prompt_disenador_ia'] = $defaultPrompts['prompt_disenador_ia'];
+                }
             }
             return $merged;
         }
@@ -971,8 +981,13 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     }
 
     $brandDefinitionBlock = '';
+    if (is_array($brandAsset) && !empty($brandAsset['local_path'])) {
+        $bName = $brandAsset['name'] ?? 'paleta_marca.png';
+        $brandDefinitionBlock .= "\n\nOBLIGATORIO - IMAGEN DE MARCA Y PALETA DE COLORES SUBIDA (\"{$bName}\"):\n"
+            . "El usuario subió la imagen \"{$bName}\" en el apartado 1 (Marca / Paleta). Extraé y aplicá fielmente los colores exactos de esa paleta subida (primarios, secundarios, fondos y acentos) y su estilo en toda la pieza gráfica (fondos, bloques gráficos, titulares, botones e íconos) para que todas las piezas mantengan la misma imagen de marca.";
+    }
     if ($brandText !== '') {
-        $brandDefinitionBlock = "\n\nDEFINICIÓN DE MARCA Y PALETA DE COLORES A APLICAR:\n" . $brandText;
+        $brandDefinitionBlock .= "\n\nDEFINICIÓN DE MARCA Y PALETA DE COLORES A APLICAR:\n" . $brandText;
     }
 
     if ($useExistingPieceAsBase) {
