@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPostId: null,
         networks: ['ig', 'fb', 'tiktok', 'linkedin'],
         placement: 'post', // 'post' (4:5 automático) | 'story' (9:16 automático)
+        includeCta: false, // Selección: Agregar CTA en la pieza gráfica
         brandAsset: null,  // Apartado 1: Imagen de paleta de colores / manual de marca
         brandText: '',     // Apartado 1: Definición textual de marca / colores
         logoAsset: null,   // Apartado 2: Logo
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const netButtons = Array.from(document.querySelectorAll('.net-btn'));
     const btnPlacePost = document.getElementById('btn-place-post');
     const btnPlaceStory = document.getElementById('btn-place-story');
+    const chkIncludeCta = document.getElementById('chk-include-cta');
     const chkAutoStep2 = document.getElementById('chk-auto-step2');
 
     // Apartado 1: Marca / Paleta
@@ -304,11 +306,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnPlaceStory) btnPlaceStory.classList.toggle('active', state.placement === 'story');
     }
 
+    function setIncludeCta(val) {
+        state.includeCta = !!val;
+        if (chkIncludeCta) {
+            chkIncludeCta.checked = state.includeCta;
+            const label = chkIncludeCta.closest('.cta-step-toggle');
+            if (label) label.classList.toggle('active', state.includeCta);
+        }
+    }
+
     if (btnPlacePost) {
         btnPlacePost.addEventListener('click', () => setPlacement('post'));
     }
     if (btnPlaceStory) {
         btnPlaceStory.addEventListener('click', () => setPlacement('story'));
+    }
+    if (chkIncludeCta) {
+        chkIncludeCta.addEventListener('change', () => setIncludeCta(chkIncludeCta.checked));
     }
 
     // =========================================================================
@@ -570,11 +584,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chkStampLogo) chkStampLogo.checked = state.stampLogoOverlay;
 
                 let directorPromptVal = data.prompt_director_creativo || '';
-                if (state.defaultPrompts.prompt_director_creativo && directorPromptVal.indexOf('IMAGEN DE MARCA Y PALETA SUBIDA') === -1) {
+                if (state.defaultPrompts.prompt_director_creativo && directorPromptVal.indexOf('SELECCIONES DE FORMATO Y OPCIÓN') === -1) {
                     directorPromptVal = state.defaultPrompts.prompt_director_creativo;
                 }
                 let designerPromptVal = data.prompt_disenador_ia || '';
-                if (state.defaultPrompts.prompt_disenador_ia && designerPromptVal.indexOf('IMAGEN DE MARCA Y PALETA DE COLORES SUBIDA') === -1) {
+                if (state.defaultPrompts.prompt_disenador_ia && designerPromptVal.indexOf('CREATIVIDAD EDITORIAL, ESCENA POTENTE') === -1) {
                     designerPromptVal = state.defaultPrompts.prompt_disenador_ia;
                 }
 
@@ -744,6 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
             prompt: promptText,
             networks: [...state.networks],
             placement: state.placement,
+            includeCta: state.includeCta,
             brandAsset: state.brandAsset,
             brandText: state.brandText,
             logoAsset: state.logoAsset,
@@ -760,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <p style="font-size:0.88rem; color:#475569;">
-                Analizando tu idea${(state.brandAsset || state.brandText) ? ', tu marca/paleta' : ''}${state.logoAsset ? ', tu logo' : ''}${state.subjectAssets.length ? ' y tus fotos (' + state.subjectAssets.map(s => s.name).join(', ') + ')' : ''} para preparar los textos de cada red y el guion narrativo de la escena...
+                Analizando tu idea${(state.brandAsset || state.brandText) ? ', tu marca/paleta' : ''}${state.logoAsset ? ', tu logo' : ''}${state.subjectAssets.length ? ' y tus fotos (' + state.subjectAssets.map(s => s.name).join(', ') + ')' : ''}${state.includeCta ? ' (incluyendo CTA visual)' : ''} para preparar los textos de cada red y el guion narrativo de la escena...
             </p>
         `;
         threadContainer.appendChild(loadingStep1El);
@@ -775,6 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     prompt: promptText,
                     networks: state.networks,
                     placement: state.placement,
+                    include_cta: state.includeCta,
                     brand_asset: state.brandAsset,
                     brand_text: state.brandText,
                     logo_asset: state.logoAsset,
@@ -829,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function appendUserTurnCard({ prompt, networks, placement, brandAsset, brandText, logoAsset, subjectAssets }) {
+    function appendUserTurnCard({ prompt, networks, placement, includeCta, brandAsset, brandText, logoAsset, subjectAssets }) {
         const card = document.createElement('div');
         card.className = 'user-turn-card';
 
@@ -875,6 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `
             <div class="user-turn-meta">
                 <span class="meta-tag">${escapeHtml(placementBadge)}</span>
+                ${includeCta ? '<span class="meta-tag">🎯 Con CTA</span>' : ''}
                 <span class="meta-tag">🌐 ${escapeHtml(netBadges)}</span>
             </div>
             <div class="user-turn-text">${escapeHtml(prompt)}</div>
@@ -903,6 +920,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const placementText = plan.placement === 'story'
             ? '📱 Historia'
             : '🖼️ Post';
+        const ctaBadgeHtml = plan.include_cta
+            ? `<span class="meta-tag">🎯 Con CTA</span>`
+            : '';
 
         const copiesCardsHtml = activeNets.map(netKey => {
             const netInfo = NETWORK_META[netKey] || { label: netKey.toUpperCase() };
@@ -923,7 +943,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="step-badge-title">
                     <span>📝 Textos por Red Social + Narrativa de la Imagen</span>
                 </div>
-                <span class="meta-tag">${escapeHtml(placementText)}</span>
+                <div style="display:flex; gap:0.35rem; align-items:center;">
+                    <span class="meta-tag">${escapeHtml(placementText)}</span>
+                    ${ctaBadgeHtml}
+                </div>
             </div>
 
             ${plan.assistant_comment ? `<div class="assistant-note">${escapeHtml(plan.assistant_comment)}</div>` : ''}
@@ -1064,6 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     base_image_url: baseImageUrl || '',
                     force_new_variant: !!forceNewVariant,
                     placement: state.placement,
+                    include_cta: state.includeCta,
                     model: state.selectedImageModel,
                     brand_asset: state.brandAsset,
                     brand_text: state.brandText,
@@ -1330,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.networks = Array.isArray(p.networks) && p.networks.length ? p.networks : ['ig', 'fb', 'tiktok', 'linkedin'];
             syncNetworkButtonsUI();
             setPlacement(p.placement || 'post');
+            setIncludeCta(!!p.include_cta);
 
             if ('brand_asset' in p) {
                 state.brandAsset = p.brand_asset || null;
@@ -1363,6 +1388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         prompt: turn.user_prompt || '',
                         networks: turn.networks || state.networks,
                         placement: turn.placement || state.placement,
+                        includeCta: !!turn.include_cta,
                         brandAsset: state.brandAsset,
                         brandText: state.brandText,
                         logoAsset: state.logoAsset,
@@ -1371,6 +1397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     appendStep1Card({
                         networks: turn.networks || state.networks,
                         placement: turn.placement || state.placement,
+                        include_cta: !!turn.include_cta,
                         assistant_comment: turn.assistant_comment || '',
                         copies: turn.copies || {},
                         visual_design: turn.visual_design || {}
@@ -1396,6 +1423,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         prompt: p.last_idea,
                         networks: state.networks,
                         placement: state.placement,
+                        includeCta: !!p.include_cta,
                         brandAsset: state.brandAsset,
                         brandText: state.brandText,
                         logoAsset: state.logoAsset,

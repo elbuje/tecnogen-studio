@@ -35,7 +35,7 @@ function getDefaultPrompts() {
     return [
         'prompt_director_creativo' =>
             "Actuás como un Director Creativo Publicitario y Estratega de Contenidos para Redes Sociales.\n"
-            . "Tu objetivo es analizar la idea del usuario junto con los 3 apartados de recursos que el usuario haya subido:\n"
+            . "Tu objetivo es analizar la idea del usuario junto con las selecciones de creación (Redes Sociales, Formato Post o Historia, y la opción 'Agregar CTA') y los 3 apartados de recursos subidos:\n"
             . "1) Marca / Paleta de Colores (imagen de paleta cromática / manual de marca subida por el usuario),\n"
             . "2) Logo de la marca,\n"
             . "3) Fotos de Personajes, Productos y/o Fondos (escenarios fotográficos).\n\n"
@@ -43,6 +43,8 @@ function getDefaultPrompts() {
             . "1. Los COPIES publicitarios adaptados al estilo, tono y extensión de cada red social seleccionada, con ganchos atractivos, estructura clara y llamado a la acción.\n"
             . "2. La NARRATIVA DE LA IMAGEN:\n"
             . "   - Definir el titular corto y potente en español que llevará la pieza gráfica.\n"
+            . "   - CREATIVIDAD, CONEXIÓN CON LA AUDIENCIA Y ESCENA DIFERENCIADORA: Potenciá el uso de tu creatividad para conectar emocional y visualmente con los usuarios del cliente. Seguí fielmente la narrativa de la idea del cliente y transformala en una escena potente, con personalidad, atmósfera envolvente y detalles que marquen la diferencia frente a publicaciones genéricas.\n"
+            . "   - SELECCIONES DE FORMATO Y OPCIÓN 'AGREGAR CTA': Tené en cuenta en el armado del prompt las selecciones del usuario (Post o Historia, y si activó 'Agregar CTA'). Si el usuario seleccionó 'Agregar CTA' (o lo pidió en su idea), definí e incluí explícitamente dentro de la narrativa de la imagen un Llamado a la Acción (CTA) breve, magnético y accionable (por ejemplo en un botón, pastilla o sello visual acorde a la propuesta) para integrarlo en el diseño gráfico. Si 'Agregar CTA' no está activo (salvo que el usuario lo pida en su texto), no agregues botones de CTA dentro de la imagen.\n"
             . "   - IMAGEN DE MARCA Y PALETA SUBIDA (APARTADO 1): Si el usuario subió una imagen en '1. Marca / Paleta', inspeccionala visualmente para extraer sus colores exactos (primarios, secundarios, fondos y acentos) y su estética, y describí explícitamente en la narrativa visual cómo aplicar esa paleta para que todas las piezas generadas mantengan la misma identidad e imagen de marca.\n"
             . "   - LIBERTAD DE POSICIONAMIENTO Y COMPOSICIÓN ESTÉTICA: Salvo que el usuario indique una ubicación puntual en su pedido, tenés total libertad creativa para posicionar a los personajes, productos, fondos, textos y elementos gráficos en cualquier lugar de la escena según la conveniencia estética de cada pieza a crear, cuidando que todos los bloques queden bien encuadrados, equilibrados, con aire respecto a los bordes y sin que ningún texto o elemento quede descuadrado o cortado.\n"
             . "   - IDENTIFICACIÓN POR NOMBRE DE ARCHIVO: Siempre que haya fotos adjuntas de personajes, productos o fondos (por ejemplo: xxxx.jpg, yyyy.jpg, zzzz.jpg), mencioná explícitamente el nombre exacto de cada archivo dentro de la narrativa visual para indicar qué rol cumple cada foto en la escena (ej.: \"En el escenario de zzzz.jpg, la persona de xxxx.jpg saluda a la persona de yyyy.jpg...\").",
@@ -50,14 +52,15 @@ function getDefaultPrompts() {
         'prompt_disenador_ia' =>
             "Actuás como un Diseñador Gráfico Editorial Senior y Director de Arte Fotográfico especializado en piezas para redes sociales.\n"
             . "DIRECTRICES DE DISEÑO:\n"
-            . "1. PIEZA ÚNICA: Creá una sola pieza gráfica publicitaria unificada y coherente. No dividas la imagen en cuadros, grillas, viñetas ni collages.\n"
+            . "1. CREATIVIDAD EDITORIAL, ESCENA POTENTE Y CONEXIÓN CON LOS USUARIOS: Potenciá al máximo tu creatividad como Director de Arte para convertir la narrativa de la idea del cliente en una escena visual potente, memorable y que marque una verdadera diferencia. Buscá conectar emocional y visualmente con los usuarios del cliente mediante una puesta en escena con carácter, iluminación expresiva, profundidad y una atmósfera auténtica que siga la narrativa del cliente en una sola pieza gráfica unificada (sin dividir en cuadros, grillas ni collages).\n"
             . "2. IMAGEN DE MARCA Y PALETA DE COLORES SUBIDA (COHERENCIA DE MARCA): Si el usuario subió una imagen de Marca / Paleta de Colores, tomá obligatoriamente los colores exactos de esa paleta subida y aplicalos en toda la pieza gráfica (fondos, bloques gráficos, titulares destacados, botones, íconos y acentos visuales) para que todas las piezas creadas mantengan fielmente la misma línea e imagen de marca.\n"
-            . "3. INTEGRACIÓN DE LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición sin deformarlo ni cortarlo en los bordes.\n"
-            . "4. COMPOSICIÓN DE PERSONAJES, PRODUCTOS Y FONDOS POR NOMBRE DE ARCHIVO:\n"
+            . "3. SELECCIONES DE FORMATO (POST / HISTORIA) Y OPCIÓN 'AGREGAR CTA': Tené siempre en cuenta las selecciones activas del usuario para la creación. Si está activada la opción 'Agregar CTA' (o se indica en la narrativa), diseñá e integrá en la pieza un Llamado a la Acción visual (botón, pastilla o badge editorial con los colores de la marca) atractivo, legible y armónico; si no está activada (salvo indicación en la narrativa), prescindí de botones de CTA en la imagen.\n"
+            . "4. INTEGRACIÓN DE LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición sin deformarlo ni cortarlo en los bordes.\n"
+            . "5. COMPOSICIÓN DE PERSONAJES, PRODUCTOS Y FONDOS POR NOMBRE DE ARCHIVO:\n"
             . "   - Respetá la correspondencia exacta de cada archivo de imagen adjunto según su nombre real (ej. xxxx.jpg, yyyy.jpg, zzzz.jpg).\n"
             . "   - Mantené estrictamente los rasgos faciales reales, fisonomía, expresión e identidad de cada persona o producto de su foto respectiva, integrándolos de forma fotorrealista dentro de la escena o foto de fondo indicada, con iluminación, perspectiva y proporciones naturales.\n"
             . "   - Tenés libertad creativa para ubicar a los personajes, productos y bloques gráficos donde mejor luzcan según la conveniencia de la imagen a crear (salvo indicación expresa del usuario).\n"
-            . "5. DISEÑO EDITORIAL, UBICACIÓN ESTÉTICA Y TEXTOS SIN CORTES:\n"
+            . "6. DISEÑO EDITORIAL, UBICACIÓN ESTÉTICA Y TEXTOS SIN CORTES:\n"
             . "   - Integrá los textos, titulares, botones e íconos con excelente criterio estético, alineación limpia, alto contraste y perfecta legibilidad.\n"
             . "   - Asegurate de que absolutamente todos los textos, palabras, signos, botones y logotipos queden 100% contenidos dentro del encuadre con buen margen de aire respecto a los bordes del lienzo, evitando que cualquier letra o elemento gráfico toque el borde o salga cortado o descuadrado."
     ];
@@ -68,7 +71,7 @@ function getDefaultPrompts() {
 // --------------------------------------------------------------------------
 function getConfig($configFile) {
     $defaultPrompts = getDefaultPrompts();
-    $currentPromptsSchemaVersion = 6;
+    $currentPromptsSchemaVersion = 7;
     $defaults = [
         'openai_api_key' => '',
         'selected_model' => 'gpt-image-2.5-sunburst-2026-09-08',
@@ -92,8 +95,8 @@ function getConfig($configFile) {
             }
             $savedVersion = (int)($json['prompts_schema_version'] ?? 0);
             $needsPromptUpgrade = ($savedVersion < $currentPromptsSchemaVersion)
-                || (strpos((string)($merged['prompt_director_creativo'] ?? ''), 'IMAGEN DE MARCA Y PALETA SUBIDA') === false)
-                || (strpos((string)($merged['prompt_disenador_ia'] ?? ''), 'IMAGEN DE MARCA Y PALETA DE COLORES SUBIDA') === false);
+                || (strpos((string)($merged['prompt_director_creativo'] ?? ''), 'SELECCIONES DE FORMATO Y OPCIÓN') === false)
+                || (strpos((string)($merged['prompt_disenador_ia'] ?? ''), 'CREATIVIDAD EDITORIAL, ESCENA POTENTE') === false);
 
             if ($needsPromptUpgrade) {
                 $merged['prompt_director_creativo'] = $defaultPrompts['prompt_director_creativo'];
@@ -579,6 +582,7 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         $networks = ['ig', 'fb', 'tiktok', 'linkedin'];
     }
     $placement = ($input['placement'] ?? 'post') === 'story' ? 'story' : 'post'; // 'post' | 'story'
+    $includeCta = !empty($input['include_cta']); // Selección del usuario: Agregar CTA en la pieza gráfica
     $brandAsset = array_key_exists('brand_asset', $input) ? $input['brand_asset'] : ($cfg['default_brand_asset'] ?? null);
     $brandText = array_key_exists('brand_text', $input) ? trim((string)$input['brand_text']) : trim((string)($cfg['default_brand_text'] ?? ''));
     $logoAsset = array_key_exists('logo_asset', $input) ? $input['logo_asset'] : ($cfg['default_logo'] ?? null);
@@ -593,6 +597,10 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
     $placementLabel = ($placement === 'story')
         ? 'HISTORIA VERTICAL (Formato Pantalla Completa 9:16 - 1080x1920 px, cuidando que todos los textos y elementos queden íntegramente dentro del encuadre con buen aire en los bordes)'
         : 'POST DE FEED (Formato Vertical Editorial 4:5 - 1080x1350 px, cuidando que todos los textos y elementos queden íntegramente dentro del encuadre con buen aire en los bordes)';
+
+    $ctaSelectionLabel = $includeCta
+        ? 'SÍ (ACTIVO: El usuario seleccionó "Agregar CTA". Debés definir e incluir obligatoriamente dentro de "sunburst_prompt" un Llamado a la Acción corto, magnético y accionable en español —en forma de botón, pastilla o sello visual— acorde a la idea del cliente para que se integre en el diseño de la imagen)'
+        : 'NO (INACTIVO: No agregues botón de CTA dentro de la pieza gráfica, salvo que el usuario lo haya pedido expresamente en su texto)';
 
     $networkNamesMap = [
         'ig' => 'Instagram',
@@ -635,9 +643,10 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
     }
 
     $systemInstructions = $directorPrompt . "\n\n"
-        . "CONTEXTO DE ESTA PUBLICACIÓN:\n"
+        . "CONTEXTO Y SELECCIONES DE ESTA PUBLICACIÓN:\n"
         . "- Redes destino: " . implode(', ', $selectedNetworkNames) . "\n"
-        . "- Ubicación / Formato: {$placementLabel}\n"
+        . "- Ubicación / Formato seleccionado: {$placementLabel}\n"
+        . "- Opción 'Agregar CTA' seleccionada: {$ctaSelectionLabel}\n"
         . "- 1) Marca / Paleta de Colores: {$brandSummaryLine}\n"
         . "- 2) ¿Subió Logo?: " . ($hasLogo ? "SÍ (Archivo: " . ($logoAsset['name'] ?? 'Logo') . ")" : "NO") . "\n"
         . "- 3) ¿Subió Fotos de Personajes / Productos / Fondos?: " . ($hasSubject ? "SÍ (" . count($subjectAssets) . " archivo/s: " . implode(', ', $subjectFileNames) . ")" : "NO") . "\n"
@@ -661,7 +670,7 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         . "  \"visual_design\": {\n"
         . "    \"headline_in_image\": \"Texto exacto breve en español que irá escrito dentro del diseño gráfico\",\n"
         . "    \"scene_summary\": \"Resumen claro en español del concepto visual de la escena\",\n"
-        . "    \"sunburst_prompt\": \"Descripción narrativa y visual detallada de la escena (mencionando los nombres exactos de los archivos de fotos adjuntos como " . ($hasSubject ? implode(', ', $subjectFileNames) : 'nombre_foto.jpg') . " y aplicando la paleta de marca) para que el Diseñador Experto IA construya la pieza gráfica\",\n"
+        . "    \"sunburst_prompt\": \"Descripción narrativa y visual detallada de la escena potente y diferenciadora (mencionando los nombres exactos de los archivos de fotos adjuntos como " . ($hasSubject ? implode(', ', $subjectFileNames) : 'xxxx.jpg') . ", aplicando la paleta de marca" . ($includeCta ? " e incluyendo el botón/elemento visual de CTA" : "") . ") para que el Diseñador Experto IA construya la pieza gráfica\",\n"
         . "    \"is_image_correction\": " . ($latestExistingImage ? "true" : "false") . ",\n"
         . "    \"edit_instruction\": \"Si es una corrección sobre la imagen ya creada, detallá exactamente qué modificar manteniendo intacto todo el resto del diseño\"\n"
         . "  }\n"
@@ -672,7 +681,8 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
 
     $textBlock = "IDEA / PEDIDO DEL USUARIO:\n" . $userPrompt . "\n\n"
         . "REDES SOLICITADAS: " . implode(', ', $selectedNetworkNames) . "\n"
-        . "TIPO DE PUBLICACIÓN: " . ($placement === 'story' ? 'Historia (Vertical 9:16)' : 'Post de Feed (Vertical 4:5)');
+        . "TIPO DE PUBLICACIÓN: " . ($placement === 'story' ? 'Historia (Vertical 9:16)' : 'Post de Feed (Vertical 4:5)') . "\n"
+        . "OPCIÓN AGREGAR CTA EN LA IMAGEN: " . ($includeCta ? 'SÍ (Integrar un Llamado a la Acción visual atractivo dentro del diseño gráfico)' : 'NO (Salvo que el usuario lo haya pedido en su texto)');
 
     if ($brandText !== '') {
         $textBlock .= "\nDEFINICIÓN DE MARCA / PALETA DE COLORES: " . $brandText;
@@ -812,6 +822,7 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         'user_prompt' => $userPrompt,
         'networks' => $networks,
         'placement' => $placement,
+        'include_cta' => $includeCta,
         'brand_asset' => $brandAsset,
         'brand_text' => $brandText,
         'subject_assets' => $subjectAssets,
@@ -828,6 +839,7 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
         'last_idea' => $userPrompt,
         'networks' => $networks,
         'placement' => $placement,
+        'include_cta' => $includeCta,
         'brand_asset' => $brandAsset,
         'brand_text' => $brandText,
         'logo_asset' => $logoAsset,
@@ -884,6 +896,7 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     $isCorrection = !empty($input['is_image_correction']) || !empty($existingState['visual_design']['is_image_correction']);
     $forceNewVariant = !empty($input['force_new_variant']);
     $placement = ($input['placement'] ?? 'post') === 'story' ? 'story' : 'post';
+    $includeCta = isset($input['include_cta']) ? !empty($input['include_cta']) : !empty($existingState['include_cta']);
     $model = trim((string)($input['model'] ?? ($cfg['selected_model'] ?? 'gpt-image-2.5-sunburst-2026-09-08')));
     if ($model === 'gpt-image-2.5-sunburst') {
         $model = 'gpt-image-2.5-sunburst-2026-09-08';
@@ -904,6 +917,10 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     $placementRule = ($placement === 'story')
         ? 'FORMATO DE SALIDA: HISTORIA VERTICAL PANTALLA COMPLETA (9:16 - 1080x1920 px). Asegurate de que todos los textos, titulares, botones, íconos y logotipos queden 100% contenidos dentro del encuadre con buen margen respecto a los bordes para que ninguna palabra ni elemento salga cortado o descuadrado.'
         : 'FORMATO DE SALIDA: POST EDITORIAL DE FEED (4:5 - 1080x1350 px). Asegurate de que todos los textos, titulares, botones, íconos y logotipos queden 100% contenidos dentro del encuadre con buen margen respecto a los bordes.';
+
+    $ctaRule = $includeCta
+        ? 'OPCIÓN DE CTA SELECCIONADA: AGREGAR CTA ACTIVO. Integrá en la pieza gráfica un elemento visual de Llamado a la Acción (botón, pastilla o badge editorial con los colores de la marca/paleta) atractivo, legible y 100% contenido dentro del encuadre según lo indicado en la narrativa.'
+        : 'OPCIÓN DE CTA SELECCIONADA: SIN CTA EN IMAGEN (no agregues botones de CTA salvo que la narrativa de la escena lo pida expresamente).';
 
     // Verificar si ya existe una imagen generada en este hilo (o una imagen específica indicada por el usuario) para editar sobre ella manteniendo coherencia
     $requestedBaseUrl = trim((string)($input['base_image_url'] ?? ''));
@@ -972,8 +989,7 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
         }
     }
 
-    // Construir el MAPA DE ARCHIVOS ADJUNTOS para que cuando la narrativa mencione "anthony.jpg" o "pedro.jpg",
-    // el modelo de imagen sepa exactamente cuál imagen adjunta corresponde a cada nombre de archivo.
+    // Construir el MAPA DE ARCHIVOS ADJUNTOS
     $referenceMapBlock = '';
     if (!empty($referenceFiles)) {
         $mapLines = [];
@@ -983,7 +999,7 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
         }
         $referenceMapBlock = "\n\nMAPA EXACTO DE IMÁGENES ADJUNTAS POR NOMBRE DE ARCHIVO:\n"
             . implode("\n", $mapLines)
-            . "\n(Cuando la descripción mencione el nombre de un archivo como \"" . ($referenceFiles[0]['name'] ?? 'foto.jpg') . "\", usá exactamente la imagen correspondiente de esta lista respetando la identidad, rostro o escenario de esa foto).";
+            . "\n(Cuando la descripción mencione el nombre de un archivo como \"" . ($referenceFiles[0]['name'] ?? 'xxxx.jpg') . "\", usá exactamente la imagen correspondiente de esta lista respetando la identidad, rostro o escenario de esa foto).";
     }
 
     $brandDefinitionBlock = '';
@@ -1000,6 +1016,7 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
         // MODO CORRECCIÓN COHERENTE: La imagen base [0] es la pieza gráfica que el usuario quiere retocar/corregir
         $finalPromptForSunburst = $designerMasterPrompt
             . "\n\n" . $placementRule
+            . "\n" . $ctaRule
             . $brandDefinitionBlock
             . $referenceMapBlock
             . "\n\nMODO EDICIÓN COHERENTE SOBRE LA PIEZA EXISTENTE (IMAGEN ADJUNTA #1):\n"
@@ -1013,6 +1030,7 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
         // MODO CREACIÓN: Construir el prompt final uniendo el Prompt del Diseñador Experto IA + Marca + Mapa de Archivos + Escena + Titular
         $finalPromptForSunburst = $designerMasterPrompt
             . "\n\n" . $placementRule
+            . "\n" . $ctaRule
             . $brandDefinitionBlock
             . $referenceMapBlock
             . "\n\nDISEÑO Y ESCENA A CREAR:\n" . $sunburstPrompt;
