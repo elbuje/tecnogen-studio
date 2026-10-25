@@ -42,6 +42,7 @@ function getDefaultPrompts() {
             . "2. La NARRATIVA DE LA IMAGEN:\n"
             . "   - Definir el titular corto y potente en español que llevará la pieza gráfica.\n"
             . "   - Redactar en forma narrativa y detallada la escena visual, aplicando la Identidad de Marca / Paleta de Colores indicada.\n"
+            . "   - LIBERTAD DE POSICIONAMIENTO Y COMPOSICIÓN ESTÉTICA: Salvo que el usuario indique una ubicación puntual en su pedido, tenés total libertad creativa para posicionar a los personajes, productos, fondos, textos y elementos gráficos en cualquier lugar de la escena según la conveniencia estética de cada pieza a crear, cuidando que todos los bloques queden bien encuadrados, equilibrados, con aire respecto a los bordes y sin que ningún texto o elemento quede descuadrado o cortado.\n"
             . "   - IDENTIFICACIÓN POR NOMBRE DE ARCHIVO: Siempre que haya fotos adjuntas de personajes, productos o fondos (por ejemplo: xxxx.jpg, yyyy.jpg, zzzz.jpg), mencioná explícitamente el nombre exacto de cada archivo dentro de la narrativa visual para indicar qué rol cumple cada foto en la escena (ej.: \"En el escenario de zzzz.jpg, la persona de xxxx.jpg saluda a la persona de yyyy.jpg...\").",
 
         'prompt_disenador_ia' =>
@@ -49,11 +50,14 @@ function getDefaultPrompts() {
             . "DIRECTRICES DE DISEÑO:\n"
             . "1. PIEZA ÚNICA: Creá una sola pieza gráfica publicitaria unificada y coherente. No dividas la imagen en cuadros, grillas, viñetas ni collages.\n"
             . "2. IDENTIDAD DE MARCA Y PALETA DE COLORES: Aplicá estrictamente la definición de marca y la paleta de colores indicada (tanto en textos/acentos gráficos como en la ambientación cromática de la pieza).\n"
-            . "3. INTEGRACIÓN DE LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición sin deformarlo.\n"
+            . "3. INTEGRACIÓN DE LOGO: Si se adjunta un logotipo, integralo de forma limpia, nítida y armónica dentro de la composición sin deformarlo ni cortarlo en los bordes.\n"
             . "4. COMPOSICIÓN DE PERSONAJES, PRODUCTOS Y FONDOS POR NOMBRE DE ARCHIVO:\n"
             . "   - Respetá la correspondencia exacta de cada archivo de imagen adjunto según su nombre real (ej. xxxx.jpg, yyyy.jpg, zzzz.jpg).\n"
             . "   - Mantené estrictamente los rasgos faciales reales, fisonomía, expresión e identidad de cada persona o producto de su foto respectiva, integrándolos de forma fotorrealista dentro de la escena o foto de fondo indicada, con iluminación, perspectiva y proporciones naturales.\n"
-            . "5. DISEÑO EDITORIAL Y TIPOGRAFÍA: Integrá el titular principal en español con tipografía moderna, limpia, de alto contraste y excelente legibilidad."
+            . "   - Tenés libertad creativa para ubicar a los personajes, productos y bloques gráficos donde mejor luzcan según la conveniencia de la imagen a crear (salvo indicación expresa del usuario).\n"
+            . "5. DISEÑO EDITORIAL, UBICACIÓN ESTÉTICA Y TEXTOS SIN CORTES:\n"
+            . "   - Integrá los textos, titulares, botones e íconos con excelente criterio estético, alineación limpia, alto contraste y perfecta legibilidad.\n"
+            . "   - Asegurate de que absolutamente todos los textos, palabras, signos, botones y logotipos queden 100% contenidos dentro del encuadre con buen margen de aire respecto a los bordes del lienzo, evitando que cualquier letra o elemento gráfico toque el borde o salga cortado o descuadrado."
     ];
 }
 
@@ -230,24 +234,47 @@ function finalizeOutputByPlacement($rawImagePath, $finalPath, $placement = 'post
     $targetRatio = $targetW / $targetH;
     $srcRatio = $srcW / $srcH;
 
+    // Preservamos el 100% del lienzo original (0 píxeles recortados en bordes) usando adaptación suave
+    // ponderada hacia los extremos para que ningún texto, botón ni logotipo quede cortado jamás.
     if (abs($srcRatio - $targetRatio) < 0.02) {
-        $cropX = 0;
-        $cropY = 0;
-        $cropW = $srcW;
-        $cropH = $srcH;
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $srcW, $srcH);
     } elseif ($srcRatio > $targetRatio) {
-        $cropH = $srcH;
-        $cropW = (int)round($srcH * $targetRatio);
-        $cropX = (int)round(($srcW - $cropW) / 2);
-        $cropY = 0;
+        // Caso Historia (ej. 1024x1536 -> 1080x1920): mantenemos el 100% del ancho ($srcW) sin cortar laterales
+        // y distribuimos la altura en bandas suaves (centro con proporción natural, extremos absorben la diferencia).
+        $slices = 40;
+        $weights = [];
+        $totalWeight = 0.0;
+        for ($i = 0; $i < $slices; $i++) {
+            $norm = abs((($i + 0.5) / $slices) - 0.5) * 2.0; // 0 en el centro, 1 en bordes superior/inferior
+            $w = 1.0 + 0.45 * pow($norm, 2.2);
+            $weights[$i] = $w;
+            $totalWeight += $w;
+        }
+        $dstY = 0;
+        for ($i = 0; $i < $slices; $i++) {
+            $srcY0 = (int)round(($i / $slices) * $srcH);
+            $srcY1 = (int)round((($i + 1) / $slices) * $srcH);
+            $sliceSrcH = max(1, $srcY1 - $srcY0);
+
+            $nextDstY = ($i === $slices - 1)
+                ? $targetH
+                : $dstY + max(1, (int)round(($weights[$i] / $totalWeight) * $targetH));
+            $sliceDstH = max(1, $nextDstY - $dstY);
+
+            imagecopyresampled($dst, $src, 0, $dstY, 0, $srcY0, $targetW, $sliceDstH, $srcW, $sliceSrcH);
+            $dstY = $nextDstY;
+        }
     } else {
+        // Caso Post (ej. 1024x1536 -> 1080x1350): recorte vertical mínimo (solo 4% por extremo en vez de 100%)
+        // combinado con adaptación suave para no cortar títulos superiores ni pies de página.
+        $idealCropH = (int)round($srcW / $targetRatio);
+        $gentleCropH = (int)round($srcH - (($srcH - $idealCropH) * 0.35));
         $cropW = $srcW;
-        $cropH = (int)round($srcW / $targetRatio);
+        $cropH = min($srcH, max($idealCropH, $gentleCropH));
         $cropX = 0;
         $cropY = (int)round(($srcH - $cropH) / 2);
+        imagecopyresampled($dst, $src, 0, 0, $cropX, $cropY, $targetW, $targetH, $cropW, $cropH);
     }
-
-    imagecopyresampled($dst, $src, 0, 0, $cropX, $cropY, $targetW, $targetH, $cropW, $cropH);
     imagedestroy($src);
 
     // Si se activó estampado adicional de logo nítido
@@ -548,8 +575,8 @@ if ($action === 'step1_plan_post' && $reqMethod === 'POST') {
     }
 
     $placementLabel = ($placement === 'story')
-        ? 'HISTORIA VERTICAL (Formato Pantalla Completa 9:16 - 1080x1920 px, con zonas seguras libres arriba y abajo)'
-        : 'POST DE FEED (Formato Vertical Editorial 4:5 - 1080x1350 px)';
+        ? 'HISTORIA VERTICAL (Formato Pantalla Completa 9:16 - 1080x1920 px, cuidando que todos los textos y elementos queden íntegramente dentro del encuadre con buen aire en los bordes)'
+        : 'POST DE FEED (Formato Vertical Editorial 4:5 - 1080x1350 px, cuidando que todos los textos y elementos queden íntegramente dentro del encuadre con buen aire en los bordes)';
 
     $networkNamesMap = [
         'ig' => 'Instagram',
@@ -859,11 +886,15 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     $defaultPrompts = getDefaultPrompts();
     $designerMasterPrompt = trim((string)($cfg['prompt_disenador_ia'] ?? $defaultPrompts['prompt_disenador_ia']));
     $placementRule = ($placement === 'story')
-        ? 'FORMATO DE SALIDA: HISTORIA VERTICAL PANTALLA COMPLETA (9:16 - 1080x1920 px). Dejá libres de texto crítico el 15% superior y el 18% inferior.'
-        : 'FORMATO DE SALIDA: POST EDITORIAL DE FEED (4:5 - 1080x1350 px).';
+        ? 'FORMATO DE SALIDA: HISTORIA VERTICAL PANTALLA COMPLETA (9:16 - 1080x1920 px). Asegurate de que todos los textos, titulares, botones, íconos y logotipos queden 100% contenidos dentro del encuadre con buen margen respecto a los bordes para que ninguna palabra ni elemento salga cortado o descuadrado.'
+        : 'FORMATO DE SALIDA: POST EDITORIAL DE FEED (4:5 - 1080x1350 px). Asegurate de que todos los textos, titulares, botones, íconos y logotipos queden 100% contenidos dentro del encuadre con buen margen respecto a los bordes.';
 
-    // Verificar si ya existe una imagen generada en este hilo para editar sobre ella manteniendo coherencia
-    $latestImgRelative = $existingState['latest_image'] ?? null;
+    // Verificar si ya existe una imagen generada en este hilo (o una imagen específica indicada por el usuario) para editar sobre ella manteniendo coherencia
+    $requestedBaseUrl = trim((string)($input['base_image_url'] ?? ''));
+    if ($requestedBaseUrl !== '') {
+        $requestedBaseUrl = preg_replace('/\?.*$/', '', $requestedBaseUrl);
+    }
+    $latestImgRelative = ($requestedBaseUrl !== '') ? $requestedBaseUrl : ($existingState['latest_image'] ?? null);
     $latestImgFull = $latestImgRelative ? (__DIR__ . '/' . ltrim($latestImgRelative, '/')) : null;
     $useExistingPieceAsBase = (!$forceNewVariant && $isCorrection && $latestImgFull && file_exists($latestImgFull));
 
@@ -945,16 +976,17 @@ if ($action === 'step2_generate_image' && $reqMethod === 'POST') {
     }
 
     if ($useExistingPieceAsBase) {
-        // MODO CORRECCIÓN COHERENTE: La imagen base [0] es la última pieza gráfica ya generada
+        // MODO CORRECCIÓN COHERENTE: La imagen base [0] es la pieza gráfica que el usuario quiere retocar/corregir
         $finalPromptForSunburst = $designerMasterPrompt
+            . "\n\n" . $placementRule
             . $brandDefinitionBlock
             . $referenceMapBlock
             . "\n\nMODO EDICIÓN COHERENTE SOBRE LA PIEZA EXISTENTE (IMAGEN ADJUNTA #1):\n"
             . "Tomá como base exactamente la pieza gráfica ya generada que se adjunta como IMAGEN ADJUNTA #1. "
-            . "MANTENÉ IDÉNTICOS la composición, la foto/pose del profesional o producto, el fondo, la iluminación, el logo y el estilo visual general. "
-            . "Aplicá ÚNICAMENTE la siguiente modificación solicitada:\n"
+            . "MANTENÉ IDÉNTICOS la composición general, la foto/pose del profesional o producto, el fondo, la iluminación, el logo y el estilo visual general. "
+            . "Aplicá ÚNICAMENTE la siguiente corrección o ajuste solicitado sobre esa misma imagen:\n"
             . ($editInstruction !== '' ? $editInstruction : $sunburstPrompt)
-            . "\n\nTEXTO / TITULAR EXACTO QUE DEBE QUEDAR EN LA IMAGEN: \"{$headlineInImage}\""
+            . ($headlineInImage !== '' ? "\n\nTEXTO / TITULAR PRINCIPAL DE REFERENCIA: \"{$headlineInImage}\"" : '')
             . "\n\nDESCRIPCIÓN COMPLETA DE REFERENCIA DE LA PIEZA:\n" . $sunburstPrompt;
     } else {
         // MODO CREACIÓN: Construir el prompt final uniendo el Prompt del Diseñador Experto IA + Marca + Mapa de Archivos + Escena + Titular

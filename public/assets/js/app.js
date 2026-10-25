@@ -998,28 +998,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 6. GENERACIÓN DE LA IMAGEN
     // =========================================================================
-    async function executeStep2ImageGeneration({ sunburstPrompt, headlineInImage, triggerButton, forceNewVariant = false }) {
+    async function executeStep2ImageGeneration({
+        sunburstPrompt,
+        headlineInImage,
+        triggerButton,
+        forceNewVariant = false,
+        isCorrectionOverride = null,
+        editInstructionOverride = null,
+        baseImageUrl = ''
+    }) {
         if (!sunburstPrompt || !sunburstPrompt.trim()) {
             alert('La descripción de diseño visual está vacía.');
             return;
         }
 
+        const originalBtnHtml = triggerButton ? triggerButton.innerHTML : '';
         if (triggerButton) {
             triggerButton.disabled = true;
-            triggerButton.innerHTML = '<span>⏳ Creando imagen...</span>';
+            triggerButton.innerHTML = '<span>⏳ Procesando imagen...</span>';
         }
 
         const vd = state.lastPlan?.visual_design || {};
+        const isCorrection = isCorrectionOverride !== null ? !!isCorrectionOverride : !!vd.is_image_correction;
+        const editInstruction = editInstructionOverride !== null ? editInstructionOverride : (vd.edit_instruction || '');
+
         const loadingStep2El = document.createElement('div');
         loadingStep2El.className = 'step2-card';
         loadingStep2El.innerHTML = `
             <div class="step-header-bar">
                 <div class="step-badge-title">
-                    <span>🎨 Diseñando pieza gráfica...</span>
+                    <span>${isCorrection && !forceNewVariant ? '✏️ Aplicando corrección sobre la misma pieza gráfica...' : '🎨 Diseñando pieza gráfica...'}</span>
                 </div>
             </div>
             <p style="font-size:0.88rem; color:#475569;">
-                Generando la imagen final${(state.brandAsset || state.brandText) ? ' aplicando tu Marca/Paleta' : ''}${state.logoAsset ? ', integrando tu Logo' : ''}${state.subjectAssets.length ? ' y tus fotos (' + escapeHtml(state.subjectAssets.map(s => s.name).join(', ')) + ')' : ''}. Esto puede demorar unos segundos...
+                ${isCorrection && !forceNewVariant
+                    ? 'Manteniendo la imagen base y aplicando tu ajuste (' + escapeHtml(editInstruction) + ')...'
+                    : 'Generando la imagen final' + ((state.brandAsset || state.brandText) ? ' aplicando tu Marca/Paleta' : '') + (state.logoAsset ? ', integrando tu Logo' : '') + (state.subjectAssets.length ? ' y tus fotos (' + escapeHtml(state.subjectAssets.map(s => s.name).join(', ')) + ')' : '') + '. Esto puede demorar unos segundos...'
+                }
             </p>
         `;
         threadContainer.appendChild(loadingStep2El);
@@ -1033,8 +1048,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     post_id: state.currentPostId,
                     sunburst_prompt: sunburstPrompt.trim(),
                     headline_in_image: (headlineInImage || '').trim(),
-                    is_image_correction: !!vd.is_image_correction,
-                    edit_instruction: vd.edit_instruction || '',
+                    is_image_correction: isCorrection,
+                    edit_instruction: editInstruction,
+                    base_image_url: baseImageUrl || '',
                     force_new_variant: !!forceNewVariant,
                     placement: state.placement,
                     model: state.selectedImageModel,
@@ -1075,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             if (triggerButton) {
                 triggerButton.disabled = false;
-                triggerButton.innerHTML = '<span>🎨 Crear / Actualizar Pieza Gráfica</span>';
+                triggerButton.innerHTML = originalBtnHtml || '<span>🎨 Crear / Actualizar Pieza Gráfica</span>';
             }
         }
     }
@@ -1105,9 +1121,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <a href="${escapeHtml(cacheBustUrl)}" download="tecnogen_${escapeHtml(placement)}_${Date.now()}.png" class="btn-primary-action">
                         ⬇️ Descargar PNG (${escapeHtml( placement === 'story' ? 'Historia' : 'Post' )})
                     </a>
-                    <button type="button" class="btn-mini btn-regenerate-piece" style="padding:0.55rem 1rem; font-size:0.84rem;">
-                        🔄 Generar Otra Variante
+                    <button type="button" class="btn-mini btn-regenerate-piece" style="padding:0.55rem 1rem; font-size:0.84rem;" title="Crea una variante completamente nueva desde cero">
+                        🔄 Generar Otra Variante Nueva
                     </button>
+                </div>
+
+                <div class="piece-direct-edit-box">
+                    <label class="piece-direct-edit-label">✏️ Corregir / Modificar sobre esta misma imagen (mantiene el diseño y aplica tu ajuste):</label>
+                    <div class="piece-direct-edit-row">
+                        <input type="text" class="design-input input-direct-correction" placeholder="Ej: 'Reubicá los textos más adentro para que no se corten', 'Cambiá el botón por Reservá hoy', 'Achicá el logo'...">
+                        <button type="button" class="btn-sunburst-create btn-apply-correction">
+                            <span>✨ Corregir esta Imagen</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -1121,6 +1147,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     triggerButton: btnRegen,
                     forceNewVariant: true
                 });
+            });
+        }
+
+        const inputCorrection = card.querySelector('.input-direct-correction');
+        const btnApplyCorrection = card.querySelector('.btn-apply-correction');
+        const triggerDirectCorrection = async () => {
+            const instruction = inputCorrection ? inputCorrection.value.trim() : '';
+            if (!instruction) {
+                alert('Escribí qué corrección o cambio querés aplicar sobre esta misma imagen.');
+                if (inputCorrection) inputCorrection.focus();
+                return;
+            }
+            await executeStep2ImageGeneration({
+                sunburstPrompt,
+                headlineInImage,
+                triggerButton: btnApplyCorrection,
+                forceNewVariant: false,
+                isCorrectionOverride: true,
+                editInstructionOverride: instruction,
+                baseImageUrl: imageUrl
+            });
+        };
+
+        if (btnApplyCorrection) {
+            btnApplyCorrection.addEventListener('click', triggerDirectCorrection);
+        }
+        if (inputCorrection) {
+            inputCorrection.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    triggerDirectCorrection();
+                }
             });
         }
 
