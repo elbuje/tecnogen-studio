@@ -20,10 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const NETWORK_META = {
-        ig: { label: '📸 Instagram', short: 'IG' },
-        fb: { label: '📘 Facebook', short: 'FB' },
-        tiktok: { label: '🎵 TikTok', short: 'TikTok' },
-        linkedin: { label: '💼 LinkedIn', short: 'LinkedIn' }
+        ig: { label: '📸 Instagram (IG)', short: 'IG' },
+        fb: { label: '📘 Facebook (FB)', short: 'FB' },
+        tiktok: { label: '🎵 TikTok (TT)', short: 'TT' },
+        linkedin: { label: '💼 LinkedIn (IN)', short: 'IN' }
     };
 
     // =========================================================================
@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const threadContainer = document.getElementById('thread-container');
 
     // Controles del Composer
-    const btnNetAll = document.getElementById('btn-net-all');
     const netButtons = Array.from(document.querySelectorAll('.net-btn'));
     const selectSlideCount = document.getElementById('select-slide-count');
     const chkAutoStep2 = document.getElementById('chk-auto-step2');
@@ -76,6 +75,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRestorePrompts = document.getElementById('btn-restore-prompts');
     const chkStampLogo = document.getElementById('chk-stamp-logo');
     const btnSaveConfig = document.getElementById('btn-save-config');
+
+    // Modal Visor Deslizable de Carrusel
+    const modalCarouselViewer = document.getElementById('modal-carousel-viewer');
+    const viewerCarouselTitle = document.getElementById('viewer-carousel-title');
+    const btnViewerOpenPopup = document.getElementById('btn-viewer-open-popup');
+    const btnCloseViewer = document.getElementById('btn-close-viewer');
+    const btnViewerPrev = document.getElementById('btn-viewer-prev');
+    const btnViewerNext = document.getElementById('btn-viewer-next');
+    const carouselViewportFrame = document.getElementById('carousel-viewport-frame');
+    const viewerCounterPill = document.getElementById('viewer-counter-pill');
+    const viewerCarouselTrack = document.getElementById('viewer-carousel-track');
+    const viewerCarouselDots = document.getElementById('viewer-carousel-dots');
+    const viewerSlideCaption = document.getElementById('viewer-slide-caption');
+    const btnViewerDownloadCurrent = document.getElementById('btn-viewer-download-current');
 
     // =========================================================================
     // UTILIDADES
@@ -247,19 +260,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. REDES SOCIALES Y CANTIDAD DE LÁMINAS
     // =========================================================================
     function syncNetworkButtonsUI() {
-        const allNets = ['ig', 'fb', 'tiktok', 'linkedin'];
-        const isAllSelected = allNets.every(n => state.networks.includes(n));
-        if (btnNetAll) btnNetAll.classList.toggle('active', isAllSelected);
         netButtons.forEach(btn => {
             const net = btn.getAttribute('data-net');
             btn.classList.toggle('active', state.networks.includes(net));
-        });
-    }
-
-    if (btnNetAll) {
-        btnNetAll.addEventListener('click', () => {
-            state.networks = ['ig', 'fb', 'tiktok', 'linkedin'];
-            syncNetworkButtonsUI();
         });
     }
 
@@ -267,10 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const net = btn.getAttribute('data-net');
             if (!net) return;
-            const allSelected = state.networks.length === 4;
-            if (allSelected) {
-                state.networks = [net];
-            } else if (state.networks.includes(net)) {
+            if (state.networks.includes(net)) {
                 if (state.networks.length > 1) {
                     state.networks = state.networks.filter(n => n !== net);
                 }
@@ -284,6 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectSlideCount) {
         selectSlideCount.addEventListener('change', () => {
             state.slideCountPref = selectSlideCount.value || 'auto';
+        });
+    }
+    if (chkAutoStep2) {
+        chkAutoStep2.addEventListener('change', () => {
+            const label = chkAutoStep2.closest('.cta-step-toggle');
+            if (label) label.classList.toggle('active', chkAutoStep2.checked);
         });
     }
 
@@ -1066,9 +1072,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="step-badge-title">
                         <span>🎠 Paso 2: Carrusel Generado (<span class="lbl-total-slides">${totalSlides}</span> Láminas — 1080×1350 px)</span>
                     </div>
-                    <button type="button" class="btn-primary-action btn-download-all-slides" style="padding:0.45rem 0.95rem; font-size:0.78rem;">
-                        ⬇️ Descargar Todo el Carrusel
-                    </button>
+                    <div class="carousel-header-actions">
+                        <button type="button" class="btn-mini btn-open-viewer-modal" style="padding:0.45rem 0.85rem; font-size:0.78rem;" title="Abrir el carrusel en un modal para deslizar las piezas">
+                            🎠 Ver en Modal Deslizable
+                        </button>
+                        <button type="button" class="btn-mini btn-open-viewer-window" style="padding:0.45rem 0.85rem; font-size:0.78rem;" title="Abrir el carrusel deslizable en una nueva ventana independiente">
+                            ↗️ Abrir en Nueva Ventana
+                        </button>
+                        <button type="button" class="btn-primary-action btn-download-all-slides" style="padding:0.45rem 0.95rem; font-size:0.78rem;">
+                            ⬇️ Descargar Todo
+                        </button>
+                    </div>
                 </div>
 
                 <div class="carousel-progress-banner">
@@ -1077,14 +1091,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div class="carousel-showcase-grid"></div>
+
+                <div class="carousel-finished-actions-bar">
+                    <div class="carousel-finished-info">
+                        <strong>🎠 Vista Previa Deslizable del Carrusel</strong>
+                        <span>Abrí el carrusel terminado en un modal o en una nueva ventana para deslizar todas las láminas en secuencia</span>
+                    </div>
+                    <div class="carousel-finished-buttons">
+                        <button type="button" class="btn-primary-action btn-open-viewer-modal-bottom">
+                            🎠 Ver Carrusel en Modal (Deslizar Piezas)
+                        </button>
+                        <button type="button" class="btn-mini btn-open-viewer-window-bottom" style="padding:0.6rem 1.05rem; font-size:0.84rem;">
+                            ↗️ Abrir en Nueva Ventana
+                        </button>
+                        <button type="button" class="btn-mini btn-download-all-bottom" style="padding:0.6rem 1.05rem; font-size:0.84rem;">
+                            ⬇️ Descargar Todas
+                        </button>
+                    </div>
+                </div>
             `;
 
-            const btnDownloadAll = galleryCard.querySelector('.btn-download-all-slides');
-            if (btnDownloadAll) {
-                btnDownloadAll.addEventListener('click', () => {
-                    downloadAllCarouselSlides(galleryCard);
+            const bindGalleryActions = () => {
+                galleryCard.querySelectorAll('.btn-download-all-slides, .btn-download-all-bottom').forEach(btn => {
+                    btn.addEventListener('click', () => downloadAllCarouselSlides(galleryCard));
                 });
-            }
+                galleryCard.querySelectorAll('.btn-open-viewer-modal, .btn-open-viewer-modal-bottom').forEach(btn => {
+                    btn.addEventListener('click', () => openCarouselViewerModal(galleryCard, 0));
+                });
+                galleryCard.querySelectorAll('.btn-open-viewer-window, .btn-open-viewer-window-bottom').forEach(btn => {
+                    btn.addEventListener('click', () => openCarouselViewerNewWindow(galleryCard, 0));
+                });
+            };
+            bindGalleryActions();
 
             threadContainer.appendChild(galleryCard);
             step1CardEl._linkedGalleryCard = galleryCard;
@@ -1125,6 +1163,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cacheBustUrl = `${imageUrl}?t=${Date.now()}`;
         slot.setAttribute('data-clean-url', imageUrl);
+        slot.setAttribute('data-slide-role', slideData.slide_role || '');
+        slot.setAttribute('data-slide-headline', slideData.headline || '');
 
         const headTitle = slot.querySelector('.slide-result-title');
         const headStatus = slot.querySelector('.slide-result-status');
@@ -1137,6 +1177,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const frameBox = slot.querySelector('.slide-frame-box');
         if (frameBox) {
             frameBox.innerHTML = `<img src="${escapeHtml(cacheBustUrl)}" alt="Lámina ${sNum}">`;
+            frameBox.classList.add('clickable-slide');
+            frameBox.title = `Clic para abrir el visor deslizable en la Lámina #${sNum}`;
+            frameBox.onclick = () => {
+                const readyList = collectReadySlidesFromGallery(galleryCard);
+                const foundIdx = readyList.findIndex(item => item.slideNumber === sNum);
+                openCarouselViewerModal(galleryCard, foundIdx >= 0 ? foundIdx : 0);
+            };
         }
 
         const actionsBar = slot.querySelector('.slide-card-actions');
@@ -1317,7 +1364,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (statusTextEl) {
-            statusTextEl.textContent = `✨ Secuencia completada (${totalSlides} láminas). Podés descargar todo o retocar cualquier lámina individualmente.`;
+            statusTextEl.textContent = `✨ Secuencia completada (${totalSlides} láminas). Podés abrir el carrusel en Modal o Nueva Ventana para deslizar las piezas.`;
         }
         if (counterBadgeEl) {
             counterBadgeEl.textContent = `✅ ${totalSlides} / ${totalSlides}`;
@@ -1433,6 +1480,437 @@ document.addEventListener('DOMContentLoaded', () => {
         if (downloaded === 0) {
             alert('Todavía no hay láminas generadas para descargar.');
         }
+    }
+
+    // =========================================================================
+    // 6B. VISOR INTERACTIVO DESLIZABLE (MODAL + NUEVA VENTANA)
+    // =========================================================================
+    let activeViewerState = {
+        galleryCard: null,
+        slides: [],
+        currentIndex: 0,
+        dragStartX: null
+    };
+
+    function collectReadySlidesFromGallery(galleryCard) {
+        const list = [];
+        if (!galleryCard) return list;
+        const slots = galleryCard.querySelectorAll('.carousel-slide-result-card');
+        slots.forEach(slot => {
+            const cleanUrl = slot.getAttribute('data-clean-url');
+            if (!cleanUrl) return;
+            const sNum = parseInt(slot.getAttribute('data-slide-num'), 10) || (list.length + 1);
+            const role = slot.getAttribute('data-slide-role') || `Lámina #${sNum}`;
+            const headline = slot.getAttribute('data-slide-headline') || '';
+            const imgEl = slot.querySelector('.slide-frame-box img');
+            const displayUrl = imgEl ? imgEl.src : `${cleanUrl}?t=${Date.now()}`;
+            list.push({
+                slideNumber: sNum,
+                cleanUrl,
+                displayUrl,
+                role,
+                headline
+            });
+        });
+        return list;
+    }
+
+    function renderViewerSlideAt(index) {
+        const slides = activeViewerState.slides;
+        if (!slides.length) return;
+        const clamped = Math.max(0, Math.min(slides.length - 1, index));
+        activeViewerState.currentIndex = clamped;
+
+        if (viewerCarouselTrack) {
+            viewerCarouselTrack.style.transform = `translateX(-${clamped * 100}%)`;
+        }
+        if (viewerCounterPill) {
+            viewerCounterPill.textContent = `${clamped + 1} / ${slides.length}`;
+        }
+        if (btnViewerPrev) {
+            btnViewerPrev.disabled = (clamped === 0);
+        }
+        if (btnViewerNext) {
+            btnViewerNext.disabled = (clamped === slides.length - 1);
+        }
+        if (viewerCarouselDots) {
+            viewerCarouselDots.querySelectorAll('.carousel-dot').forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === clamped);
+            });
+        }
+        const cur = slides[clamped];
+        if (viewerSlideCaption && cur) {
+            viewerSlideCaption.textContent = `Lámina #${cur.slideNumber}${cur.role ? ' · ' + cur.role : ''}${cur.headline ? ' — "' + cur.headline + '"' : ''}`;
+        }
+        if (btnViewerDownloadCurrent && cur) {
+            btnViewerDownloadCurrent.href = cur.displayUrl;
+            btnViewerDownloadCurrent.download = `carrusel_slide_${String(cur.slideNumber).padStart(2, '0')}.png`;
+        }
+    }
+
+    function openCarouselViewerModal(galleryCard, startIndex = 0) {
+        const slides = collectReadySlidesFromGallery(galleryCard);
+        if (!slides.length) {
+            alert('Todavía no hay láminas generadas en este carrusel para visualizar.');
+            return;
+        }
+
+        activeViewerState.galleryCard = galleryCard;
+        activeViewerState.slides = slides;
+        activeViewerState.currentIndex = Math.max(0, Math.min(slides.length - 1, startIndex));
+
+        if (viewerCarouselTitle) {
+            viewerCarouselTitle.textContent = (currentCarouselTitle ? currentCarouselTitle.textContent : 'Carrusel') + ` (${slides.length} láminas)`;
+        }
+
+        if (viewerCarouselTrack) {
+            viewerCarouselTrack.innerHTML = slides.map(s => `
+                <div class="carousel-slide-item">
+                    <img src="${escapeHtml(s.displayUrl)}" alt="Lámina ${s.slideNumber}">
+                </div>
+            `).join('');
+        }
+
+        if (viewerCarouselDots) {
+            viewerCarouselDots.innerHTML = slides.map((_, idx) => `
+                <button type="button" class="carousel-dot ${idx === activeViewerState.currentIndex ? 'active' : ''}" data-dot-idx="${idx}" title="Ir a lámina #${idx + 1}"></button>
+            `).join('');
+            viewerCarouselDots.querySelectorAll('.carousel-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const idx = parseInt(dot.getAttribute('data-dot-idx'), 10);
+                    renderViewerSlideAt(idx);
+                });
+            });
+        }
+
+        renderViewerSlideAt(activeViewerState.currentIndex);
+        if (modalCarouselViewer) {
+            modalCarouselViewer.style.display = 'flex';
+        }
+    }
+
+    function closeCarouselViewerModal() {
+        if (modalCarouselViewer) {
+            modalCarouselViewer.style.display = 'none';
+        }
+    }
+
+    if (btnCloseViewer) {
+        btnCloseViewer.addEventListener('click', closeCarouselViewerModal);
+    }
+    if (modalCarouselViewer) {
+        modalCarouselViewer.addEventListener('click', (e) => {
+            if (e.target === modalCarouselViewer) closeCarouselViewerModal();
+        });
+    }
+    if (btnViewerPrev) {
+        btnViewerPrev.addEventListener('click', () => {
+            renderViewerSlideAt(activeViewerState.currentIndex - 1);
+        });
+    }
+    if (btnViewerNext) {
+        btnViewerNext.addEventListener('click', () => {
+            renderViewerSlideAt(activeViewerState.currentIndex + 1);
+        });
+    }
+    if (btnViewerOpenPopup) {
+        btnViewerOpenPopup.addEventListener('click', () => {
+            if (activeViewerState.galleryCard) {
+                openCarouselViewerNewWindow(activeViewerState.galleryCard, activeViewerState.currentIndex);
+            }
+        });
+    }
+
+    // Soporte de teclado (← → Esc) y arrastre/swipe con mouse o pantalla táctil en el modal
+    document.addEventListener('keydown', (e) => {
+        if (!modalCarouselViewer || modalCarouselViewer.style.display === 'none') return;
+        if (e.key === 'Escape') {
+            closeCarouselViewerModal();
+        } else if (e.key === 'ArrowLeft') {
+            renderViewerSlideAt(activeViewerState.currentIndex - 1);
+        } else if (e.key === 'ArrowRight') {
+            renderViewerSlideAt(activeViewerState.currentIndex + 1);
+        }
+    });
+
+    if (carouselViewportFrame) {
+        carouselViewportFrame.addEventListener('pointerdown', (e) => {
+            activeViewerState.dragStartX = e.clientX;
+        });
+        carouselViewportFrame.addEventListener('pointerup', (e) => {
+            if (activeViewerState.dragStartX === null) return;
+            const deltaX = e.clientX - activeViewerState.dragStartX;
+            activeViewerState.dragStartX = null;
+            if (Math.abs(deltaX) > 40) {
+                if (deltaX < 0) {
+                    renderViewerSlideAt(activeViewerState.currentIndex + 1);
+                } else {
+                    renderViewerSlideAt(activeViewerState.currentIndex - 1);
+                }
+            }
+        });
+        carouselViewportFrame.addEventListener('pointerleave', () => {
+            activeViewerState.dragStartX = null;
+        });
+    }
+
+    function openCarouselViewerNewWindow(galleryCard, startIndex = 0) {
+        const slides = collectReadySlidesFromGallery(galleryCard);
+        if (!slides.length) {
+            alert('Todavía no hay láminas generadas en este carrusel para visualizar.');
+            return;
+        }
+
+        const titleText = currentCarouselTitle ? currentCarouselTitle.textContent : 'Carrusel TecnoGen Studio';
+        const baseHref = window.location.href.replace(/\/[^/]*$/, '/');
+        const slidesPayload = slides.map(s => ({
+            slideNumber: s.slideNumber,
+            url: s.displayUrl.startsWith('http') ? s.displayUrl : (baseHref + s.displayUrl.replace(/^\//, '')),
+            role: s.role,
+            headline: s.headline
+        }));
+
+        const win = window.open('', '_blank', 'width=720,height=880,resizable=yes,scrollbars=yes');
+        if (!win) {
+            alert('Tu navegador bloqueó la ventana emergente. Permití ventanas emergentes para este sitio o usá el botón "Ver en Modal Deslizable".');
+            return;
+        }
+
+        const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(titleText)} — Visor de Carrusel</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0B132B;
+    color: #F8FAFC;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem;
+    user-select: none;
+  }
+  .top-bar {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  .top-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.85rem;
+    width: 100%;
+    max-width: 640px;
+    flex: 1;
+  }
+  .viewport {
+    width: 100%;
+    max-width: 470px;
+    aspect-ratio: 4 / 5;
+    max-height: 74vh;
+    background: #050B18;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  .viewport:active { cursor: grabbing; }
+  .counter-pill {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: rgba(15, 23, 42, 0.82);
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 0.28rem 0.7rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .slide {
+    min-width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .arrow {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.12);
+    color: #FFFFFF;
+    font-size: 1.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.16s ease;
+    flex-shrink: 0;
+  }
+  .arrow:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0052E0 0%, #1973FF 100%);
+    border-color: transparent;
+    transform: scale(1.06);
+  }
+  .arrow:disabled { opacity: 0.28; cursor: not-allowed; }
+  .dots {
+    display: flex;
+    gap: 0.45rem;
+    margin: 0.75rem 0 0.5rem 0;
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 9999px;
+    border: none;
+    background: rgba(255,255,255,0.32);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .dot.active {
+    width: 26px;
+    background: #38BDF8;
+  }
+  .bottom-bar {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(255,255,255,0.14);
+  }
+  .caption {
+    font-size: 0.8rem;
+    color: #CBD5E1;
+    font-weight: 600;
+  }
+  .btn {
+    background: linear-gradient(135deg, #0052E0 0%, #1973FF 100%);
+    color: #FFFFFF;
+    text-decoration: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 9px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+</style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="top-title">🎠 ${escapeHtml(titleText)}</div>
+    <span style="font-size:0.75rem; color:#94A3B8;">Deslizá con el mouse o usá las flechas ← →</span>
+  </div>
+  <div class="stage">
+    <button type="button" id="prevBtn" class="arrow" title="Anterior (←)">‹</button>
+    <div class="viewport" id="viewport">
+      <div class="counter-pill" id="counterPill">1 / ${slidesPayload.length}</div>
+      <div class="track" id="track"></div>
+    </div>
+    <button type="button" id="nextBtn" class="arrow" title="Siguiente (→)">›</button>
+  </div>
+  <div class="dots" id="dots"></div>
+  <div class="bottom-bar">
+    <div class="caption" id="caption"></div>
+    <a id="downloadBtn" class="btn" href="#" download="carrusel_slide_01.png">⬇️ Descargar esta lámina</a>
+  </div>
+  <script>
+    const slides = ${JSON.stringify(slidesPayload)};
+    let current = ${Math.max(0, Math.min(slidesPayload.length - 1, startIndex))};
+    const track = document.getElementById('track');
+    const dots = document.getElementById('dots');
+    const counterPill = document.getElementById('counterPill');
+    const caption = document.getElementById('caption');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const viewport = document.getElementById('viewport');
+
+    track.innerHTML = slides.map(s => '<div class="slide"><img src="' + s.url + '" alt="Slide ' + s.slideNumber + '"></div>').join('');
+    dots.innerHTML = slides.map((_, i) => '<button type="button" class="dot" data-idx="' + i + '"></button>').join('');
+
+    function goTo(idx) {
+      current = Math.max(0, Math.min(slides.length - 1, idx));
+      track.style.transform = 'translateX(-' + (current * 100) + '%)';
+      counterPill.textContent = (current + 1) + ' / ' + slides.length;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === slides.length - 1;
+      Array.from(dots.children).forEach((d, i) => d.classList.toggle('active', i === current));
+      const s = slides[current];
+      caption.textContent = 'Lámina #' + s.slideNumber + (s.role ? ' · ' + s.role : '') + (s.headline ? ' — "' + s.headline + '"' : '');
+      downloadBtn.href = s.url;
+      downloadBtn.download = 'carrusel_slide_' + String(s.slideNumber).padStart(2, '0') + '.png';
+    }
+
+    prevBtn.addEventListener('click', () => goTo(current - 1));
+    nextBtn.addEventListener('click', () => goTo(current + 1));
+    Array.from(dots.children).forEach(d => d.addEventListener('click', () => goTo(parseInt(d.dataset.idx, 10))));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') goTo(current - 1);
+      if (e.key === 'ArrowRight') goTo(current + 1);
+    });
+    let startX = null;
+    viewport.addEventListener('pointerdown', (e) => { startX = e.clientX; });
+    viewport.addEventListener('pointerup', (e) => {
+      if (startX === null) return;
+      const dx = e.clientX - startX;
+      startX = null;
+      if (Math.abs(dx) > 40) goTo(current + (dx < 0 ? 1 : -1));
+    });
+    goTo(current);
+  <\/script>
+</body>
+</html>`;
+
+        win.document.open();
+        win.document.write(htmlContent);
+        win.document.close();
     }
 
     // =========================================================================

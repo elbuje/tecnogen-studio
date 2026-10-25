@@ -103,18 +103,15 @@
         <section class="composer-wrapper">
             <div class="composer-box">
 
-                <!-- FILA 1: Selección de Redes + Cantidad de Láminas + Auto-crear carrusel -->
+                <!-- FILA 1: Selección múltiple de Redes (IG, FB, TT, IN) + Cantidad de Láminas + 2 Pasos juntos -->
                 <div class="composer-controls-row">
-                    <!-- Redes Sociales -->
+                    <!-- Redes Sociales (Selección múltiple libre) -->
                     <div class="control-group">
                         <span class="control-label">Redes:</span>
-                        <button type="button" id="btn-net-all" class="chip-select active" title="Seleccionar todas las redes">
-                            🌐 Todas
-                        </button>
-                        <button type="button" class="chip-select net-btn active" data-net="ig">📸 IG</button>
-                        <button type="button" class="chip-select net-btn active" data-net="fb">📘 FB</button>
-                        <button type="button" class="chip-select net-btn active" data-net="tiktok">🎵 TikTok</button>
-                        <button type="button" class="chip-select net-btn active" data-net="linkedin">💼 LinkedIn</button>
+                        <button type="button" class="chip-select net-btn net-ig active" data-net="ig" title="Instagram (clic para activar o quitar)">IG</button>
+                        <button type="button" class="chip-select net-btn net-fb active" data-net="fb" title="Facebook (clic para activar o quitar)">FB</button>
+                        <button type="button" class="chip-select net-btn net-tiktok active" data-net="tiktok" title="TikTok (clic para activar o quitar)">TT</button>
+                        <button type="button" class="chip-select net-btn net-linkedin active" data-net="linkedin" title="LinkedIn (clic para activar o quitar)">IN</button>
                     </div>
 
                     <div class="controls-right-group">
@@ -132,10 +129,10 @@
                             </select>
                         </div>
 
-                        <!-- Modo Automático -->
-                        <label class="auto-step-toggle" title="Si está activado, al terminar el guion genera todas las láminas en secuencia automáticamente">
+                        <!-- Modo Automático: Hacer Paso 1 y Paso 2 juntos -->
+                        <label class="auto-step-toggle cta-step-toggle active" title="Ejecuta el Paso 1 (Guion de Láminas) y el Paso 2 (Crear todas las Láminas) juntos en un solo clic">
                             <input type="checkbox" id="chk-auto-step2" checked>
-                            <span>⚡ Auto-crear láminas</span>
+                            <span>⚡ Hacer los 2 pasos juntos</span>
                         </label>
                     </div>
                 </div>
@@ -276,6 +273,48 @@
         </div>
     </div>
 
-    <script src="assets/js/carruseles.js?v=1.0.<?= @filemtime(__DIR__ . '/assets/js/carruseles.js') ?: time() ?>"></script>
+    <!-- ==================== MODAL VISOR DESLIZABLE DE CARRUSEL ==================== -->
+    <div id="modal-carousel-viewer" class="modal-backdrop carousel-viewer-backdrop" style="display: none;">
+        <div class="carousel-viewer-modal-card">
+            <div class="carousel-viewer-header">
+                <div class="carousel-viewer-title-wrap">
+                    <span class="mode-pill-badge">🎠 Vista Previa Interactiva</span>
+                    <h3 id="viewer-carousel-title">Carrusel</h3>
+                </div>
+                <div class="carousel-viewer-top-actions">
+                    <button type="button" id="btn-viewer-open-popup" class="btn-mini" title="Abrir este carrusel deslizable en una nueva ventana independiente">
+                        ↗️ Abrir en Nueva Ventana
+                    </button>
+                    <button type="button" id="btn-close-viewer" class="btn-close-modal" title="Cerrar visor (Esc)">✕</button>
+                </div>
+            </div>
+
+            <div class="carousel-viewer-stage">
+                <button type="button" id="btn-viewer-prev" class="carousel-nav-arrow prev" title="Lámina anterior (←)">‹</button>
+
+                <div class="carousel-viewport-frame" id="carousel-viewport-frame">
+                    <div class="carousel-counter-pill" id="viewer-counter-pill">1 / 1</div>
+                    <div class="carousel-track" id="viewer-carousel-track">
+                        <!-- Slides inyectadas dinámicamente -->
+                    </div>
+                </div>
+
+                <button type="button" id="btn-viewer-next" class="carousel-nav-arrow next" title="Siguiente lámina (→)">›</button>
+            </div>
+
+            <div class="carousel-viewer-dots" id="viewer-carousel-dots"></div>
+
+            <div class="carousel-viewer-footer">
+                <div class="viewer-slide-caption" id="viewer-slide-caption">Deslizá con el mouse, teclado (← →) o las flechas laterales</div>
+                <div class="viewer-footer-buttons">
+                    <a id="btn-viewer-download-current" href="#" download="carrusel_slide_01.png" class="btn-primary-action" style="padding:0.48rem 1rem; font-size:0.8rem;">
+                        ⬇️ Descargar esta lámina
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/carruseles.js?v=1.1.<?= @filemtime(__DIR__ . '/assets/js/carruseles.js') ?: time() ?>"></script>
 </body>
 </html>
