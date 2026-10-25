@@ -62,10 +62,13 @@ temp_storage/
 
 # App specifics
 data/config.json
+data/config_carruseles.json
 *.log
 output/
 public/output/
 carrusel_fila*/
 data/drive_cache/
 data/uploads/
+data/uploads_carousels/
 data/temp_refs/
+data/temp_refs_carousels/

@@ -18,6 +18,16 @@
                 <img src="assets/img/logo-tecnogen-studio.jpg" alt="TecnoGen Studio — Plataforma de contenido con IA" class="brand-logo-img">
             </div>
 
+            <!-- Menú de navegación entre aplicaciones independientes -->
+            <nav class="studio-mode-nav" aria-label="Modo de estudio">
+                <a href="index.php" class="studio-mode-link active">
+                    <span>🖼️</span> Publicación Única
+                </a>
+                <a href="carruseles.php" class="studio-mode-link">
+                    <span>🎠</span> Estudio de Carruseles
+                </a>
+            </nav>
+
             <button id="btn-new-post" type="button" class="btn-new-chat">
                 <span>＋</span> Nueva Publicación
             </button>
@@ -119,6 +129,12 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Opción Agregar CTA en la pieza gráfica -->
+                        <label class="auto-step-toggle cta-step-toggle" title="Si está activado, agrega un Llamado a la Acción (CTA) visual en el diseño de la imagen y en el prompt">
+                            <input type="checkbox" id="chk-include-cta">
+                            <span>🎯 Agregar CTA</span>
+                        </label>
 
                         <!-- Modo Automático -->
                         <label class="auto-step-toggle" title="Si está activado, genera los textos y la imagen de forma continua">

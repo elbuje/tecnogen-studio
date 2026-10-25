@@ -939,6 +939,27 @@ body.chatgpt-layout {
     cursor: pointer;
 }
 
+.cta-step-toggle {
+    background: #F8FAFC;
+    border: 1px solid var(--border-color);
+    padding: 0.22rem 0.55rem;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+
+.cta-step-toggle:hover {
+    background: var(--brand-soft-bg);
+    border-color: var(--brand-soft-border);
+    color: var(--brand-blue);
+}
+
+.cta-step-toggle.active,
+.cta-step-toggle:has(input:checked) {
+    background: var(--brand-soft-bg);
+    border-color: var(--brand-blue);
+    color: var(--brand-blue);
+}
+
 /* FILA 2: LOS 3 APARTADOS DE RECURSOS (1. Marca/Paleta · 2. Logo · 3. Personajes, Productos y Fondos) */
 .composer-assets-row {
     display: flex;
@@ -1393,4 +1414,41 @@ body.chatgpt-layout {
     background: #ECFDF5;
     border: 1px solid #A7F3D0;
     color: #047857;
+}
+
+/* Menú de cambio entre Publicación Única y Estudio de Carruseles */
+.studio-mode-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.32rem;
+    margin-bottom: 0.7rem;
+    padding: 0.32rem;
+    background: #F1F5F9;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.studio-mode-link {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.46rem 0.68rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-body);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.studio-mode-link:hover {
+    background: #FFFFFF;
+    color: var(--brand-blue);
+}
+
+.studio-mode-link.active {
+    background: #FFFFFF;
+    color: var(--brand-blue);
+    box-shadow: 0 2px 6px rgba(6, 19, 46, 0.08);
+    border: 1px solid var(--brand-soft-border);
 }
