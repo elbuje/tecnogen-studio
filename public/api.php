@@ -2,6 +2,8 @@
 @ini_set('memory_limit', '512M');
 @ini_set('max_execution_time', '180');
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -66,7 +68,7 @@ function getDefaultPrompts() {
 // --------------------------------------------------------------------------
 function getConfig($configFile) {
     $defaultPrompts = getDefaultPrompts();
-    $currentPromptsSchemaVersion = 5;
+    $currentPromptsSchemaVersion = 6;
     $defaults = [
         'openai_api_key' => '',
         'selected_model' => 'gpt-image-2.5-sunburst-2026-09-08',
@@ -89,11 +91,15 @@ function getConfig($configFile) {
                 $merged['selected_model'] = 'gpt-image-2.5-sunburst-2026-09-08';
             }
             $savedVersion = (int)($json['prompts_schema_version'] ?? 0);
-            if ($savedVersion < $currentPromptsSchemaVersion) {
+            $needsPromptUpgrade = ($savedVersion < $currentPromptsSchemaVersion)
+                || (strpos((string)($merged['prompt_director_creativo'] ?? ''), 'IMAGEN DE MARCA Y PALETA SUBIDA') === false)
+                || (strpos((string)($merged['prompt_disenador_ia'] ?? ''), 'IMAGEN DE MARCA Y PALETA DE COLORES SUBIDA') === false);
+
+            if ($needsPromptUpgrade) {
                 $merged['prompt_director_creativo'] = $defaultPrompts['prompt_director_creativo'];
                 $merged['prompt_disenador_ia'] = $defaultPrompts['prompt_disenador_ia'];
                 $merged['prompts_schema_version'] = $currentPromptsSchemaVersion;
-                saveConfig($configFile, $merged);
+                @saveConfig($configFile, $merged);
             } else {
                 if (empty(trim((string)($merged['prompt_director_creativo'] ?? '')))) {
                     $merged['prompt_director_creativo'] = $defaultPrompts['prompt_director_creativo'];

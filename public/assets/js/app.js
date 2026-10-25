@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     async function loadConfig() {
         try {
-            const res = await fetch('api.php?action=get_config');
+            const res = await fetch('api.php?action=get_config&t=' + Date.now(), { cache: 'no-store' });
             const data = await res.json();
             if (data.status === 'ok') {
                 if (inputApiKey) inputApiKey.value = data.openai_api_key || '';
@@ -568,8 +568,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (lblActiveModel) lblActiveModel.textContent = state.selectedImageModel;
                 if (selectTextModel) selectTextModel.value = state.selectedTextModel;
                 if (chkStampLogo) chkStampLogo.checked = state.stampLogoOverlay;
-                if (inputPromptDirector) inputPromptDirector.value = data.prompt_director_creativo || '';
-                if (inputPromptDesigner) inputPromptDesigner.value = data.prompt_disenador_ia || '';
+
+                let directorPromptVal = data.prompt_director_creativo || '';
+                if (state.defaultPrompts.prompt_director_creativo && directorPromptVal.indexOf('IMAGEN DE MARCA Y PALETA SUBIDA') === -1) {
+                    directorPromptVal = state.defaultPrompts.prompt_director_creativo;
+                }
+                let designerPromptVal = data.prompt_disenador_ia || '';
+                if (state.defaultPrompts.prompt_disenador_ia && designerPromptVal.indexOf('IMAGEN DE MARCA Y PALETA DE COLORES SUBIDA') === -1) {
+                    designerPromptVal = state.defaultPrompts.prompt_disenador_ia;
+                }
+
+                if (inputPromptDirector) inputPromptDirector.value = directorPromptVal;
+                if (inputPromptDesigner) inputPromptDesigner.value = designerPromptVal;
 
                 if (selectModel) {
                     let exists = Array.from(selectModel.options).some(o => o.value === state.selectedImageModel);
@@ -616,8 +626,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (btnOpenConfig && modalConfig) {
-        btnOpenConfig.addEventListener('click', () => {
+        btnOpenConfig.addEventListener('click', async () => {
             if (alertConfig) alertConfig.style.display = 'none';
+            await loadConfig();
             modalConfig.style.display = 'flex';
         });
     }

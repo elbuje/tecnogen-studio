@@ -233,7 +233,7 @@
                         🧠 Prompt de Sistema — Director Creativo (Paso 1: Copies y Concepto Narrativo)
                     </label>
                 </div>
-                <textarea id="input-prompt-director" class="design-textarea mono" rows="5" placeholder="Instrucciones para el Director Creativo..."></textarea>
+                <textarea id="input-prompt-director" class="design-textarea mono" rows="5" autocomplete="off" placeholder="Instrucciones para el Director Creativo..."></textarea>
             </div>
 
             <!-- PROMPT PASO 2: DISEÑADOR EXPERTO PARA IA -->
@@ -243,7 +243,7 @@
                         🎨 Prompt de Sistema — Diseñador Experto para IA (Paso 2: Creación de la Imagen)
                     </label>
                 </div>
-                <textarea id="input-prompt-designer" class="design-textarea mono" rows="5" placeholder="Instrucciones para el Diseñador Experto para IA..."></textarea>
+                <textarea id="input-prompt-designer" class="design-textarea mono" rows="5" autocomplete="off" placeholder="Instrucciones para el Diseñador Experto para IA..."></textarea>
             </div>
 
             <div class="form-group">
@@ -264,6 +264,6 @@
         </div>
     </div>
 
-    <script src="assets/js/app.js?v=3.5.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
+    <script src="assets/js/app.js?v=3.6.<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
 </body>
 </html>
