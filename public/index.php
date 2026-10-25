@@ -102,18 +102,15 @@
         <section class="composer-wrapper">
             <div class="composer-box">
 
-                <!-- FILA 1 (UNA SOLA LÍNEA): Selección de Redes + Post/Historia + Auto-imagen -->
+                <!-- FILA 1: Selección múltiple de Redes (IG, FB, TT, IN) + Formato + CTA + 2 Pasos juntos -->
                 <div class="composer-controls-row">
-                    <!-- Redes Sociales -->
+                    <!-- Redes Sociales (Selección múltiple libre) -->
                     <div class="control-group">
                         <span class="control-label">Redes:</span>
-                        <button type="button" id="btn-net-all" class="chip-select active" title="Seleccionar todas las redes">
-                            🌐 Todas
-                        </button>
-                        <button type="button" class="chip-select net-btn active" data-net="ig">📸 IG</button>
-                        <button type="button" class="chip-select net-btn active" data-net="fb">📘 FB</button>
-                        <button type="button" class="chip-select net-btn active" data-net="tiktok">🎵 TikTok</button>
-                        <button type="button" class="chip-select net-btn active" data-net="linkedin">💼 LinkedIn</button>
+                        <button type="button" class="chip-select net-btn net-ig active" data-net="ig" title="Instagram (clic para activar o quitar)">IG</button>
+                        <button type="button" class="chip-select net-btn net-fb active" data-net="fb" title="Facebook (clic para activar o quitar)">FB</button>
+                        <button type="button" class="chip-select net-btn net-tiktok active" data-net="tiktok" title="TikTok (clic para activar o quitar)">TT</button>
+                        <button type="button" class="chip-select net-btn net-linkedin active" data-net="linkedin" title="LinkedIn (clic para activar o quitar)">IN</button>
                     </div>
 
                     <div class="controls-right-group">
@@ -136,10 +133,10 @@
                             <span>🎯 Agregar CTA</span>
                         </label>
 
-                        <!-- Modo Automático -->
-                        <label class="auto-step-toggle" title="Si está activado, genera los textos y la imagen de forma continua">
+                        <!-- Modo Automático: Hacer Paso 1 y Paso 2 juntos -->
+                        <label class="auto-step-toggle cta-step-toggle active" title="Ejecuta el Paso 1 (Textos + Narrativa) y el Paso 2 (Crear Imagen) juntos en un solo clic">
                             <input type="checkbox" id="chk-auto-step2" checked>
-                            <span>⚡ Auto-crear imagen</span>
+                            <span>⚡ Hacer los 2 pasos juntos</span>
                         </label>
                     </div>
                 </div>

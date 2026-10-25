@@ -19,10 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const NETWORK_META = {
-        ig: { label: '📸 Instagram', short: 'IG' },
-        fb: { label: '📘 Facebook', short: 'FB' },
-        tiktok: { label: '🎵 TikTok', short: 'TikTok' },
-        linkedin: { label: '💼 LinkedIn', short: 'LinkedIn' }
+        ig: { label: '📸 Instagram (IG)', short: 'IG' },
+        fb: { label: '📘 Facebook (FB)', short: 'FB' },
+        tiktok: { label: '🎵 TikTok (TT)', short: 'TT' },
+        linkedin: { label: '💼 LinkedIn (IN)', short: 'IN' }
     };
 
     // =========================================================================
@@ -262,22 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. SELECCIÓN DE REDES SOCIALES Y UBICACIÓN (POST vs HISTORIA)
     // =========================================================================
     function syncNetworkButtonsUI() {
-        const allNets = ['ig', 'fb', 'tiktok', 'linkedin'];
-        const isAllSelected = allNets.every(n => state.networks.includes(n));
-
-        if (btnNetAll) {
-            btnNetAll.classList.toggle('active', isAllSelected);
-        }
         netButtons.forEach(btn => {
             const net = btn.getAttribute('data-net');
             btn.classList.toggle('active', state.networks.includes(net));
-        });
-    }
-
-    if (btnNetAll) {
-        btnNetAll.addEventListener('click', () => {
-            state.networks = ['ig', 'fb', 'tiktok', 'linkedin'];
-            syncNetworkButtonsUI();
         });
     }
 
@@ -286,10 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const net = btn.getAttribute('data-net');
             if (!net) return;
 
-            const allSelected = state.networks.length === 4;
-            if (allSelected) {
-                state.networks = [net];
-            } else if (state.networks.includes(net)) {
+            if (state.networks.includes(net)) {
                 if (state.networks.length > 1) {
                     state.networks = state.networks.filter(n => n !== net);
                 }
@@ -323,6 +307,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (chkIncludeCta) {
         chkIncludeCta.addEventListener('change', () => setIncludeCta(chkIncludeCta.checked));
+    }
+    if (chkAutoStep2) {
+        chkAutoStep2.addEventListener('change', () => {
+            const label = chkAutoStep2.closest('.cta-step-toggle');
+            if (label) label.classList.toggle('active', chkAutoStep2.checked);
+        });
     }
 
     // =========================================================================
