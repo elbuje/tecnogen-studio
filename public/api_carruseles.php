@@ -2,6 +2,8 @@
 @ini_set('memory_limit', '512M');
 @ini_set('max_execution_time', '180');
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -38,28 +40,38 @@ function getDefaultCarouselPrompts() {
             . "Tu objetivo es analizar la base del guion o idea del usuario junto con los 3 apartados de recursos si están presentes:\n"
             . "1) Definición de Marca / Paleta de Colores,\n"
             . "2) Logo de la marca,\n"
-            . "3) Fotos de Personajes, Productos y/o Fondos (escenarios fotográficos).\n\n"
+            . "3) Fotos de Personajes, Productos y/o Fondos (escenarios fotográficos),\n"
+            . "y respetar las preferencias de Estilo y Ubicación de los Deslizadores seleccionadas por el usuario.\n\n"
             . "REGLAS CREATIVAS Y DE ESTRUCTURA DEL CARRUSEL:\n"
             . "1. FORMATO DINÁMICO ATRACTIVO (LIBERTAD CREATIVA): Según lo que plantee el guion del usuario, elegí libremente la dinámica de carrusel que mejor cuente la historia y más retenga la atención de principio a fin (por ejemplo: Mito vs. Realidad, Verdadero o Falso, Pregunta y Respuesta, Paso a Paso, Errores Comunes vs. Solución, Storytelling secuencial, Checklist, etc.), sin atarte a moldes fijos.\n"
-            . "2. DESLIZADORES / CONECTORES DINÁMICOS: Elegí vos mismo el texto del deslizador ('swipe_indicator') ideal para cada lámina según el contexto de esa slide (ej.: 'Deslizá →', '¿Mito o Verdad? Deslizá →', '¿Verdadero o Falso? →', 'Mirá qué pasa después →', 'Paso 2 →', etc.). En la última lámina colocá un llamado a la acción o cierre claro.\n"
-            . "3. ADN VISUAL Y CONTINUIDAD DE LA HISTORIA: Todas las láminas del carrusel deben pertenecer a una misma serie visual coherente y narrar la historia planteada en el guion:\n"
-            . "   - Definí una línea editorial unificada (paleta cromática de marca, estilo tipográfico, diseño de tarjetas/pastillas de texto, ambiente e iluminación).\n"
-            . "   - Si hay fotos de personas/protagonistas adjuntas (ej. xxxx.jpg), definí un vestuario y aspecto constante para todo el carrusel, pero variando la postura, gesto, acción o plano fotográfico en cada lámina para que la secuencia sea dinámica y acompañe lo que dice cada slide.\n"
+            . "2. VARIANTES DE DESLIZADORES / CONECTORES ('swipe_indicator') Y UBICACIÓN ('swipe_position'):\n"
+            . "   - Respetá el estilo de deslizador elegido por el usuario en la barra inicial:\n"
+            . "     a) Gancho / Intriga (Texto corto + →): 'Mirá por qué →', 'Descubrí la causa →', 'Pero eso no es todo →', 'Acá está el secreto →', '¿Qué pasó después? →', 'La solución real →'.\n"
+            . "     b) Interactivo / Gamificado: '¿Mito o Realidad? Deslizá →', '¿Verdadero o Falso? →', '¿Qué harías vos? →', 'Adiviná la respuesta →'.\n"
+            . "     c) Secuencial / Progreso: 'Paso 1 →', 'Siguiente tip →', '01 / 05 →', '[ ● ● ○ ○ ] →'.\n"
+            . "     d) Solo Flecha / Ícono minimalista (sin texto): Indicá un botón circular o pastilla con flecha '→' o doble chevron '»' en los colores de marca.\n"
+            . "     e) Puente Visual al borde derecho: Indicá un elemento gráfico o flecha que nace en la lámina y toca el borde derecho invitando a arrastrar.\n"
+            . "     f) En la ÚLTIMA lámina: colocá siempre un cierre o llamado a la acción claro ('🔖 Guardá este post', '📲 Compartilo', '💬 Contanos en comentarios', '📅 Reservá tu turno por link en bio', etc.).\n"
+            . "   - Definí también para cada lámina su ubicación ('swipe_position'): 'bottom_right' (abajo a la derecha), 'middle_right' (centro-derecha al borde), 'bottom_center' (abajo centrado), 'top_right' (arriba a la derecha), 'below_text' (integrado debajo del texto) o 'none'.\n"
+            . "3. ADN VISUAL, PALETA DE MARCA Y CONTINUIDAD DE LA HISTORIA:\n"
+            . "   - Todas las láminas del carrusel deben pertenecer a una misma serie visual coherente y aplicar estrictamente la Marca / Paleta de Colores subida por el usuario en fondos, acentos, pastillas, titulares y deslizadores.\n"
+            . "   - Si hay fotos de personas/protagonistas adjuntas (ej. xxxx.jpg), definí un vestuario y aspecto constante para todo el carrusel, pero variando la postura, gesto, acción o plano fotográfico en cada lámina para que la secuencia sea dinámica.\n"
             . "4. IDENTIFICACIÓN POR NOMBRE DE ARCHIVO: Siempre que haya fotos adjuntas de personajes, productos o fondos (ej.: xxxx.jpg, yyyy.jpg, zzzz.jpg), mencioná explícitamente el nombre exacto de cada archivo dentro del 'scene_prompt' de cada lámina donde participe.",
 
         'prompt_disenador_carrusel' =>
             "Actuás como un Diseñador Gráfico Editorial Senior y Director de Arte Fotográfico especializado en Carruseles Secuenciales para redes sociales (Formato Vertical 4:5 - 1080x1350 px).\n"
             . "DIRECTRICES DE DISEÑO SECUENCIAL:\n"
             . "1. LÁMINA INDIVIDUAL UNIFICADA: Creá únicamente la lámina actual solicitada como una sola pieza gráfica vertical 4:5 a pantalla completa. Prohibido dividir la imagen en múltiples cuadros, grillas, tiras o collages.\n"
-            . "2. COHERENCIA GRÁFICA ENTRE SLIDES DEL CARRUSEL:\n"
-            . "   - Cuando se adjunte una imagen de referencia de continuidad del carrusel (como la Portada / Slide 1 ya generada o la lámina anterior), mantené estrictamente el mismo sistema gráfico editorial: misma familia y jerarquía tipográfica, mismo estilo de cajas/pastillas/contenedores, misma paleta de colores de marca, misma ambientación lumínica y mismo vestuario del personaje protagonista.\n"
+            . "2. COHERENCIA GRÁFICA Y PALETA DE MARCA ENTRE SLIDES DEL CARRUSEL:\n"
+            . "   - Cuando se adjunte una imagen de referencia de continuidad del carrusel (como la Portada / Slide 1 ya generada o la lámina anterior), mantené estrictamente el mismo sistema gráfico editorial: misma familia y jerarquía tipográfica, mismo estilo de cajas/pastillas/contenedores, misma paleta de colores de marca subida por el usuario, misma ambientación lumínica y mismo vestuario del personaje protagonista.\n"
             . "3. FIDELIDAD DE IDENTIDAD Y USO DE ARCHIVOS ADJUNTOS:\n"
             . "   - Respetá la correspondencia exacta de cada archivo original adjunto según su nombre real (ej. xxxx.jpg, yyyy.jpg, zzzz.jpg).\n"
             . "   - Mantené estrictamente los rasgos faciales reales, fisonomía, expresión e identidad de cada persona o producto de su foto original respectiva.\n"
             . "   - Si se adjunta logotipo, integralo de forma limpia, nítida y coherente con el resto del carrusel.\n"
-            . "4. PROGRESIÓN NARRATIVA (QUÉ CAMBIA EN CADA SLIDE):\n"
-            . "   - Aunque el estilo editorial, el ambiente y el vestuario se mantienen coherentes con el carrusel, en esta lámina debés representar la nueva postura, gesto, plano o acción descrita para esta escena del guion.\n"
+            . "4. PROGRESIÓN NARRATIVA Y DESLIZADOR / CONECTOR UBICADO CON PRECISIÓN:\n"
+            . "   - Representá la nueva postura, gesto, plano o acción descrita para esta escena del guion.\n"
             . "   - Renderizá ÚNICAMENTE los textos exactos en español indicados para ESTA lámina actual (Titular principal, Texto secundario/bajada si lo tiene, y el Deslizador/Conector de esta lámina). Prohibido repetir textos de láminas anteriores.\n"
+            . "   - Colocá el Deslizador / Conector exactamente en la UBICACIÓN indicada para esta lámina (abajo a la derecha, centro-derecha al borde, abajo centrado, arriba a la derecha o debajo del bloque de texto) con diseño atractivo, limpio y coherente con la paleta de marca.\n"
             . "5. DISEÑO EDITORIAL LIMPIO Y CERO CORTES:\n"
             . "   - Asegurate de que absolutamente todos los textos, titulares, subtítulos, deslizadores, íconos y logotipos tengan alto contraste, perfecta legibilidad y queden 100% contenidos dentro del encuadre con buen margen de aire respecto a los bordes del lienzo."
     ];
@@ -70,6 +82,7 @@ function getDefaultCarouselPrompts() {
 // --------------------------------------------------------------------------
 function getCarouselConfig($carouselConfigFile, $mainConfigFile) {
     $defaultPrompts = getDefaultCarouselPrompts();
+    $currentPromptsVersion = 2;
 
     // Si existe config.json del estudio principal, tomamos su API key como valor inicial por comodidad
     $sharedApiKey = '';
@@ -94,6 +107,7 @@ function getCarouselConfig($carouselConfigFile, $mainConfigFile) {
         'default_logo' => $sharedLogo,
         'default_brand_asset' => $sharedBrandAsset,
         'default_brand_text' => $sharedBrandText,
+        'prompts_schema_version' => $currentPromptsVersion,
         'prompt_director_carrusel' => $defaultPrompts['prompt_director_carrusel'],
         'prompt_disenador_carrusel' => $defaultPrompts['prompt_disenador_carrusel']
     ];
@@ -103,17 +117,29 @@ function getCarouselConfig($carouselConfigFile, $mainConfigFile) {
         $json = json_decode($content, true);
         if (is_array($json)) {
             $merged = array_merge($defaults, $json);
+            $needsSave = false;
+
             if (empty($merged['openai_api_key']) && !empty($sharedApiKey)) {
                 $merged['openai_api_key'] = $sharedApiKey;
             }
             if ($merged['selected_model'] === 'gpt-image-2.5-sunburst') {
                 $merged['selected_model'] = 'gpt-image-2.5-sunburst-2026-09-08';
             }
+            $savedVersion = (int)($json['prompts_schema_version'] ?? 1);
+            if ($savedVersion < $currentPromptsVersion) {
+                $merged['prompt_director_carrusel'] = $defaultPrompts['prompt_director_carrusel'];
+                $merged['prompt_disenador_carrusel'] = $defaultPrompts['prompt_disenador_carrusel'];
+                $merged['prompts_schema_version'] = $currentPromptsVersion;
+                $needsSave = true;
+            }
             if (empty(trim((string)($merged['prompt_director_carrusel'] ?? '')))) {
                 $merged['prompt_director_carrusel'] = $defaultPrompts['prompt_director_carrusel'];
             }
             if (empty(trim((string)($merged['prompt_disenador_carrusel'] ?? '')))) {
                 $merged['prompt_disenador_carrusel'] = $defaultPrompts['prompt_disenador_carrusel'];
+            }
+            if ($needsSave) {
+                saveCarouselConfig($carouselConfigFile, $merged);
             }
             return $merged;
         }
@@ -535,6 +561,8 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
         $networks = ['ig', 'fb', 'tiktok', 'linkedin'];
     }
     $slideCountPref = trim((string)($input['slide_count'] ?? 'auto')); // 'auto' o número '3'..'10'
+    $swipeStylePref = trim((string)($input['swipe_style_pref'] ?? 'auto'));
+    $swipePositionPref = trim((string)($input['swipe_position_pref'] ?? 'auto'));
     $brandAsset = array_key_exists('brand_asset', $input) ? $input['brand_asset'] : ($cfg['default_brand_asset'] ?? null);
     $brandText = array_key_exists('brand_text', $input) ? trim((string)$input['brand_text']) : trim((string)($cfg['default_brand_text'] ?? ''));
     $logoAsset = array_key_exists('logo_asset', $input) ? $input['logo_asset'] : ($cfg['default_logo'] ?? null);
@@ -589,11 +617,36 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
         ? "CANTIDAD EXACTA DE LÁMINAS SOLICITADA: " . (int)$slideCountPref . " láminas (slides). Desarrollá exactamente " . (int)$slideCountPref . " objetos dentro del array 'slides'."
         : "CANTIDAD DE LÁMINAS (AUTOMÁTICA SEGÚN GUION): Si el guion del usuario ya especifica cuántas láminas/slides tiene, respetá exactamente esa cantidad. Si no lo especifica, definí vos la cantidad ideal de láminas (entre 4 y 7 slides) para narrar toda la secuencia con ritmo ágil y alto impacto.";
 
+    $swipeStyleMap = [
+        'auto' => "ESTILO DE DESLIZADOR SELECCIONADO: AUTOMÁTICO SEGÚN GUION — Variá creativamente el conector ('swipe_indicator') de cada lámina según lo que se cuenta en esa slide (ganchos de intriga, preguntas interactivas, pasos o flechas) y poné un CTA de cierre en la última lámina.",
+        'intriga' => "ESTILO DE DESLIZADOR SELECCIONADO: GANCHO / INTRIGA (Texto corto + →) — En cada lámina (salvo la última que lleva CTA de cierre) usá conectores narrativos intrigantes que despierten curiosidad por deslizar (ej. 'Mirá por qué →', 'Descubrí la causa →', 'Pero eso no es todo →', 'Acá está el secreto →', '¿Qué pasó después? →', 'La solución real →').",
+        'interactivo' => "ESTILO DE DESLIZADOR SELECCIONADO: INTERACTIVO / GAMIFICADO — En las láminas que plantean una incógnita, mito o reto usá conectores participativos (ej. '¿Mito o Realidad? Deslizá →', '¿Verdadero o Falso? →', '¿Qué harías vos? →', 'Comprobá tu respuesta →'), y un CTA en la última.",
+        'numerado' => "ESTILO DE DESLIZADOR SELECCIONADO: NUMERADO / PROGRESO EDITORIAL — Usá indicadores secuenciales o de paginación con flecha (ej. '01 / N →', '02 / N →', 'Paso 1 →', 'Siguiente paso →' o '[ ● ● ○ ○ ] →'), y cierre/CTA en la última lámina.",
+        'icono_minimal' => "ESTILO DE DESLIZADOR SELECCIONADO: SOLO FLECHA / ÍCONO MINIMALISTA (SIN TEXTO) — En 'swipe_indicator' colocá '[SOLO ÍCONO: Botón circular con flecha →]' para que el diseñador dibuje únicamente un botón/ícono gráfico limpio con flecha sin palabras adicionales (salvo en la última lámina si requiere cierre).",
+        'puente_visual' => "ESTILO DE DESLIZADOR SELECCIONADO: PUENTE VISUAL AL BORDE DERECHO — En 'swipe_indicator' colocá '[PUENTE VISUAL: Flecha continua hacia el borde derecho]' (o combinalo con 2 palabras cortas) e indicá en 'scene_prompt' un elemento gráfico o flecha que asoma y continúa hacia el margen derecho conectando visualmente con la siguiente lámina.",
+        'none' => "ESTILO DE DESLIZADOR SELECCIONADO: SIN DESLIZADOR — El usuario eligió NO incluir deslizadores. Dejá 'swipe_indicator' vacío ('') y 'swipe_position' en 'none'."
+    ];
+    $swipeStyleRule = $swipeStyleMap[$swipeStylePref] ?? $swipeStyleMap['auto'];
+
+    $swipePosMap = [
+        'auto' => "UBICACIÓN DEL DESLIZADOR: AUTOMÁTICA SEGÚN ESCENA — Elegí en cada lámina la mejor ubicación ('bottom_right', 'middle_right', 'bottom_center', 'top_right' o 'below_text') según dónde quede mejor equilibrio visual sin tapar al protagonista.",
+        'bottom_right' => "UBICACIÓN DEL DESLIZADOR: ABAJO A LA DERECHA ('bottom_right') — Asigná 'swipe_position': 'bottom_right' en las láminas e integrá el deslizador en el rincón inferior derecho con margen seguro.",
+        'middle_right' => "UBICACIÓN DEL DESLIZADOR: CENTRO-DERECHA AL BORDE ('middle_right') — Asigná 'swipe_position': 'middle_right' en las láminas para ubicar el deslizador a mitad de altura sobre el margen derecho (estilo pestaña/flecha lateral).",
+        'bottom_center' => "UBICACIÓN DEL DESLIZADOR: ABAJO CENTRADO ('bottom_center') — Asigná 'swipe_position': 'bottom_center' en las láminas para ubicar el deslizador centrado en el pie editorial inferior.",
+        'top_right' => "UBICACIÓN DEL DESLIZADOR: ARRIBA A LA DERECHA ('top_right') — Asigná 'swipe_position': 'top_right' en las láminas para ubicar el deslizador en la esquina superior derecha.",
+        'below_text' => "UBICACIÓN DEL DESLIZADOR: DEBAJO DEL TEXTO ('below_text') — Asigná 'swipe_position': 'below_text' en las láminas para ubicar el deslizador inmediatamente debajo del bloque de titular/bajada como remate de lectura."
+    ];
+    $swipePositionRule = ($swipeStylePref === 'none')
+        ? "UBICACIÓN DEL DESLIZADOR: 'none' (Sin deslizador)."
+        : ($swipePosMap[$swipePositionPref] ?? $swipePosMap['auto']);
+
     $systemInstructions = $directorPrompt . "\n\n"
-        . "CONTEXTO DE ESTE CARRUSEL:\n"
+        . "CONTEXTO Y SELECCIONES DEL USUARIO PARA ESTE CARRUSEL:\n"
         . "- Redes destino para los copies: " . implode(', ', $selectedNetworkNames) . "\n"
         . "- Formato de cada lámina: Carrusel Editorial Vertical 4:5 (1080x1350 px)\n"
         . "- {$slideCountRule}\n"
+        . "- {$swipeStyleRule}\n"
+        . "- {$swipePositionRule}\n"
         . "- 1) Marca / Paleta de Colores: {$brandSummaryLine}\n"
         . "- 2) ¿Subió Logo?: " . ($hasLogo ? "SÍ (Archivo: " . ($logoAsset['name'] ?? 'Logo') . ")" : "NO") . "\n"
         . "- 3) ¿Subió Fotos de Personajes / Productos / Fondos?: " . ($hasSubject ? "SÍ (" . count($subjectAssets) . " archivo/s: " . implode(', ', $subjectFileNames) . ")" : "NO") . "\n"
@@ -603,7 +656,7 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
         . "\nFORMATO DE RESPUESTA OBLIGATORIO (JSON válido):\n"
         . "Devolvé ÚNICAMENTE un objeto JSON con esta estructura exacta:\n"
         . "{\n"
-        . "  \"assistant_comment\": \"Breve explicación de la dinámica elegida para este carrusel, cantidad de láminas y enfoque narrativo (2-3 oraciones).\",\n"
+        . "  \"assistant_comment\": \"Breve explicación de la dinámica elegida para este carrusel, estilo/ubicación de deslizadores, cantidad de láminas y enfoque narrativo (2-3 oraciones).\",\n"
         . "  \"title_summary\": \"Título corto de 3 a 5 palabras para identificar este carrusel en el historial\",\n"
         . "  \"copies\": {\n"
         . "    \"ig\": \"Copy completo para acompañar el carrusel en Instagram (si fue seleccionada, sino cadena vacía)\",\n"
@@ -613,8 +666,8 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
         . "  },\n"
         . "  \"visual_dna\": {\n"
         . "    \"carousel_format\": \"Nombre del formato dinámico elegido según el guion (ej. Mito vs. Realidad, Verdadero o Falso, Paso a Paso, Storytelling Clínico, etc.)\",\n"
-        . "    \"style_and_typography\": \"Regla unificada de diseño editorial, estilo de cajas/contenedores, tipografías y aplicación de la paleta cromática que se mantendrá constante en todas las láminas\",\n"
-        . "    \"character_and_setting_continuity\": \"Descripción del vestuario exacto del personaje (si hay foto como " . ($hasSubject ? implode(', ', $subjectFileNames) : 'protagonista.jpg') . ") y del ambiente/escenario e iluminación común para que todas las láminas tengan continuidad perfecta\"\n"
+        . "    \"style_and_typography\": \"Regla unificada de diseño editorial, estilo de cajas/contenedores, diseño de los deslizadores, tipografías y aplicación de la paleta cromática de la marca que se mantendrá constante en todas las láminas\",\n"
+        . "    \"character_and_setting_continuity\": \"Descripción del vestuario exacto del personaje (si hay foto como " . ($hasSubject ? implode(', ', $subjectFileNames) : 'xxxx.jpg') . ") y del ambiente/escenario e iluminación común para que todas las láminas tengan continuidad perfecta\"\n"
         . "  },\n"
         . "  \"slides\": [\n"
         . "    {\n"
@@ -622,9 +675,10 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
         . "      \"slide_role\": \"Rol narrativo de la lámina (ej. Portada / Gancho, Mito #1, La Verdad, Explicación, Cierre / CTA)\",\n"
         . "      \"headline\": \"Texto titular principal en español que irá escrito dentro de esta lámina\",\n"
         . "      \"body_text\": \"Texto secundario breve o bajada que irá escrito dentro de esta lámina (puede ser vacío en la portada si no hace falta)\",\n"
-        . "      \"swipe_indicator\": \"Texto del deslizador o conector elegido para esta lámina (ej. 'Deslizá →', '¿Verdadero o Falso? →', o CTA final en la última slide)\",\n"
+        . "      \"swipe_indicator\": \"Texto o indicación visual del deslizador/conector para esta lámina respetando el Estilo elegido por el usuario\",\n"
+        . "      \"swipe_position\": \"Ubicación del deslizador en esta lámina: 'bottom_right' | 'middle_right' | 'bottom_center' | 'top_right' | 'below_text' | 'none'\",\n"
         . "      \"camera_and_action\": \"Plano fotográfico y postura/acción/gesto específico en esta lámina para darle dinamismo a la secuencia\",\n"
-        . "      \"scene_prompt\": \"Descripción narrativa y visual completa de esta lámina puntual (mencionando los nombres exactos de archivo como " . ($hasSubject ? implode(', ', $subjectFileNames) : 'foto.jpg') . "), indicando la escena, la expresión/pose del personaje y cómo se integran su titular, su bajada y su deslizador manteniendo el ADN visual del carrusel\"\n"
+        . "      \"scene_prompt\": \"Descripción narrativa y visual completa de esta lámina puntual (mencionando los nombres exactos de archivo como " . ($hasSubject ? implode(', ', $subjectFileNames) : 'xxxx.jpg') . "), indicando la escena, la expresión/pose del personaje y cómo se integran su titular, su bajada y su deslizador en la ubicación indicada manteniendo el ADN visual y paleta del carrusel\"\n"
         . "    }\n"
         . "  ]\n"
         . "}";
@@ -633,7 +687,9 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
 
     $textBlock = "GUION / IDEA BASE DEL USUARIO PARA EL CARRUSEL:\n" . $userPrompt . "\n\n"
         . "REDES SOLICITADAS: " . implode(', ', $selectedNetworkNames) . "\n"
-        . "PREFERENCIA DE CANTIDAD DE SLIDES: " . ($slideCountPref === 'auto' ? 'Automático según el guion' : $slideCountPref . ' láminas');
+        . "PREFERENCIA DE CANTIDAD DE SLIDES: " . ($slideCountPref === 'auto' ? 'Automático según el guion' : $slideCountPref . ' láminas') . "\n"
+        . "ESTILO DE DESLIZADOR ELEGIDO POR EL USUARIO: " . $swipeStylePref . "\n"
+        . "UBICACIÓN DE DESLIZADOR ELEGIDA POR EL USUARIO: " . $swipePositionPref;
 
     if ($brandText !== '') {
         $textBlock .= "\nDEFINICIÓN DE MARCA / PALETA DE COLORES: " . $brandText;
@@ -754,15 +810,27 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
 
     // Normalizar numeración de slides y preservar imágenes previas si ya existían para ese índice
     $existingSlideImages = $existingState['slide_images'] ?? [];
+    $validSwipePositions = ['bottom_right', 'middle_right', 'bottom_center', 'top_right', 'below_text', 'auto', 'none'];
     $normalizedSlides = [];
     foreach (array_values($plan['slides']) as $idx => $sl) {
         $sNum = $idx + 1;
+        $rawSwipeInd = ($swipeStylePref === 'none') ? '' : trim((string)($sl['swipe_indicator'] ?? ''));
+        $rawSwipePos = trim((string)($sl['swipe_position'] ?? ''));
+        if ($swipeStylePref === 'none' || $rawSwipeInd === '') {
+            $rawSwipePos = 'none';
+        } elseif ($swipePositionPref !== 'auto' && in_array($swipePositionPref, $validSwipePositions, true)) {
+            $rawSwipePos = $swipePositionPref;
+        } elseif (!in_array($rawSwipePos, $validSwipePositions, true)) {
+            $rawSwipePos = 'bottom_right';
+        }
+
         $normalizedSlides[] = [
             'slide_number' => $sNum,
             'slide_role' => trim((string)($sl['slide_role'] ?? ("Lámina {$sNum}"))),
             'headline' => trim((string)($sl['headline'] ?? '')),
             'body_text' => trim((string)($sl['body_text'] ?? '')),
-            'swipe_indicator' => trim((string)($sl['swipe_indicator'] ?? '')),
+            'swipe_indicator' => $rawSwipeInd,
+            'swipe_position' => $rawSwipePos,
             'camera_and_action' => trim((string)($sl['camera_and_action'] ?? '')),
             'scene_prompt' => trim((string)($sl['scene_prompt'] ?? ''))
         ];
@@ -773,6 +841,8 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
         'user_prompt' => $userPrompt,
         'networks' => $networks,
         'slide_count_pref' => $slideCountPref,
+        'swipe_style_pref' => $swipeStylePref,
+        'swipe_position_pref' => $swipePositionPref,
         'brand_asset' => $brandAsset,
         'brand_text' => $brandText,
         'logo_asset' => $logoAsset,
@@ -791,6 +861,8 @@ if ($action === 'step1_plan_carousel' && $reqMethod === 'POST') {
         'last_idea' => $userPrompt,
         'networks' => $networks,
         'slide_count_pref' => $slideCountPref,
+        'swipe_style_pref' => $swipeStylePref,
+        'swipe_position_pref' => $swipePositionPref,
         'brand_asset' => $brandAsset,
         'brand_text' => $brandText,
         'logo_asset' => $logoAsset,
@@ -849,6 +921,8 @@ if ($action === 'step2_generate_slide' && $reqMethod === 'POST') {
     $headline = trim((string)($input['headline'] ?? ''));
     $bodyText = trim((string)($input['body_text'] ?? ''));
     $swipeIndicator = trim((string)($input['swipe_indicator'] ?? ''));
+    $swipePosition = trim((string)($input['swipe_position'] ?? ($existingState['swipe_position_pref'] ?? 'bottom_right')));
+    $swipeStylePref = trim((string)($input['swipe_style_pref'] ?? ($existingState['swipe_style_pref'] ?? 'auto')));
     $cameraAndAction = trim((string)($input['camera_and_action'] ?? ''));
     $scenePrompt = trim((string)($input['scene_prompt'] ?? ''));
 
@@ -1037,6 +1111,17 @@ if ($action === 'step2_generate_slide' && $reqMethod === 'POST') {
         ? "\n\nHILO NARRATIVO DE LA SECUENCIA:\n" . implode("\n", $narrativeContextLines)
         : '';
 
+    // Directriz exacta de ubicación y diseño del Deslizador / Conector en esta lámina
+    $positionDescriptions = [
+        'bottom_right' => 'en la ESQUINA INFERIOR DERECHA de la lámina (con margen de seguridad respecto a los bordes para que no se corte)',
+        'middle_right' => 'en el CENTRO-DERECHA sobre el margen derecho a mitad de altura de la lámina (como pestaña, botón lateral o flecha hacia la derecha)',
+        'bottom_center' => 'CENTRADO EN LA PARTE INFERIOR (pie editorial centrado al fondo de la lámina con buen margen inferior)',
+        'top_right' => 'en la ESQUINA SUPERIOR DERECHA de la lámina (como etiqueta o paginador editorial limpio)',
+        'below_text' => 'INTEGRADO JUSTO DEBAJO DEL BLOQUE DE TEXTO PRINCIPAL como remate visual de lectura',
+        'auto' => 'en una zona limpia y equilibrada de la composición (preferentemente hacia el sector derecho o inferior) sin tapar el rostro ni elementos clave'
+    ];
+    $posDesc = $positionDescriptions[$swipePosition] ?? $positionDescriptions['bottom_right'];
+
     // Textos exactos que deben renderizarse en ESTA lámina
     $slideTextsLines = [];
     if ($headline !== '') {
@@ -1045,11 +1130,19 @@ if ($action === 'step2_generate_slide' && $reqMethod === 'POST') {
     if ($bodyText !== '') {
         $slideTextsLines[] = "- TEXTO SECUNDARIO / BAJADA EN LA IMAGEN: \"{$bodyText}\"";
     }
-    if ($swipeIndicator !== '') {
-        $slideTextsLines[] = "- DESLIZADOR / CONECTOR EN LA IMAGEN: \"{$swipeIndicator}\"";
+    if ($swipePosition === 'none' || $swipeIndicator === '') {
+        $slideTextsLines[] = "- DESLIZADOR / CONECTOR: NO incluir ningún deslizador ni flecha de avance en esta lámina.";
+    } elseif (stripos($swipeIndicator, '[SOLO ÍCONO') !== false || $swipeStylePref === 'icono_minimal') {
+        $slideTextsLines[] = "- DESLIZADOR VISUAL MINIMALISTA (SIN TEXTO): Dibujá únicamente un botón circular o pastilla moderna con los colores de la marca y un ícono de flecha '→' (sin escribir palabras dentro del deslizador), ubicado {$posDesc}.";
+    } elseif (stripos($swipeIndicator, '[PUENTE VISUAL') !== false || $swipeStylePref === 'puente_visual') {
+        $cleanSwipeText = trim(preg_replace('/\[PUENTE VISUAL[^\]]*\]/i', '', $swipeIndicator));
+        $slideTextsLines[] = "- DESLIZADOR TIPO PUENTE VISUAL CONTINUO: Diseñá una flecha, pastilla o acento gráfico con la paleta de la marca ubicado {$posDesc} que se extienda hacia el borde derecho de la lámina invitando a deslizar"
+            . ($cleanSwipeText !== '' ? ", con el texto \"{$cleanSwipeText}\"" : "") . ".";
+    } else {
+        $slideTextsLines[] = "- DESLIZADOR / CONECTOR EN LA IMAGEN: \"{$swipeIndicator}\" — UBICACIÓN OBLIGATORIA: Colocalo {$posDesc}, diseñado como una pastilla, botón o etiqueta editorial atractiva con la paleta de la marca y una flecha nítida.";
     }
     $slideTextsBlock = !empty($slideTextsLines)
-        ? "\n\nTEXTOS EXACTOS EN ESPAÑOL A INCLUIR EN ESTA LÁMINA {$slideNumber} DE {$totalSlides} (No incluir textos de otras láminas):\n" . implode("\n", $slideTextsLines)
+        ? "\n\nTEXTOS Y DESLIZADOR A INCLUIR EN ESTA LÁMINA {$slideNumber} DE {$totalSlides} (No incluir textos de otras láminas):\n" . implode("\n", $slideTextsLines)
         : '';
 
     if ($useSelfAsCorrectionBase) {
@@ -1066,7 +1159,7 @@ if ($action === 'step2_generate_slide' && $reqMethod === 'POST') {
             ? "\n\nREGLA DE CONTINUIDAD DE CARRUSEL PARA ESTA LÁMINA {$slideNumber} DE {$totalSlides}:\n"
               . "- Mantené EXACTAMENTE el mismo estilo de diseño editorial, familia tipográfica, estilo de cajas/contenedores, paleta de colores, iluminación y vestimenta del personaje que ves en 'slide_1_estilo_carrusel.png'.\n"
               . "- Tomá el rostro y fisonomía real directamente de la foto original del personaje adjunta.\n"
-              . "- CAMBIÁ la postura/gesto/acción o ángulo de la escena según se describe abajo para esta Lámina {$slideNumber}, y colocá ÚNICAMENTE los textos correspondientes a esta Lámina {$slideNumber}."
+              . "- CAMBIÁ la postura/gesto/acción o ángulo de la escena según se describe abajo para esta Lámina {$slideNumber}, y colocá ÚNICAMENTE los textos y el deslizador correspondientes a esta Lámina {$slideNumber}."
             : "\n\nESTA ES LA LÁMINA 1 DE {$totalSlides} (PORTADA DEL CARRUSEL):\n"
               . "- Establecé un diseño editorial limpio, impactante y moderno que servirá como sistema visual para todo el carrusel.";
 

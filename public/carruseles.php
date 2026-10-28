@@ -103,7 +103,7 @@
         <section class="composer-wrapper">
             <div class="composer-box">
 
-                <!-- FILA 1: Selección múltiple de Redes (IG, FB, TT, IN) + Cantidad de Láminas + 2 Pasos juntos -->
+                <!-- FILA 1: Selección múltiple de Redes + Láminas + Deslizador y Ubicación + 2 Pasos juntos -->
                 <div class="composer-controls-row">
                     <!-- Redes Sociales (Selección múltiple libre) -->
                     <div class="control-group">
@@ -119,13 +119,40 @@
                         <div class="control-group">
                             <span class="control-label">Láminas:</span>
                             <select id="select-slide-count" class="slide-count-select" title="Cantidad de láminas del carrusel">
-                                <option value="auto" selected>✨ Automático (según guion)</option>
+                                <option value="auto" selected>✨ Auto</option>
                                 <option value="3">3 láminas</option>
                                 <option value="4">4 láminas</option>
                                 <option value="5">5 láminas</option>
                                 <option value="6">6 láminas</option>
                                 <option value="7">7 láminas</option>
                                 <option value="8">8 láminas</option>
+                            </select>
+                        </div>
+
+                        <!-- Selector de Estilo de Deslizador / Conector -->
+                        <div class="control-group">
+                            <span class="control-label">Deslizador:</span>
+                            <select id="select-swipe-style" class="slide-count-select" title="Tipo de deslizador o conector para pasar de una lámina a la siguiente">
+                                <option value="auto" selected>✨ Auto (según guion)</option>
+                                <option value="intriga">🔥 Gancho / Intriga (Texto + →)</option>
+                                <option value="interactivo">❓ Interactivo (Mito/Verdad, V/F)</option>
+                                <option value="numerado">🔢 Numerado / Progreso (01/05 →)</option>
+                                <option value="icono_minimal">➡️ Solo Flecha / Ícono (sin texto)</option>
+                                <option value="puente_visual">🧩 Puente visual al borde derecho</option>
+                                <option value="none">🚫 Sin deslizador</option>
+                            </select>
+                        </div>
+
+                        <!-- Selector de Ubicación del Deslizador en la Lámina -->
+                        <div class="control-group">
+                            <span class="control-label">Ubicación:</span>
+                            <select id="select-swipe-position" class="slide-count-select" title="Dónde ubicar el deslizador/conector dentro de cada lámina">
+                                <option value="auto" selected>✨ Auto (según escena)</option>
+                                <option value="bottom_right">↘️ Abajo a la derecha</option>
+                                <option value="middle_right">➡️ Centro-derecha (al borde)</option>
+                                <option value="bottom_center">⬇️ Abajo centrado</option>
+                                <option value="top_right">↗️ Arriba a la derecha</option>
+                                <option value="below_text">📑 Debajo del texto</option>
                             </select>
                         </div>
 
@@ -242,7 +269,7 @@
                         🧠 Prompt de Sistema — Director Creativo de Carruseles (Paso 1: Guion Slide por Slide y ADN Visual)
                     </label>
                 </div>
-                <textarea id="input-prompt-director" class="design-textarea mono" rows="5" placeholder="Instrucciones para el Director Creativo de Carruseles..."></textarea>
+                <textarea id="input-prompt-director" class="design-textarea mono" rows="5" autocomplete="off" placeholder="Instrucciones para el Director Creativo de Carruseles..."></textarea>
             </div>
 
             <!-- PROMPT PASO 2: DISEÑADOR DE SECUENCIAS IA -->
@@ -252,7 +279,7 @@
                         🎨 Prompt de Sistema — Diseñador Experto de Carruseles (Paso 2: Coherencia Secuencial de Láminas)
                     </label>
                 </div>
-                <textarea id="input-prompt-designer" class="design-textarea mono" rows="5" placeholder="Instrucciones para el Diseñador de Carruseles..."></textarea>
+                <textarea id="input-prompt-designer" class="design-textarea mono" rows="5" autocomplete="off" placeholder="Instrucciones para el Diseñador de Carruseles..."></textarea>
             </div>
 
             <div class="form-group">

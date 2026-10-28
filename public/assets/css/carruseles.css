@@ -776,13 +776,58 @@ body.chatgpt-layout {
 
 .slide-fields-row {
     display: grid;
-    grid-template-columns: 1.3fr 1.3fr 0.9fr;
+    grid-template-columns: 1fr 1fr;
     gap: 0.65rem;
     margin-bottom: 0.65rem;
 }
 
+.slide-swipe-row {
+    display: grid;
+    grid-template-columns: 1.35fr 0.85fr;
+    gap: 0.65rem;
+    margin-bottom: 0.65rem;
+    background: #F0F6FF;
+    border: 1px solid #DBEAFE;
+    border-radius: 10px;
+    padding: 0.55rem 0.7rem;
+}
+
+.swipe-label-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.28rem;
+}
+
+.swipe-label-header label {
+    margin-bottom: 0 !important;
+}
+
+.swipe-preset-select {
+    background: #FFFFFF;
+    border: 1px solid #93C5FD;
+    color: var(--brand-blue);
+    font-size: 0.71rem;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0.14rem 0.45rem;
+    border-radius: 6px;
+    cursor: pointer;
+    max-width: 225px;
+    outline: none;
+}
+
+.swipe-preset-select:hover,
+.swipe-preset-select:focus {
+    border-color: var(--brand-blue);
+    background: #EFF6FF;
+}
+
 @media (max-width: 820px) {
-    .slide-fields-row {
+    .slide-fields-row,
+    .slide-swipe-row {
         grid-template-columns: 1fr;
     }
 }
@@ -1062,13 +1107,14 @@ body.chatgpt-layout {
     background: #F8FAFC;
     border: 1px solid var(--border-strong);
     color: var(--brand-navy);
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 700;
     font-family: inherit;
-    padding: 0.25rem 0.55rem;
-    border-radius: 8px;
+    padding: 0.22rem 0.42rem;
+    border-radius: 7px;
     cursor: pointer;
     outline: none;
+    max-width: 178px;
 }
 
 .slide-count-select:focus {

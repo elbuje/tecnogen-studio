@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentCarouselId: null,
         networks: ['ig', 'fb', 'tiktok', 'linkedin'],
         slideCountPref: 'auto',
+        swipeStylePref: 'auto',
+        swipePositionPref: 'auto',
         brandAsset: null,
         brandText: '',
         logoAsset: null,
@@ -26,6 +28,82 @@ document.addEventListener('DOMContentLoaded', () => {
         linkedin: { label: '💼 LinkedIn (IN)', short: 'IN' }
     };
 
+    const SWIPE_STYLE_META = {
+        auto: '✨ Deslizador: Auto',
+        intriga: '🔥 Gancho / Intriga',
+        interactivo: '❓ Interactivo (Mito/V-F)',
+        numerado: '🔢 Numerado / Progreso',
+        icono_minimal: '➡️ Solo Flecha / Ícono',
+        puente_visual: '🧩 Puente Visual Borde',
+        none: '🚫 Sin Deslizador'
+    };
+
+    const SWIPE_POSITION_META = {
+        auto: '✨ Ubicación: Auto',
+        bottom_right: '↘️ Abajo Derecha',
+        middle_right: '➡️ Centro-Derecha (Borde)',
+        bottom_center: '⬇️ Abajo Centrado',
+        top_right: '↗️ Arriba Derecha',
+        below_text: '📑 Debajo del Texto',
+        none: '🚫 Sin Deslizador'
+    };
+
+    const SWIPE_PRESET_GROUPS = [
+        {
+            label: '🔥 Narrativos / Intriga (Texto + →)',
+            options: [
+                'Deslizá →',
+                'Mirá por qué →',
+                'Descubrí la causa →',
+                'Pero eso no es todo →',
+                'Acá está el secreto →',
+                '¿Qué pasó después? →',
+                'El error más común →',
+                'La solución real →',
+                'Seguí leyendo →'
+            ]
+        },
+        {
+            label: '❓ Interactivos / Juego (Reto)',
+            options: [
+                '¿Mito o Realidad? Deslizá →',
+                '¿Verdadero o Falso? →',
+                '¿Qué harías vos? →',
+                'Adiviná la respuesta →',
+                'Comprobá si acertaste →'
+            ]
+        },
+        {
+            label: '🔢 Secuenciales / Progreso',
+            options: [
+                'Paso 1 →',
+                'Ir al siguiente paso →',
+                'Siguiente tip →',
+                '01 / 05 →',
+                '[ ● ● ○ ○ ] →'
+            ]
+        },
+        {
+            label: '➡️ Visuales Puros (Sin texto)',
+            options: [
+                '[SOLO ÍCONO: Botón circular con flecha →]',
+                '[SOLO ÍCONO: Doble chevron minimalista »]',
+                '[PUENTE VISUAL: Flecha continua hacia el borde derecho]'
+            ]
+        },
+        {
+            label: '🎯 Cierre / CTA (Para última lámina)',
+            options: [
+                '🔖 Guardá este post para después',
+                '📲 Compartilo con alguien que lo necesite',
+                '💬 Contanos tu duda en comentarios',
+                '📅 Reservá tu turno por link en bio',
+                '📩 Escribinos por mensaje directo',
+                'Contáctanos ahora →'
+            ]
+        }
+    ];
+
     // =========================================================================
     // REFERENCIAS DOM
     // =========================================================================
@@ -44,6 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Controles del Composer
     const netButtons = Array.from(document.querySelectorAll('.net-btn'));
     const selectSlideCount = document.getElementById('select-slide-count');
+    const selectSwipeStyle = document.getElementById('select-swipe-style');
+    const selectSwipePosition = document.getElementById('select-swipe-position');
     const chkAutoStep2 = document.getElementById('chk-auto-step2');
 
     // Apartados de Recursos
@@ -286,6 +366,16 @@ document.addEventListener('DOMContentLoaded', () => {
             state.slideCountPref = selectSlideCount.value || 'auto';
         });
     }
+    if (selectSwipeStyle) {
+        selectSwipeStyle.addEventListener('change', () => {
+            state.swipeStylePref = selectSwipeStyle.value || 'auto';
+        });
+    }
+    if (selectSwipePosition) {
+        selectSwipePosition.addEventListener('change', () => {
+            state.swipePositionPref = selectSwipePosition.value || 'auto';
+        });
+    }
     if (chkAutoStep2) {
         chkAutoStep2.addEventListener('change', () => {
             const label = chkAutoStep2.closest('.cta-step-toggle');
@@ -513,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     async function loadConfig() {
         try {
-            const res = await fetch('api_carruseles.php?action=get_config');
+            const res = await fetch(`api_carruseles.php?action=get_config&_t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
             if (data.status === 'ok') {
                 if (inputApiKey) inputApiKey.value = data.openai_api_key || '';
@@ -678,6 +768,8 @@ document.addEventListener('DOMContentLoaded', () => {
             prompt: promptText,
             networks: [...state.networks],
             slideCountPref: state.slideCountPref,
+            swipeStylePref: state.swipeStylePref,
+            swipePositionPref: state.swipePositionPref,
             brandAsset: state.brandAsset,
             brandText: state.brandText,
             logoAsset: state.logoAsset,
@@ -693,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <p style="font-size:0.88rem; color:#475569;">
-                El Director Creativo está analizando tu guion${state.subjectAssets.length ? ' y tus fotos (' + state.subjectAssets.map(s => s.name).join(', ') + ')' : ''} para definir el formato dinámico, el ADN visual unificado y cada una de las láminas...
+                El Director Creativo está analizando tu guion${state.subjectAssets.length ? ' y tus fotos (' + state.subjectAssets.map(s => s.name).join(', ') + ')' : ''} para definir el formato dinámico, los deslizadores y cada una de las láminas...
             </p>
         `;
         threadContainer.appendChild(loadingStep1El);
@@ -708,6 +800,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     prompt: promptText,
                     networks: state.networks,
                     slide_count: state.slideCountPref,
+                    swipe_style_pref: state.swipeStylePref,
+                    swipe_position_pref: state.swipePositionPref,
                     brand_asset: state.brandAsset,
                     brand_text: state.brandText,
                     logo_asset: state.logoAsset,
@@ -755,11 +849,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function appendUserTurnCard({ prompt, networks, slideCountPref, brandAsset, brandText, logoAsset, subjectAssets }) {
+    function appendUserTurnCard({ prompt, networks, slideCountPref, swipeStylePref, swipePositionPref, brandAsset, brandText, logoAsset, subjectAssets }) {
         const card = document.createElement('div');
         card.className = 'user-turn-card';
 
-        const countBadge = slideCountPref === 'auto' ? '🎠 Slides: Automático' : `🎠 ${slideCountPref} Láminas`;
+        const countBadge = slideCountPref === 'auto' ? '🎠 Slides: Auto' : `🎠 ${slideCountPref} Láminas`;
+        const swipeStyleBadge = SWIPE_STYLE_META[swipeStylePref || 'auto'] || '✨ Deslizador: Auto';
+        const swipePosBadge = SWIPE_POSITION_META[swipePositionPref || 'auto'] || '✨ Ubicación: Auto';
         const netBadges = (networks || []).map(n => NETWORK_META[n]?.short || n).join(' · ');
 
         let assetsHtml = '';
@@ -801,6 +897,8 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `
             <div class="user-turn-meta">
                 <span class="meta-tag">${escapeHtml(countBadge)}</span>
+                <span class="meta-tag">${escapeHtml(swipeStyleBadge)}</span>
+                <span class="meta-tag">${escapeHtml(swipePosBadge)}</span>
                 <span class="meta-tag">🌐 ${escapeHtml(netBadges)}</span>
             </div>
             <div class="user-turn-text">${escapeHtml(prompt)}</div>
@@ -817,11 +915,26 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
     }
 
+    function buildSwipePresetsSelectHtml() {
+        const groupsHtml = SWIPE_PRESET_GROUPS.map(g => `
+            <optgroup label="${escapeHtml(g.label)}">
+                ${g.options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('')}
+            </optgroup>
+        `).join('');
+        return `
+            <select class="swipe-preset-select" title="Elegí una variante rápida de deslizador/conector para esta lámina">
+                <option value="">⚡ Variantes rápidas de deslizador...</option>
+                ${groupsHtml}
+                <option value="__CLEAR__">🚫 Vaciar (Sin deslizador)</option>
+            </select>
+        `;
+    }
+
     /**
      * Renderiza la tarjeta del Paso 1 con:
      * 1. Copies por red social
      * 2. ADN Visual Unificado del Carrusel (editable)
-     * 3. Lista editable de las N Láminas (Titular, Bajada, Deslizador, Acción y Escena)
+     * 3. Lista editable de las N Láminas (Titular, Bajada, Deslizador + Ubicación, Acción y Escena)
      */
     function appendStep1CarouselCard(plan) {
         const card = document.createElement('div');
@@ -882,7 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <!-- Desglose editable de cada Lámina -->
             <div class="slides-plan-header">
-                <span class="slides-plan-title">🎬 Secuencia de Láminas (Podés editar textos, deslizadores o escenas antes de crear)</span>
+                <span class="slides-plan-title">🎬 Secuencia de Láminas (Podés editar textos, elegir variantes de deslizador, su ubicación o escenas antes de crear)</span>
                 <button type="button" class="btn-mini btn-add-slide">➕ Agregar Lámina</button>
             </div>
 
@@ -919,6 +1032,9 @@ document.addEventListener('DOMContentLoaded', () => {
             slideEl.className = 'slide-plan-card';
             slideEl.setAttribute('data-slide-num', slideObj.slide_number);
 
+            const slideSwipePos = slideObj.swipe_position
+                || (plan.swipe_position_pref && plan.swipe_position_pref !== 'auto' ? plan.swipe_position_pref : 'bottom_right');
+
             slideEl.innerHTML = `
                 <div class="slide-plan-top">
                     <div class="slide-badge-group">
@@ -944,9 +1060,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         <label>Texto secundario / Bajada:</label>
                         <input type="text" class="design-input input-slide-body" value="${escapeHtml(slideObj.body_text || '')}">
                     </div>
+                </div>
+
+                <!-- Fila exclusiva para Deslizador / Conector + Variantes rápidas + Ubicación -->
+                <div class="slide-swipe-row">
                     <div class="design-field-group" style="margin-bottom:0;">
-                        <label>Deslizador / Conector:</label>
-                        <input type="text" class="design-input input-slide-swipe" value="${escapeHtml(slideObj.swipe_indicator || '')}" placeholder="Ej: Deslizá →">
+                        <div class="swipe-label-header">
+                            <label>Deslizador / Conector:</label>
+                            ${buildSwipePresetsSelectHtml()}
+                        </div>
+                        <input type="text" class="design-input input-slide-swipe" value="${escapeHtml(slideObj.swipe_indicator || '')}" placeholder="Ej: Deslizá →, ¿Mito o Realidad? →, 01/05 →">
+                    </div>
+                    <div class="design-field-group" style="margin-bottom:0;">
+                        <label>Ubicación del Deslizador en la lámina:</label>
+                        <select class="design-input select-slide-swipe-pos">
+                            <option value="bottom_right" ${slideSwipePos === 'bottom_right' ? 'selected' : ''}>↘️ Abajo a la derecha (Clásico)</option>
+                            <option value="middle_right" ${slideSwipePos === 'middle_right' ? 'selected' : ''}>➡️ Centro-derecha (Pestaña al borde)</option>
+                            <option value="bottom_center" ${slideSwipePos === 'bottom_center' ? 'selected' : ''}>⬇️ Abajo centrado (Pie editorial)</option>
+                            <option value="top_right" ${slideSwipePos === 'top_right' ? 'selected' : ''}>↗️ Arriba a la derecha (Paginador)</option>
+                            <option value="below_text" ${slideSwipePos === 'below_text' ? 'selected' : ''}>📑 Integrado debajo del texto</option>
+                            <option value="auto" ${slideSwipePos === 'auto' ? 'selected' : ''}>✨ Libre según composición</option>
+                            <option value="none" ${slideSwipePos === 'none' ? 'selected' : ''}>🚫 Sin deslizador en esta lámina</option>
+                        </select>
                     </div>
                 </div>
 
@@ -961,6 +1096,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     <textarea class="design-textarea mono textarea-slide-scene" rows="3">${escapeHtml(slideObj.scene_prompt || '')}</textarea>
                 </div>
             `;
+
+            const presetSelect = slideEl.querySelector('.swipe-preset-select');
+            const swipeInput = slideEl.querySelector('.input-slide-swipe');
+            const posSelect = slideEl.querySelector('.select-slide-swipe-pos');
+            if (presetSelect && swipeInput) {
+                presetSelect.addEventListener('change', () => {
+                    const val = presetSelect.value;
+                    if (!val) return;
+                    if (val === '__CLEAR__') {
+                        swipeInput.value = '';
+                        if (posSelect) posSelect.value = 'none';
+                    } else {
+                        swipeInput.value = val;
+                        if (posSelect && posSelect.value === 'none') {
+                            posSelect.value = 'bottom_right';
+                        }
+                    }
+                    presetSelect.value = '';
+                });
+            }
 
             const varsContainer = slideEl.querySelector('.slide-photo-vars-container');
             if (varsContainer) {
@@ -1003,6 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     headline: '',
                     body_text: '',
                     swipe_indicator: 'Deslizá →',
+                    swipe_position: state.swipePositionPref !== 'auto' ? state.swipePositionPref : 'bottom_right',
                     camera_and_action: 'Plano medio dinámico manteniendo continuidad con el carrusel',
                     scene_prompt: ''
                 });
@@ -1051,6 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headline: c.querySelector('.input-slide-headline')?.value.trim() || '',
                 body_text: c.querySelector('.input-slide-body')?.value.trim() || '',
                 swipe_indicator: c.querySelector('.input-slide-swipe')?.value.trim() || '',
+                swipe_position: c.querySelector('.select-slide-swipe-pos')?.value || 'bottom_right',
                 camera_and_action: c.querySelector('.input-slide-action')?.value.trim() || '',
                 scene_prompt: c.querySelector('.textarea-slide-scene')?.value.trim() || ''
             });
@@ -1329,6 +1486,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         headline: sl.headline,
                         body_text: sl.body_text,
                         swipe_indicator: sl.swipe_indicator,
+                        swipe_position: sl.swipe_position || state.swipePositionPref || 'bottom_right',
+                        swipe_style_pref: state.swipeStylePref || 'auto',
                         camera_and_action: sl.camera_and_action,
                         scene_prompt: sl.scene_prompt,
                         visual_dna: visualDna,
@@ -1420,6 +1579,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     headline: sl.headline,
                     body_text: sl.body_text,
                     swipe_indicator: sl.swipe_indicator,
+                    swipe_position: sl.swipe_position || state.swipePositionPref || 'bottom_right',
+                    swipe_style_pref: state.swipeStylePref || 'auto',
                     camera_and_action: sl.camera_and_action,
                     scene_prompt: sl.scene_prompt,
                     visual_dna: visualDna,
@@ -2051,6 +2212,12 @@ document.addEventListener('DOMContentLoaded', () => {
             state.slideCountPref = c.slide_count_pref || 'auto';
             if (selectSlideCount) selectSlideCount.value = state.slideCountPref;
 
+            state.swipeStylePref = c.swipe_style_pref || 'auto';
+            if (selectSwipeStyle) selectSwipeStyle.value = state.swipeStylePref;
+
+            state.swipePositionPref = c.swipe_position_pref || 'auto';
+            if (selectSwipePosition) selectSwipePosition.value = state.swipePositionPref;
+
             if ('brand_asset' in c) state.brandAsset = c.brand_asset || null;
             if ('brand_text' in c) state.brandText = typeof c.brand_text === 'string' ? c.brand_text : '';
             if ('logo_asset' in c) state.logoAsset = c.logo_asset || null;
@@ -2071,6 +2238,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     prompt: c.last_idea,
                     networks: state.networks,
                     slideCountPref: state.slideCountPref,
+                    swipeStylePref: state.swipeStylePref,
+                    swipePositionPref: state.swipePositionPref,
                     brandAsset: state.brandAsset,
                     brandText: state.brandText,
                     logoAsset: state.logoAsset,
